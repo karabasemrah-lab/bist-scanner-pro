@@ -1,0 +1,39 @@
+{
+  "summary": {
+    "period": "2y",
+    "strategy": "Breakout + RSI + Hacim",
+    "symbolsTested": 0,
+    "totalSignals": 0,
+    "wins": 0,
+    "losses": 0,
+    "winRate": 0,
+    "avgReturn": 0,
+    "maxDrawdown": 0,
+    "failed": [
+      "AKBNK"
+    ],
+    "config": {
+      "period": "2y",
+      "donchian": 20,
+      "rsiMin": 55.0,
+      "volumeMin": 1.5,
+      "moneyFlowMin": 55.0,
+      "squeezeMin": 60.0,
+      "rsMin": 0.0,
+      "targetPct": 5.0,
+      "stopPct": 3.0,
+      "holdingDays": 10,
+      "maxSymbols": 1,
+      "useBreakout": true,
+      "useRsi": true,
+      "useVolume": true,
+      "useEma": false,
+      "useSupertrend": false,
+      "useMoneyFlow": false,
+      "useSqueeze": false,
+      "useRs": false
+    }
+  },
+  "symbols": [],
+  "updatedAt": "2026-08-04 19:46:41"
+}

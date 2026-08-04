@@ -1,0 +1,29 @@
+BIST SCANNER PRO — GITHUB PAGES YÜKLEME
+
+1) github.com adresinde hesabınıza giriş yapın.
+2) Sağ üstte + → New repository seçin.
+3) Repository name: bist-scanner-pro
+4) Public seçin ve Create repository deyin.
+5) Açılan sayfada "uploading an existing file" bağlantısına tıklayın.
+6) Bu ZIP'i önce bilgisayarınızda ayıklayın.
+7) Ayıklanan klasörün İÇİNDEKİ tüm dosya ve klasörleri GitHub yükleme alanına sürükleyin.
+8) Commit changes deyin.
+9) Settings → Pages → Build and deployment → Source: GitHub Actions seçin.
+10) Actions → BIST Cloud Snapshot ve GitHub Pages → Run workflow.
+11) İşlem bitince Settings → Pages altında yayın adresi görünür.
+
+Adres örneği:
+https://kullanici-adiniz.github.io/bist-scanner-pro/
+
+
+BIST TÜM OTOMATİK TARAMA
+- Workflow artık yalnızca BIST 100 değil, KAP'taki güncel BIST Tüm pay evrenini tarar.
+- Tarama 4 parçaya bölünür ve sonuçlar otomatik birleştirilir.
+- Actions ekranında prepare, scan (4 parça), merge ve deploy adımlarının yeşil olması gerekir.
+- data/build_info.json dosyasından taranan sembol sayısını kontrol edebilirsiniz.
+
+GITHUB ACTIONS İZİNLERİ
+- Settings > Actions > General > Workflow permissions bölümünde "Read and write permissions" seçili olmalıdır.
+- Settings > Pages > Source bölümünde "GitHub Actions" seçilmelidir.
+- İlk manuel çalıştırmada Actions > BIST Tüm Cloud Tarama ve GitHub Pages > Run workflow kullanılır.
+- Başarılı çalışmada 4 tarama parçasının tamamı, birleştirme ve deploy adımları yeşil görünür.
