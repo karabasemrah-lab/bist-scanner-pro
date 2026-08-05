@@ -1,1 +1,10 @@
-{"rows":[],"updatedAt":null,"warning":"GitHub Actions ilk kez çalıştığında KAP snapshot oluşacak."}
+{
+  "ok": false,
+  "updated": "05.08.2026 16:52",
+  "timestamp": 1785948776.071387,
+  "count": 0,
+  "rows": [],
+  "source": "KAP",
+  "error": "",
+  "disclaimer": "Etki skoru başlık ve özet metnindeki açıklanabilir anahtar kelimelerden üretilir; yatırım tavsiyesi değildir."
+}
