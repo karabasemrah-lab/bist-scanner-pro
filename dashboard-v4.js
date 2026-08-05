@@ -4,10 +4,10 @@
   const $ = (id) => document.getElementById(id);
   const esc = (value) => String(value ?? '').replace(/[&<>'"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
-  function createSectionTitle(number, title, subtitle = '') {
+  function createSectionTitle(_number, title, subtitle = '') {
     const head = document.createElement('div');
-    head.className = 'v4-section-title';
-    head.innerHTML = `<span class="v4-section-number">${number}</span><div><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ''}</div>`;
+    head.className = 'v4-section-title v4-section-title-clean';
+    head.innerHTML = `<div><h2>${esc(title)}</h2>${subtitle ? `<p>${esc(subtitle)}</p>` : ''}</div>`;
     return head;
   }
 
@@ -242,7 +242,98 @@
   function watchRows() {
     const source = $('marketHeatmap') || $('rows');
     if (source) new MutationObserver(() => renderV4Heatmaps()).observe(source, {childList:true, subtree:true});
-    setInterval(renderV4Heatmaps, 5000);
+  }
+
+  const AUTO_REFRESH_MS = 60_000;
+  let lastCloudUpdatedAt = '';
+  let refreshInFlight = false;
+
+  function updateRefreshStatus(state, message) {
+    let status = $('v4CloudStatus');
+    if (!status) {
+      status = document.createElement('span');
+      status.id = 'v4CloudStatus';
+      status.className = 'v4-cloud-status';
+      const actions = document.querySelector('.top-actions');
+      if (actions) actions.insertBefore(status, actions.firstChild);
+    }
+    if (!status) return;
+    status.dataset.state = state;
+    status.textContent = message;
+  }
+
+  function setRefreshButtons(active) {
+    [$('scanTop'), $('scan')].forEach((button) => {
+      if (!button) return;
+      button.disabled = active;
+      if (!button.dataset.v4OriginalText) button.dataset.v4OriginalText = button.textContent;
+      button.textContent = active ? 'Güncelleniyor…' : (button.dataset.v4OriginalText || 'Taramayı Yenile');
+    });
+  }
+
+  async function refreshCloudSnapshot({manual = false, force = false} = {}) {
+    if (refreshInFlight) return;
+    refreshInFlight = true;
+    setRefreshButtons(true);
+    updateRefreshStatus('loading', manual ? 'Veriler yenileniyor…' : 'Yeni veri kontrol ediliyor…');
+
+    try {
+      const scan = await fetchJson(`/api/last-scan?_=${Date.now()}`, {cache:'no-store'});
+      const updatedAt = String(scan?.updatedAt || '');
+      const changed = Boolean(updatedAt && updatedAt !== lastCloudUpdatedAt);
+
+      if (Array.isArray(scan?.rows) && scan.rows.length) {
+        allRows = scan.rows;
+        failedSymbols = Array.isArray(scan.failedSymbols) ? scan.failedSymbols : [];
+        if (changed || manual || !lastCloudUpdatedAt) render();
+      }
+
+      await loadDashboard(force || manual);
+      renderV4Heatmaps();
+      syncScreenerMirror();
+
+      if (updatedAt) {
+        lastCloudUpdatedAt = updatedAt;
+        const label = $('updated');
+        if (label) label.textContent = updatedAt.slice(11,16) || updatedAt;
+        const dashboardLabel = $('dashboardUpdated');
+        if (dashboardLabel) dashboardLabel.textContent = updatedAt;
+        updateRefreshStatus('ok', changed ? 'Yeni veri yüklendi' : 'Veriler güncel');
+      } else {
+        updateRefreshStatus('waiting', 'Otomatik tarama verisi bekleniyor');
+      }
+    } catch (error) {
+      updateRefreshStatus('error', `Güncelleme hatası: ${error.message}`);
+    } finally {
+      refreshInFlight = false;
+      setRefreshButtons(false);
+    }
+  }
+
+  function setupCloudAutoRefresh() {
+    if (!window.__BIST_CLOUD__) return;
+
+    const manualHandler = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
+      refreshCloudSnapshot({manual:true, force:true});
+    };
+
+    $('scanTop')?.addEventListener('click', manualHandler, {capture:true});
+    $('scan')?.addEventListener('click', manualHandler, {capture:true});
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshCloudSnapshot();
+    });
+    window.addEventListener('focus', () => refreshCloudSnapshot());
+    window.addEventListener('online', () => refreshCloudSnapshot({manual:true}));
+
+    setInterval(() => {
+      if (!document.hidden) refreshCloudSnapshot();
+    }, AUTO_REFRESH_MS);
+
+    refreshCloudSnapshot({manual:false, force:false});
   }
 
   function createModuleGrid() {
@@ -324,6 +415,7 @@
     arrangeDashboard();
     watchScreener();
     watchRows();
+    setupCloudAutoRefresh();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, {once:true});

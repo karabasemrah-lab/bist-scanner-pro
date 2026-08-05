@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <title>BIST Scanner Pro</title>
-  <link rel="stylesheet" href="style.css?v=4.0.0">
+  <link rel="stylesheet" href="style.css?v=2.7">
 </head>
 <body>
 <div class="app-shell">
@@ -41,7 +41,7 @@
   <main class="main-area">
     <header class="topbar">
       <div><h1 id="pageTitle">Dashboard</h1><p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p></div>
-      <div class="top-actions"><span class="badge">v4.0 Dashboard Beta</span><button id="scanTop">Taramayı Yenile</button></div>
+      <div class="top-actions"><span class="badge">v3.3.2 Cloud Data Engine Beta</span><button id="scanTop">Taramayı Yenile</button></div>
     </header>
 
     <section id="dashboardView" class="view active dashboard-v12">
@@ -331,9 +331,9 @@
   </main>
 </div>
 <div id="detailModal" class="modal hidden"><div class="modal-card"><button id="closeDetail" class="modal-close">×</button><div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div><div id="detailGrid" class="detail-grid"></div><div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır.</div></div></div>
-<script src="cloud-adapter.js?v=3.3.0"></script>
-<script src="app.js?v=3.3.0"></script>
-<script src="repair.js?v=3.3.0"></script>
-<script src="dashboard-v4.js?v=4.0.0"></script>
+<script src="cloud-adapter.js?v=4.0.1"></script>
+<script src="app.js?v=4.0.1"></script>
+<script src="repair.js?v=4.0.1"></script>
+<script src="dashboard-v4.js?v=4.0.1"></script>
 <div id="failedModal" class="modal hidden"><div class="modal-card"><button id="closeFailed" class="modal-close">×</button><h2>Başarısız semboller</h2><p id="failedSummary" class="muted"></p><div id="failedList" class="failed-list"></div></div></div><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));}</script>
 </body></html>

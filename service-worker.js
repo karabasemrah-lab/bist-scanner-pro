@@ -1,12 +1,12 @@
-const CACHE = 'bist-scanner-dashboard-v4-20260805';
+const CACHE = 'bist-scanner-dashboard-v4.0.1-20260805';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=4.0.0',
-  './cloud-adapter.js?v=3.3.0',
-  './app.js?v=3.3.0',
-  './repair.js?v=3.3.0',
-  './dashboard-v4.js?v=4.0.0',
+  './style.css?v=4.0.1',
+  './cloud-adapter.js?v=4.0.1',
+  './app.js?v=4.0.1',
+  './repair.js?v=4.0.1',
+  './dashboard-v4.js?v=4.0.1',
   './manifest.webmanifest'
 ];
 self.addEventListener('install', event => {
