@@ -4,7 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 required = [
-    ROOT / ".github/workflows/pages.yml",
+    ROOT / ".github/workflows/bist-cloud.yml",
+    ROOT / ".github/workflows/bist-data.yml",
     ROOT / "scripts/prepare_universe.py",
     ROOT / "scripts/generate_shard.py",
     ROOT / "scripts/merge_snapshot.py",

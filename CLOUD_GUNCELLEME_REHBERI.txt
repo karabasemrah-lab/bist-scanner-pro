@@ -1,0 +1,44 @@
+BIST SCANNER PRO v3.3.2 - CLOUD DATA ENGINE
+
+MEVCUT GITHUB DEPONA YÜKLEME
+
+1) Bu ZIP'i Tümünü Ayıkla ile aç.
+2) GitHub deposunda Code > Add file > Upload files ekranını aç.
+3) Ayıklanan klasörün İÇİNDEKİ bütün dosya ve klasörleri yükle.
+4) GitHub aynı isimli dosyaları yeni sürümle günceller.
+5) Commit changes düğmesine bas.
+
+ÖNEMLİ WORKFLOW DOSYALARI
+
+.github/workflows/bist-cloud.yml
+- Siteyi GitHub Pages'e yayınlar.
+- main dalına veri geldiğinde otomatik çalışır.
+
+.github/workflows/bist-data.yml
+- KAP'tan BIST Tüm sembol listesini hazırlar.
+- 4 parçalı tarama yapar.
+- JSON sonuçlarını data klasörüne kaydeder.
+- Hafta içi Türkiye saatiyle yaklaşık 19:45'te otomatik çalışır.
+
+GITHUB AYARLARI
+
+Settings > Actions > General > Workflow permissions:
+Read and write permissions seçili olmalı.
+
+Settings > Pages > Source:
+GitHub Actions seçili olmalı.
+
+İLK ÇALIŞTIRMA
+
+Actions > BIST Tüm - Günlük Veri Motoru > Run workflow
+
+Şu işler yeşil olmalı:
+- prepare
+- scan (0)
+- scan (1)
+- scan (2)
+- scan (3)
+- merge
+
+Merge işi data/*.json dosyalarını main dalına kaydeder.
+Bu push sonrası BIST Scanner Pro - GitHub Pages otomatik çalışır ve site güncellenir.
