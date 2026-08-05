@@ -1,0 +1,23 @@
+BIST SCANNER PRO — DASHBOARD V4 MİNİMAL GÜNCELLEME
+
+Bu paket yalnızca 4 dosya içerir:
+- index.html
+- style.css
+- dashboard-v4.js (yeni)
+- service-worker.js
+
+Mevcut data, scripts, GitHub Actions, app.js, cloud-adapter.js ve diğer dosyalara dokunmaz.
+
+Yükleme:
+1) GitHub deponda Code > Add file > Upload files bölümünü aç.
+2) Bu klasördeki 4 web dosyasını yükleme alanına bırak.
+3) YUKLEME_NOTU.txt dosyasını yüklemek zorunda değilsin.
+4) Commit changes yap.
+5) GitHub Pages Action yeşil olunca siteyi ?v=400 ile aç.
+6) İlk kontrolde Ctrl+F5 yap veya mobilde site verilerini temizle.
+
+Site adresi örneği:
+https://karabasemrah-lab.github.io/bist-scanner-pro/?v=400
+
+Geri alma:
+GitHub > Commits > bu güncelleme commit'i > Revert.
