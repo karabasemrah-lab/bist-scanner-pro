@@ -111,3 +111,28 @@
     health().then(d=>statusBox(`Sistem hazır · v${esc(d.version)} · ${d.masterSymbols||0} BIST Tüm sembolü`)).catch(e=>statusBox(`Başlangıç kontrolü: ${esc(e.message)}`,'error'));
   });
 })();
+
+/* v3.3.3 robust modal safety layer */
+(() => {
+  'use strict';
+  const close = modal => {
+    if (!modal) return;
+    modal.classList.add('hidden');
+    if (!document.querySelector('.modal:not(.hidden)')) document.body.classList.remove('modal-open');
+  };
+  document.addEventListener('click', event => {
+    const closeButton = event.target.closest('.modal-close');
+    if (closeButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      close(closeButton.closest('.modal'));
+      return;
+    }
+    if (event.target.classList?.contains('modal')) close(event.target);
+  }, true);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      document.querySelectorAll('.modal:not(.hidden)').forEach(close);
+    }
+  }, true);
+})();

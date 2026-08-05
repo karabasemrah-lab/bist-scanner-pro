@@ -71,7 +71,9 @@ async function scan(){
 }
 async function loadLast(){try{const data=await fetchJson('/api/last-scan',{cache:'no-store'});if(Array.isArray(data.rows)&&data.rows.length){allRows=data.rows;failedSymbols=Array.isArray(data.failedSymbols)?data.failedSymbols:[];$('updated').textContent=data.updatedAt?.slice(11,16)||'-';render()}}catch(e){}}
 function yes(v){return v?'✓':'—'}
-function showDetail(symbol){const r=allRows.find(x=>x.symbol===symbol);if(!r)return;$('detailSymbol').textContent=r.symbol;$('detailName').textContent=r.name;$('detailScore').textContent=r.score;const c=r.conditions||{};$('detailGrid').innerHTML=[['Fiyat',n(r.close)],['Değişim',`${n(r.changePct)}%`],['Teknik skor',r.technicalScore??'-'],['Breakout skoru',r.breakoutScore??'-'],['Sıkışma skoru',r.squeezeScore??'-'],['Composite skor',r.compositeScore??r.score??'-'],['AI breakout olasılığı',`%${r.aiBreakoutProbability??'-'}`],['AI risk skoru',r.aiRiskScore??'-'],['Beklenen 10G getiri',`${n(r.aiExpectedReturn10d)}%`],['Model güveni',r.aiModelConfidence??'-'],['Model örnek sayısı',r.aiSampleSize??0],['Relative Strength',r.rsScore??'-'],['RS trendi',r.rsTrend??'-'],['RS 20G',r.rs20??'-'],['RS 60G',r.rs60??'-'],['RS 120G',r.rs120??'-'],['RS 252G',r.rs252??'-'],['Sektör',r.sector??'Diğer'],['Sektör skoru',r.sectorScore??'-'],['Sektör sırası',r.sectorRank??'-'],['Para akışı skoru',r.moneyFlowScore??'-'],['CMF 20',n(r.cmf20,3)],['OBV eğimi 20G',`${n(r.obvSlope20)}%`],['A/D eğimi 20G',`${n(r.adlSlope20)}%`],['Yükseliş/Düşüş hacmi',`${n(r.upDownVolumeRatio)}x`],['Fiyat-hacim korelasyonu',n(r.priceVolumeCorrelation,3)],['Yakın destek',n(r.support1)],['Desteğe uzaklık',`${n(r.supportDistancePct)}%`],['İkinci destek',n(r.support2)],['Yakın direnç',n(r.resistance1)],['Dirence uzaklık',`${n(r.resistanceDistancePct)}%`],['İkinci direnç',n(r.resistance2)],['Destek temas',r.supportTouches??0],['Direnç temas',r.resistanceTouches??0],['Hacim oranı',`${n(r.volumeRatio)}x`],['RSI',n(r.rsi,1)],['TR / ATR',n(r.trAtr)],['Kırılım',`${n(r.breakoutPct)}%`],['BB genişliği',`${n(r.bbWidth)}%`],['EMA20',n(r.ema20)],['EMA50',n(r.ema50)],['EMA200',n(r.ema200)],['MACD',n(r.macd,3)],['SuperTrend',n(r.supertrend)],['Breakout',yes(c.breakout)],['Hacim patlaması',yes(c.volumeSpike)],['Bollinger sıkışması',yes(c.bollingerSqueeze)],['EMA trend',yes(c.emaTrend)],['MACD pozitif',yes(c.macdBullish)],['SuperTrend AL',yes(c.supertrendBuy)],['Pozitif uyumsuzluk',yes(c.positiveDivergence)],['Para akışı pozitif',yes(c.moneyFlowPositive)],['Durum',r.setup],['Veri tarihi',r.dataDate||'-']].map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('');openModal('detailModal')}
+let detailCurrentIndex=-1;
+function showDetail(symbol){const r=allRows.find(x=>x.symbol===symbol);if(!r)return;detailCurrentIndex=allRows.findIndex(x=>x.symbol===symbol);$('detailSymbol').textContent=r.symbol;$('detailName').textContent=r.name;$('detailScore').textContent=r.score;const c=r.conditions||{};$('detailGrid').innerHTML=[['Fiyat',n(r.close)],['Değişim',`${n(r.changePct)}%`],['Teknik skor',r.technicalScore??'-'],['Breakout skoru',r.breakoutScore??'-'],['Sıkışma skoru',r.squeezeScore??'-'],['Composite skor',r.compositeScore??r.score??'-'],['AI breakout olasılığı',`%${r.aiBreakoutProbability??'-'}`],['AI risk skoru',r.aiRiskScore??'-'],['Beklenen 10G getiri',`${n(r.aiExpectedReturn10d)}%`],['Model güveni',r.aiModelConfidence??'-'],['Model örnek sayısı',r.aiSampleSize??0],['Relative Strength',r.rsScore??'-'],['RS trendi',r.rsTrend??'-'],['RS 20G',r.rs20??'-'],['RS 60G',r.rs60??'-'],['RS 120G',r.rs120??'-'],['RS 252G',r.rs252??'-'],['Sektör',r.sector??'Diğer'],['Sektör skoru',r.sectorScore??'-'],['Sektör sırası',r.sectorRank??'-'],['Para akışı skoru',r.moneyFlowScore??'-'],['CMF 20',n(r.cmf20,3)],['OBV eğimi 20G',`${n(r.obvSlope20)}%`],['A/D eğimi 20G',`${n(r.adlSlope20)}%`],['Yükseliş/Düşüş hacmi',`${n(r.upDownVolumeRatio)}x`],['Fiyat-hacim korelasyonu',n(r.priceVolumeCorrelation,3)],['Yakın destek',n(r.support1)],['Desteğe uzaklık',`${n(r.supportDistancePct)}%`],['İkinci destek',n(r.support2)],['Yakın direnç',n(r.resistance1)],['Dirence uzaklık',`${n(r.resistanceDistancePct)}%`],['İkinci direnç',n(r.resistance2)],['Destek temas',r.supportTouches??0],['Direnç temas',r.resistanceTouches??0],['Hacim oranı',`${n(r.volumeRatio)}x`],['RSI',n(r.rsi,1)],['TR / ATR',n(r.trAtr)],['Kırılım',`${n(r.breakoutPct)}%`],['BB genişliği',`${n(r.bbWidth)}%`],['EMA20',n(r.ema20)],['EMA50',n(r.ema50)],['EMA200',n(r.ema200)],['MACD',n(r.macd,3)],['SuperTrend',n(r.supertrend)],['Breakout',yes(c.breakout)],['Hacim patlaması',yes(c.volumeSpike)],['Bollinger sıkışması',yes(c.bollingerSqueeze)],['EMA trend',yes(c.emaTrend)],['MACD pozitif',yes(c.macdBullish)],['SuperTrend AL',yes(c.supertrendBuy)],['Pozitif uyumsuzluk',yes(c.positiveDivergence)],['Para akışı pozitif',yes(c.moneyFlowPositive)],['Durum',r.setup],['Veri tarihi',r.dataDate||'-']].map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('');if($('detailPosition'))$('detailPosition').textContent=`${detailCurrentIndex+1} / ${allRows.length}`;openModal('detailModal')}
+function showAdjacentDetail(delta){if(!allRows.length)return;const next=(detailCurrentIndex+delta+allRows.length)%allRows.length;showDetail(allRows[next].symbol)}
 window.showDetail=showDetail;
 
 function applyPreset(name){const p=presets[name];if(!p)return;Object.entries(p).forEach(([k,v])=>{if($(k))$(k).value=v});render()}
@@ -174,7 +176,7 @@ document.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',(
 function openModal(id){const m=$(id);if(!m)return;m.classList.remove('hidden');document.body.classList.add('modal-open');const card=m.querySelector('.modal-card');if(card)card.scrollTop=0}
 function closeModal(id){const m=$(id);if(!m)return;m.classList.add('hidden');if(document.querySelectorAll('.modal:not(.hidden)').length===0)document.body.classList.remove('modal-open')}
 function closeAllModals(){document.querySelectorAll('.modal:not(.hidden)').forEach(m=>m.classList.add('hidden'));document.body.classList.remove('modal-open')}
-$('scan').addEventListener('click',scan);$('scanTop').addEventListener('click',scan);$('save').addEventListener('click',saveSettings);$('clearSettings').addEventListener('click',()=>{localStorage.removeItem('bistScannerSettings');location.reload()});$('exportCsv').addEventListener('click',()=>download('/api/export.csv'));$('exportExcel').addEventListener('click',()=>download('/api/export.xlsx'));$('profile').addEventListener('change',e=>applyPreset(e.target.value));$('saveProfile').addEventListener('click',saveNamedProfile);$('savedProfiles').addEventListener('change',e=>loadNamedProfile(e.target.value));$('deleteProfile').addEventListener('click',deleteNamedProfile);$('columnButton').addEventListener('click',()=>$('columnPanel').classList.toggle('hidden'));$('failedButton').addEventListener('click',showFailed);$('closeFailed').addEventListener('click',()=>closeModal('failedModal'));$('failedModal').addEventListener('click',e=>{if(e.target===$('failedModal'))closeModal('failedModal')});$('closeDetail').addEventListener('click',()=>closeModal('detailModal'));$('detailModal').addEventListener('click',e=>{if(e.target===$('detailModal'))closeModal('detailModal')});
+$('scan').addEventListener('click',scan);$('scanTop').addEventListener('click',scan);$('save').addEventListener('click',saveSettings);$('clearSettings').addEventListener('click',()=>{localStorage.removeItem('bistScannerSettings');location.reload()});$('exportCsv').addEventListener('click',()=>download('/api/export.csv'));$('exportExcel').addEventListener('click',()=>download('/api/export.xlsx'));$('profile').addEventListener('change',e=>applyPreset(e.target.value));$('saveProfile').addEventListener('click',saveNamedProfile);$('savedProfiles').addEventListener('change',e=>loadNamedProfile(e.target.value));$('deleteProfile').addEventListener('click',deleteNamedProfile);$('columnButton').addEventListener('click',()=>$('columnPanel').classList.toggle('hidden'));$('failedButton')?.addEventListener('click',showFailed);$('closeFailed')?.addEventListener('click',()=>closeModal('failedModal'));$('failedModal')?.addEventListener('click',e=>{if(e.target===$('failedModal'))closeModal('failedModal')});$('closeDetail')?.addEventListener('click',()=>closeModal('detailModal'));$('detailModal')?.addEventListener('click',e=>{if(e.target===$('detailModal'))closeModal('detailModal')});$('detailPrev')?.addEventListener('click',()=>showAdjacentDetail(-1));$('detailNext')?.addEventListener('click',()=>showAdjacentDetail(1));document.addEventListener('keydown',e=>{const detailOpen=!$('detailModal')?.classList.contains('hidden');if(e.key==='Escape'){closeAllModals();return}if(detailOpen&&e.key==='ArrowLeft')showAdjacentDetail(-1);if(detailOpen&&e.key==='ArrowRight')showAdjacentDetail(1)});
 $('selectAllCards').addEventListener('click',()=>{visibleMarketCards=new Set(marketCardCatalog.map(c=>c.code));saveMarketCardSelection();renderMarketCards(marketCardCatalog)});
 $('defaultCards').addEventListener('click',()=>{visibleMarketCards=new Set(defaultMarketCards);saveMarketCardSelection();renderMarketCards(marketCardCatalog)});
 loadSettings();persistWatch();buildColumnPanel();refreshProfiles();Promise.allSettled([loadLast(),loadDashboard()]);
@@ -290,80 +292,11 @@ async function ensureScanData(messageTarget){
 }
 async function runScreenerAi(){
   const prompt=$('screenerAiPrompt').value.trim();if(!prompt){alert('Ne aradığını yaz.');return}
-  lastScreenerAiPrompt=prompt;lastScreenerAiSpec=screenerAiSpec(prompt);localStorage.setItem('bistLastScreenerAiPrompt', prompt);$('runScreenerAi').disabled=true;$('runScreenerAi').textContent='Analiz ediliyor…';
+  lastScreenerAiPrompt=prompt;lastScreenerAiSpec=screenerAiSpec(prompt);$('runScreenerAi').disabled=true;$('runScreenerAi').textContent='Analiz ediliyor…';
   showView('screenerai');$('screenerAiResultLabel').textContent='Tarama verisi hazırlanıyor…';
   try{await ensureScanData($('screenerAiResults'));renderScreenerAi(lastScreenerAiSpec)}catch(e){$('screenerAiResultLabel').textContent='Screener AI çalıştırılamadı';$('screenerAiResults').innerHTML=`<div class="error-box">${esc(e.message)} <button class="secondary" onclick="showView('scanner')">Tarama ekranını aç</button></div>`}finally{$('runScreenerAi').disabled=false;$('runScreenerAi').textContent='AI ile Tara'}
 }
-async function rerunScreenerAi() {
-  const button = $('rerunScreenerAi');
-
-  const prompt = (
-    lastScreenerAiPrompt ||
-    $('screenerAiPrompt')?.value.trim() ||
-    localStorage.getItem('bistLastScreenerAiPrompt') ||
-    ''
-  ).trim();
-
-  if (!prompt) {
-    $('screenerAiResultLabel').textContent = 'Yenilenecek önceki sorgu bulunamadı.';
-    return;
-  }
-
-  if (button) {
-    button.disabled = true;
-    button.textContent = 'Yenileniyor…';
-  }
-
-  try {
-    const data = await fetchJson(
-      `/api/last-scan?_=${Date.now()}`,
-      { cache: 'no-store' }
-    );
-
-    if (Array.isArray(data.rows) && data.rows.length) {
-      allRows = data.rows;
-    }
-
-    if (!allRows.length) {
-      throw new Error('Güncel tarama verisi bulunamadı.');
-    }
-
-    lastScreenerAiPrompt = prompt;
-    lastScreenerAiSpec = screenerAiSpec(prompt);
-
-    localStorage.setItem('bistLastScreenerAiPrompt', prompt);
-
-    if ($('screenerAiPrompt')) {
-      $('screenerAiPrompt').value = prompt;
-    }
-
-    renderScreenerAi(lastScreenerAiSpec);
-  } catch (error) {
-    $('screenerAiResultLabel').textContent = 'Sorgu yenilenemedi';
-    $('screenerAiResults').innerHTML =
-      `<div class="error-box">${esc(error.message)}</div>`;
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = 'Sorguyu Yenile';
-    }
-  }
-}
-
-$('runScreenerAi')?.addEventListener('click', runScreenerAi);
-
-$('screenerAiPrompt')?.addEventListener('keydown', event => {
-  if (event.key === 'Enter') runScreenerAi();
-});
-
-$('rerunScreenerAi')?.addEventListener('click', rerunScreenerAi);
-
-document.querySelectorAll('[data-ai-prompt]').forEach(button => {
-  button.addEventListener('click', () => {
-    $('screenerAiPrompt').value = button.dataset.aiPrompt;
-    runScreenerAi();
-  });
-});
+$('runScreenerAi')?.addEventListener('click',runScreenerAi);$('screenerAiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter')runScreenerAi()});$('rerunScreenerAi')?.addEventListener('click',()=>{if(lastScreenerAiSpec)renderScreenerAi(lastScreenerAiSpec)});document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',()=>{$('screenerAiPrompt').value=b.dataset.aiPrompt;runScreenerAi()}));
 
 // v2.5 Alarm Merkezi
 let alarms=safeJsonParse(localStorage.getItem('bistAlarms')||'[]',[]);

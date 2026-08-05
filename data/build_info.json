@@ -1,8 +1,9 @@
 {
   "universe": "BIST Tüm",
-  "requested": 621,
-  "completed": 488,
-  "failed": 133,
+  "requested": 0,
+  "completed": 0,
+  "failed": 0,
   "shardCount": 4,
-  "updatedAt": "2026-08-05 16:52:54"
+  "updatedAt": null,
+  "status": "İlk GitHub Actions taraması bekleniyor"
 }

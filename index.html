@@ -41,7 +41,7 @@
   <main class="main-area">
     <header class="topbar">
       <div><h1 id="pageTitle">Dashboard</h1><p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p></div>
-      <div class="top-actions"><span class="badge">v3.3.2 Cloud Data Engine Beta</span><button id="scanTop">Taramayı Yenile</button></div>
+      <div class="top-actions"><span class="badge">v3.3.3 Modal Fix Beta</span><button id="scanTop">Taramayı Yenile</button></div>
     </header>
 
     <section id="dashboardView" class="view active dashboard-v12">
@@ -330,9 +330,24 @@
     </section>
   </main>
 </div>
-<div id="detailModal" class="modal hidden"><div class="modal-card"><button id="closeDetail" class="modal-close">×</button><div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div><div id="detailGrid" class="detail-grid"></div><div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır.</div></div></div>
-<script src="cloud-adapter.js?v=3.3.0"></script>
+<div id="detailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detailSymbol">
+  <div class="modal-card">
+    <button id="closeDetail" type="button" class="modal-close" aria-label="Detay penceresini kapat">×</button>
+    <div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div>
+    <div class="modal-nav" aria-label="Hisseler arasında gezinme">
+      <button id="detailPrev" type="button" class="secondary small">← Önceki</button>
+      <span id="detailPosition" class="muted">- / -</span>
+      <button id="detailNext" type="button" class="secondary small">Sonraki →</button>
+    </div>
+    <div id="detailGrid" class="detail-grid"></div>
+    <div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır. ESC veya dış alana tıklayarak kapatabilirsin.</div>
+  </div>
+</div>
+<div id="failedModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-card"><button id="closeFailed" type="button" class="modal-close" aria-label="Pencereyi kapat">×</button><h2>Başarısız semboller</h2><p id="failedSummary" class="muted"></p><div id="failedList" class="failed-list"></div></div>
+</div>
+<script src="cloud-adapter.js?v=3.3.3"></script>
 <script src="app.js?v=3.3.3"></script>
-<script src="repair.js?v=3.3.0"></script>
-<div id="failedModal" class="modal hidden"><div class="modal-card"><button id="closeFailed" class="modal-close">×</button><h2>Başarısız semboller</h2><p id="failedSummary" class="muted"></p><div id="failedList" class="failed-list"></div></div></div><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));}</script>
+<script src="repair.js?v=3.3.3"></script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js?v=3.3.3").catch(()=>{}));}</script>
 </body></html>
