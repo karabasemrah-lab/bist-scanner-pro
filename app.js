@@ -290,11 +290,80 @@ async function ensureScanData(messageTarget){
 }
 async function runScreenerAi(){
   const prompt=$('screenerAiPrompt').value.trim();if(!prompt){alert('Ne aradığını yaz.');return}
-  lastScreenerAiPrompt=prompt;lastScreenerAiSpec=screenerAiSpec(prompt);$('runScreenerAi').disabled=true;$('runScreenerAi').textContent='Analiz ediliyor…';
+  lastScreenerAiPrompt=prompt;lastScreenerAiSpec=screenerAiSpec(prompt);localStorage.setItem('bistLastScreenerAiPrompt', prompt);$('runScreenerAi').disabled=true;$('runScreenerAi').textContent='Analiz ediliyor…';
   showView('screenerai');$('screenerAiResultLabel').textContent='Tarama verisi hazırlanıyor…';
   try{await ensureScanData($('screenerAiResults'));renderScreenerAi(lastScreenerAiSpec)}catch(e){$('screenerAiResultLabel').textContent='Screener AI çalıştırılamadı';$('screenerAiResults').innerHTML=`<div class="error-box">${esc(e.message)} <button class="secondary" onclick="showView('scanner')">Tarama ekranını aç</button></div>`}finally{$('runScreenerAi').disabled=false;$('runScreenerAi').textContent='AI ile Tara'}
 }
-$('runScreenerAi')?.addEventListener('click',runScreenerAi);$('screenerAiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter')runScreenerAi()});$('rerunScreenerAi')?.addEventListener('click',()=>{if(lastScreenerAiSpec)renderScreenerAi(lastScreenerAiSpec)});document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',()=>{$('screenerAiPrompt').value=b.dataset.aiPrompt;runScreenerAi()}));
+async function rerunScreenerAi() {
+  const button = $('rerunScreenerAi');
+
+  const prompt = (
+    lastScreenerAiPrompt ||
+    $('screenerAiPrompt')?.value.trim() ||
+    localStorage.getItem('bistLastScreenerAiPrompt') ||
+    ''
+  ).trim();
+
+  if (!prompt) {
+    $('screenerAiResultLabel').textContent = 'Yenilenecek önceki sorgu bulunamadı.';
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Yenileniyor…';
+  }
+
+  try {
+    const data = await fetchJson(
+      `/api/last-scan?_=${Date.now()}`,
+      { cache: 'no-store' }
+    );
+
+    if (Array.isArray(data.rows) && data.rows.length) {
+      allRows = data.rows;
+    }
+
+    if (!allRows.length) {
+      throw new Error('Güncel tarama verisi bulunamadı.');
+    }
+
+    lastScreenerAiPrompt = prompt;
+    lastScreenerAiSpec = screenerAiSpec(prompt);
+
+    localStorage.setItem('bistLastScreenerAiPrompt', prompt);
+
+    if ($('screenerAiPrompt')) {
+      $('screenerAiPrompt').value = prompt;
+    }
+
+    renderScreenerAi(lastScreenerAiSpec);
+  } catch (error) {
+    $('screenerAiResultLabel').textContent = 'Sorgu yenilenemedi';
+    $('screenerAiResults').innerHTML =
+      `<div class="error-box">${esc(error.message)}</div>`;
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Sorguyu Yenile';
+    }
+  }
+}
+
+$('runScreenerAi')?.addEventListener('click', runScreenerAi);
+
+$('screenerAiPrompt')?.addEventListener('keydown', event => {
+  if (event.key === 'Enter') runScreenerAi();
+});
+
+$('rerunScreenerAi')?.addEventListener('click', rerunScreenerAi);
+
+document.querySelectorAll('[data-ai-prompt]').forEach(button => {
+  button.addEventListener('click', () => {
+    $('screenerAiPrompt').value = button.dataset.aiPrompt;
+    runScreenerAi();
+  });
+});
 
 // v2.5 Alarm Merkezi
 let alarms=safeJsonParse(localStorage.getItem('bistAlarms')||'[]',[]);
