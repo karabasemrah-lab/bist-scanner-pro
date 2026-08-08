@@ -430,7 +430,36 @@ function moverRows(items,type){
 }
 function heatClass(change){const c=Number(change)||0;if(c>=4)return'heat-positive-3';if(c>=2)return'heat-positive-2';if(c>.15)return'heat-positive-1';if(c<=-4)return'heat-negative-3';if(c<=-2)return'heat-negative-2';if(c<-.15)return'heat-negative-1';return'heat-neutral'}
 function renderMarketLists(lists){
-  lists=lists||{};$('advancersList').innerHTML=moverRows(lists.advancers,'change');$('declinersList').innerHTML=moverRows(lists.decliners,'change');$('volumeLeadersList').innerHTML=moverRows(lists.volumeLeaders,'volume');
+  lists = lists || {};
+
+  const all = Array.isArray(lists.all) ? [...lists.all] : [];
+
+  const periodKey =
+    marketPeriod === 'weekly' ? 'changeWeekly' :
+    marketPeriod === 'monthly' ? 'changeMonthly' :
+    marketPeriod === 'yearly' ? 'changeYearly' :
+    'changePct';
+
+  let advancers = lists.advancers || [];
+  let decliners = lists.decliners || [];
+
+  if (all.length) {
+    advancers = all
+      .filter(r => Number(r[periodKey]) > 0)
+      .sort((a,b) => Number(b[periodKey]) - Number(a[periodKey]))
+      .slice(0,20);
+
+    decliners = all
+      .filter(r => Number(r[periodKey]) < 0)
+      .sort((a,b) => Number(a[periodKey]) - Number(b[periodKey]))
+      .slice(0,20);
+  }
+
+  $('advancersList').innerHTML = moverRows(advancers,'change');
+  $('declinersList').innerHTML = moverRows(decliners,'change');
+  $('volumeLeadersList').innerHTML = moverRows(lists.volumeLeaders || [],'volume');
+
+  const heat = Array.isArray(lists.heatmap) ? lists.heatmap : [];
   const heat=Array.isArray(lists.heatmap)?lists.heatmap:[];$('heatmapUniverse').textContent=heat.length?`${heat.length} hisse`:'Son tarama';
   $('marketHeatmap').innerHTML=heat.length?heat.map(r=>{const size=Math.max(1,Math.min(3,Math.round((Number(r.score)||0)/35)));return `<div class="heat-tile ${heatClass(r.changePct)}" style="--heat-size:${size}" onclick="showDetail('${esc(r.symbol)}')" title="${esc(r.name||r.symbol)} | Skor ${r.score||0} | Hacim ${n(r.volumeRatio)}x"><b>${esc(r.symbol)}</b><span>${Number(r.changePct)>=0?'+':''}${n(r.changePct)}%</span><small>Skor ${r.score||0}</small></div>`}).join(''):'<div class="empty">Sıcaklık haritası için BIST 100 veya BIST Tüm taraması yapın.</div>'
 }
@@ -1139,13 +1168,19 @@ $('openMinerviniResults')?.addEventListener('click', async () => {
   }
 });
 
-// BIST Yükselenler / Düşenler / Hacimliler sekmeleri
-document.querySelectorAll('.market-tab').forEach(button => {
-  button.addEventListener('click', () => {
-    const selected = button.dataset.marketTab;
+// Mobil piyasa sekmeleri - dinamik ve güvenli tıklama yönetimi
+document.addEventListener('click', async (event) => {
+
+  const marketTab = event.target.closest('.market-tab');
+
+  if (marketTab) {
+    const selected = marketTab.dataset.marketTab;
 
     document.querySelectorAll('.market-tab').forEach(tab => {
-      tab.classList.toggle('active', tab === button);
+      tab.classList.toggle(
+        'active',
+        tab.dataset.marketTab === selected
+      );
     });
 
     document.querySelectorAll('.market-tab-panel').forEach(panel => {
@@ -1154,18 +1189,26 @@ document.querySelectorAll('.market-tab').forEach(button => {
         panel.dataset.marketPanel === selected
       );
     });
-  });
-});
 
-// Günlük / Haftalık / Aylık / Yıllık dönem seçimi
-document.querySelectorAll('.market-period').forEach(button => {
-  button.addEventListener('click', () => {
-    marketPeriod = button.dataset.period || 'daily';
+    return;
+  }
+
+
+  const periodTab = event.target.closest('.market-period');
+
+  if (periodTab) {
+    marketPeriod = periodTab.dataset.period || 'daily';
 
     document.querySelectorAll('.market-period').forEach(tab => {
-      tab.classList.toggle('active', tab === button);
+      tab.classList.toggle(
+        'active',
+        tab.dataset.period === marketPeriod
+      );
     });
 
-    loadScanDashboard();
-  });
+    await loadScanDashboard();
+
+    return;
+  }
+
 });

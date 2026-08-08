@@ -1039,11 +1039,12 @@ def market_lists_from_rows(rows: list[dict]) -> dict:
         "setup": r.get("setup", "")
     }
     return {
-        "advancers": [slim(r) for r in advancers if _finite(r.get("changePct")) > 0],
-        "decliners": [slim(r) for r in decliners if _finite(r.get("changePct")) < 0],
-        "volumeLeaders": [slim(r) for r in volume_leaders],
-        "heatmap": [slim(r) for r in heatmap],
-    }
+    "advancers": [slim(r) for r in advancers if _finite(r.get("changePct")) > 0],
+    "decliners": [slim(r) for r in decliners if _finite(r.get("changePct")) < 0],
+    "volumeLeaders": [slim(r) for r in volume_leaders],
+    "heatmap": [slim(r) for r in heatmap],
+    "all": [slim(r) for r in clean],
+}
 
 def market_health_from_rows(rows: list[dict]) -> dict:
     total = len(rows)
