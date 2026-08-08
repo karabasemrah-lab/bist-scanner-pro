@@ -341,16 +341,22 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     low = clean.low
     volume = clean.volume
 
-    last_close = float(close.iloc[-1])
-    prev_close = float(close.iloc[-2])
-
-    if not math.isfinite(last_close) or last_close <= 0:
-        return None
-
-    if not math.isfinite(prev_close) or prev_close <= 0:
-        return None
+    last_close, prev_close = float(close.iloc[-1]), float(close.iloc[-2])
+    if not math.isfinite(last_close) or last_close <= 0: return None
 
     change = _finite((last_close / prev_close - 1) * 100)
+
+    def period_change(days):
+        if len(close) <= days:
+            return 0.0
+        base = _finite(close.iloc[-1-days])
+        if base <= 0:
+            return 0.0
+        return _finite((last_close / base - 1) * 100)
+
+    change_weekly = period_change(5)
+    change_monthly = period_change(21)
+    change_yearly = period_change(252)
 
     recent_volume = volume.shift(1).tail(20)
     positive_volume_count = int((recent_volume > 0).sum())
@@ -682,8 +688,11 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
         "symbol": symbol,
         "name": symbol_name(symbol),
         "sector": symbol_sector(symbol),
-        "close": round(last_close, 2),
-        "changePct": round(change, 2),
+        "close":round(last_close,2),
+"changePct":round(change,2),
+"changeWeekly":round(change_weekly,2),
+"changeMonthly":round(change_monthly,2),
+"changeYearly":round(change_yearly,2),
         "volumeRatio": round(volume_ratio, 2),
         "volume": int(_finite(volume.iloc[-1])),
         "avgVolume20": int(avg_vol),
@@ -1017,12 +1026,18 @@ def market_lists_from_rows(rows: list[dict]) -> dict:
     heatmap = sorted(clean, key=lambda r: (int(r.get("score", 0)), abs(_finite(r.get("changePct")))), reverse=True)[:80]
     def slim(r):
         return {
-            "symbol": r.get("symbol"), "name": r.get("name"),
-            "changePct": round(_finite(r.get("changePct")), 2),
-            "volumeRatio": round(_finite(r.get("volumeRatio")), 2),
-            "volume": int(_finite(r.get("volume"))),
-            "score": int(r.get("score", 0)), "setup": r.get("setup", "")
-        }
+        "symbol": r.get("symbol"),
+        "name": r.get("name"),
+        "close": round(_finite(r.get("close")), 2),
+        "changePct": round(_finite(r.get("changePct")), 2),
+        "changeWeekly": round(_finite(r.get("changeWeekly")), 2),
+        "changeMonthly": round(_finite(r.get("changeMonthly")), 2),
+        "changeYearly": round(_finite(r.get("changeYearly")), 2),
+        "volumeRatio": round(_finite(r.get("volumeRatio")), 2),
+        "volume": int(_finite(r.get("volume"))),
+        "score": int(r.get("score", 0)),
+        "setup": r.get("setup", "")
+    }
     return {
         "advancers": [slim(r) for r in advancers if _finite(r.get("changePct")) > 0],
         "decliners": [slim(r) for r in decliners if _finite(r.get("changePct")) < 0],

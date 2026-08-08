@@ -399,9 +399,34 @@ function renderExposureChart(rows){
 function renderBreadth(b){
   b=b||{};$('breadthAD').textContent=`${b.advancing||0} / ${b.declining||0}`;$('breadthAdvancePct').textContent=`%${b.advancePct||0} yükselen`;$('breadthEma').textContent=`%${b.aboveEmaPct||0}`;$('breadthVolume').textContent=`%${b.volumeSpikePct||0}`;$('breadthStrong').textContent=`%${b.strongPct||0}`;
 }
+let marketPeriod = 'daily';
+
+function marketPeriodValue(r){
+  if(marketPeriod === 'weekly') return Number(r.changeWeekly);
+  if(marketPeriod === 'monthly') return Number(r.changeMonthly);
+  if(marketPeriod === 'yearly') return Number(r.changeYearly);
+  return Number(r.changePct);
+}
+
 function moverRows(items,type){
-  if(!Array.isArray(items)||!items.length)return '<div class="empty">Tarama sonucu bulunamadı</div>';
-  return items.slice(0,20).map(r=>{const val=type==='volume'?`${n(r.volumeRatio)}x`:`${n(r.changePct)}%`;const cls=type==='volume'?'volume':Number(r.changePct)>=0?'up':'down';return `<div class="mover-row" onclick="showDetail('${esc(r.symbol)}')"><b>${esc(r.symbol)}</b><small title="${esc(r.name||'')}">${esc(r.name||'')}</small><span class="mover-value ${cls}">${val}</span></div>`}).join('')
+  if(!Array.isArray(items) || !items.length){
+    return '<div class="empty">Tarama sonucu bulunamadı</div>';
+  }
+
+  return items.slice(0,20).map(r => {
+    const periodValue = marketPeriodValue(r);
+    const cls = Number(periodValue) >= 0 ? 'up' : 'down';
+
+    return `
+      <div class="mover-row" onclick="showDetail('${esc(r.symbol)}')">
+        <b>${esc(r.symbol)}</b>
+        <small>${n(r.close)}</small>
+        <span class="mover-value ${cls}">
+          ${periodValue >= 0 ? '+' : ''}${n(periodValue)}%
+        </span>
+      </div>
+    `;
+  }).join('');
 }
 function heatClass(change){const c=Number(change)||0;if(c>=4)return'heat-positive-3';if(c>=2)return'heat-positive-2';if(c>.15)return'heat-positive-1';if(c<=-4)return'heat-negative-3';if(c<=-2)return'heat-negative-2';if(c<-.15)return'heat-negative-1';return'heat-neutral'}
 function renderMarketLists(lists){
@@ -1129,5 +1154,18 @@ document.querySelectorAll('.market-tab').forEach(button => {
         panel.dataset.marketPanel === selected
       );
     });
+  });
+});
+
+// Günlük / Haftalık / Aylık / Yıllık dönem seçimi
+document.querySelectorAll('.market-period').forEach(button => {
+  button.addEventListener('click', () => {
+    marketPeriod = button.dataset.period || 'daily';
+
+    document.querySelectorAll('.market-period').forEach(tab => {
+      tab.classList.toggle('active', tab === button);
+    });
+
+    loadScanDashboard();
   });
 });

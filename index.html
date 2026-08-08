@@ -45,6 +45,7 @@
     </header>
 
     <section id="dashboardView" class="view active dashboard-v12">
+      <span id="dashboardUpdated" style="display:none"></span>
       
 
       <section class="panel screener-ai-hero">
@@ -76,6 +77,12 @@
   ...
 </article>
       </div>
+      <div class="market-period-tabs">
+  <button type="button" class="market-period active" data-period="daily">Günlük</button>
+  <button type="button" class="market-period" data-period="weekly">Haftalık</button>
+  <button type="button" class="market-period" data-period="monthly">Aylık</button>
+  <button type="button" class="market-period" data-period="yearly">Yıllık</button>
+</div>
       <div class="market-list-tabs">
   <button type="button" class="market-tab active" data-market-tab="advancers">Yükselenler</button>
   <button type="button" class="market-tab" data-market-tab="decliners">Düşenler</button>
