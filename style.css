@@ -139,3 +139,103 @@ body.modal-open{overflow:hidden}
 @media (max-width: 760px) {
   .v4-cloud-status { width:100%; max-width:none; order:5; justify-content:center; }
 }
+/* Mobil - endeks kartlarını kompakt göster */
+@media(max-width:760px){
+  .market-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+    gap:8px !important;
+    margin-bottom:12px !important;
+  }
+
+  .market-card{
+    min-height:105px !important;
+    padding:10px !important;
+    border-radius:12px !important;
+    grid-template-columns:1fr 1fr !important;
+    gap:5px !important;
+  }
+
+  .market-card h4{
+    font-size:13px !important;
+    margin-bottom:2px !important;
+  }
+
+  .market-card small{
+    font-size:9px !important;
+    min-height:18px !important;
+  }
+
+  .market-card strong{
+    font-size:16px !important;
+    margin-top:4px !important;
+  }
+
+  .market-change{
+    font-size:11px !important;
+    margin-top:2px !important;
+  }
+
+  .spark-svg{
+    height:65px !important;
+  }
+}
+
+/* Mobil piyasa listesi sekmeleri */
+.market-list-tabs{
+  display:flex;
+  gap:8px;
+  margin:8px 0 10px;
+}
+
+.market-tab{
+  flex:1;
+  border:1px solid var(--line);
+  background:rgba(255,255,255,.03);
+  color:var(--muted);
+  border-radius:10px;
+  padding:9px 6px;
+  font-size:11px;
+  font-weight:700;
+}
+
+.market-tab.active{
+  background:#2d68ff;
+  color:#fff;
+  border-color:#2d68ff;
+}
+
+@media(max-width:760px){
+  .market-lists-grid{
+    display:block !important;
+  }
+
+  .market-tab-panel{
+    display:none !important;
+    margin-bottom:8px;
+  }
+
+  .market-tab-panel.active{
+    display:block !important;
+  }
+
+  .market-tab-panel .panel-title{
+    margin-bottom:8px;
+  }
+
+  .market-tab-panel .panel-title h3{
+    font-size:14px;
+  }
+
+  .market-tab-panel .panel-title span{
+    font-size:9px;
+  }
+
+  .mover-list{
+    max-height:none;
+  }
+
+  .mover-row{
+    min-height:38px;
+    font-size:11px;
+  }
+}

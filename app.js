@@ -1113,3 +1113,21 @@ $('openMinerviniResults')?.addEventListener('click', async () => {
     alert(`Minervini sonuçları açılamadı: ${e.message}`);
   }
 });
+
+// BIST Yükselenler / Düşenler / Hacimliler sekmeleri
+document.querySelectorAll('.market-tab').forEach(button => {
+  button.addEventListener('click', () => {
+    const selected = button.dataset.marketTab;
+
+    document.querySelectorAll('.market-tab').forEach(tab => {
+      tab.classList.toggle('active', tab === button);
+    });
+
+    document.querySelectorAll('.market-tab-panel').forEach(panel => {
+      panel.classList.toggle(
+        'active',
+        panel.dataset.marketPanel === selected
+      );
+    });
+  });
+});

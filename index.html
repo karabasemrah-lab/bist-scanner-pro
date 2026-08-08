@@ -45,13 +45,10 @@
     </header>
 
     <section id="dashboardView" class="view active dashboard-v12">
-      <div class="snapshot-head">
-        <div><span class="eyebrow">BIST GÜNLÜK SNAPSHOT</span><h2>Türkiye Piyasası</h2><p>Endeksler, piyasa sağlığı ve en güçlü tarama adayları.</p></div>
-        <div class="snapshot-date">Son güncelleme <b id="dashboardUpdated">-</b></div>
-      </div>
+      
 
       <section class="panel screener-ai-hero">
-        <div class="screener-ai-title"><div><span class="eyebrow">SCREENER AI</span><h2>Ne aradığını yaz, filtreleri biz oluşturalım</h2><p>Komutun mevcut tarama sonuçlarına uygulanır; veri yoksa tarama otomatik başlatılır.</p></div><span class="ai-live-badge">Açıklanabilir AI</span></div>
+        <div class="screener-ai-title"><div><span class="eyebrow">SCREENER AI</span></div><span class="ai-live-badge">Açıklanabilir AI</span></div>
         <div class="screener-ai-command"><input id="screenerAiPrompt" type="text" placeholder="Örn: Patlamaya hazır hisseleri bul"><button id="runScreenerAi">AI ile Tara</button></div>
         <div id="screenerAiLibrary" class="ai-command-library">
           <button data-ai-prompt="Patlamaya hazır hisseleri bul">📈 Breakout Adayları</button><button data-ai-prompt="Hacim patlaması yapan hisseleri bul">🔥 Hacim Patlaması</button><button data-ai-prompt="Güçlü para girişi olan hisseleri bul">💰 Para Girişi</button><button data-ai-prompt="Bugün en güçlü trend hisselerini göster">🚀 Güçlü Trend</button><button data-ai-prompt="Momentum hisselerini göster">⚡ Momentum</button><button data-ai-prompt="Banka hisselerinde breakout ara">🏦 Bankalar</button><button data-ai-prompt="Sanayi hisselerinde güçlü adayları göster">⚙️ Sanayi</button><button data-ai-prompt="Savunma hisselerinde fırsat ara">🛡️ Savunma</button><button data-ai-prompt="Enerji hisselerinde güçlü adayları bul">🌱 Enerji</button>
@@ -65,12 +62,57 @@
         <article><small>Hacim patlaması</small><b id="breadthVolume">%0</b><span>Ortalamanın üzerinde hacim</span></article>
         <article><small>70+ teknik skor</small><b id="breadthStrong">%0</b><span>Güçlü aday oranı</span></article>
       </section>
+      
+      <div class="market-list-tabs">
+      <article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
+  ...
+</article>
 
-      <section class="market-lists-grid">
-        <article class="panel mover-panel"><div class="panel-title"><h3>BIST Yükselenler</h3><span>İlk 20 günlük en güçlü</span></div><div id="advancersList" class="mover-list"><div class="empty">Tarama bekleniyor</div></div></article>
-        <article class="panel mover-panel"><div class="panel-title"><h3>BIST Düşenler</h3><span>İlk 20 günlük en zayıf</span></div><div id="declinersList" class="mover-list"><div class="empty">Tarama bekleniyor</div></div></article>
-        <article class="panel mover-panel"><div class="panel-title"><h3>En Hacimliler</h3><span>İlk 20 · 20 günlük ortalamaya göre</span></div><div id="volumeLeadersList" class="mover-list"><div class="empty">Tarama bekleniyor</div></div></article>
-      </section>
+<article class="panel mover-panel market-tab-panel" data-market-panel="decliners">
+  ...
+</article>
+
+<article class="panel mover-panel market-tab-panel" data-market-panel="volume">
+  ...
+</article>
+      </div>
+      <div class="market-list-tabs">
+  <button type="button" class="market-tab active" data-market-tab="advancers">Yükselenler</button>
+  <button type="button" class="market-tab" data-market-tab="decliners">Düşenler</button>
+  <button type="button" class="market-tab" data-market-tab="volume">Hacimliler</button>
+</div>
+
+<section class="market-lists-grid">
+  <article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
+    <div class="panel-title">
+      <h3>BIST Yükselenler</h3>
+      <span>İlk 20 günlük en güçlü</span>
+    </div>
+    <div id="advancersList" class="mover-list">
+      <div class="empty">Tarama bekleniyor</div>
+    </div>
+  </article>
+
+  <article class="panel mover-panel market-tab-panel" data-market-panel="decliners">
+    <div class="panel-title">
+      <h3>BIST Düşenler</h3>
+      <span>İlk 20 günlük en zayıf</span>
+    </div>
+    <div id="declinersList" class="mover-list">
+      <div class="empty">Tarama bekleniyor</div>
+    </div>
+  </article>
+
+  <article class="panel mover-panel market-tab-panel" data-market-panel="volume">
+    <div class="panel-title">
+      <h3>En Hacimliler</h3>
+      <span>İlk 20 · 20 günlük ortalamaya göre</span>
+    </div>
+    <div id="volumeLeadersList" class="mover-list">
+      <div class="empty">Tarama bekleniyor</div>
+    </div>
+  </article>
+</section>
 
       <section class="panel heatmap-panel">
         <div class="panel-title"><div><h3>BIST Sıcaklık Haritası</h3><span>Renk günlük değişimi, kutu büyüklüğü teknik skoru gösterir.</span></div><span id="heatmapUniverse">Son tarama</span></div>
