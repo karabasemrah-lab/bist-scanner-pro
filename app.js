@@ -1,6 +1,7 @@
 let allRows=[];
 let activeJob=null;
 let failedSymbols=[];
+let insufficientHistorySymbols=[];
 const $=id=>document.getElementById(id);
 function safeJsonParse(text,fallback){try{return JSON.parse(text)}catch(_){return fallback}}
 function storageGet(key,fallback){try{return safeJsonParse(localStorage.getItem(key)||'',fallback)}catch(_){return fallback}}
@@ -9,13 +10,13 @@ async function fetchJson(url,options={}){const res=await fetch(url,options);cons
 const watchlist=new Set(safeJsonParse(localStorage.getItem('bistScannerWatchlist')||'[]',[]));
 const titles={dashboard:'Dashboard',scanner:'Tarama',watchlist:'Watchlist',breakout:'Breakout',minervini:'Minervini',relative:'Relative Strength',ai:'AI Breakout',backtest:'Backtest',builder:'AI Builder',alarms:'Alarm Merkezi',portfolio:'Portföy',kap:'KAP AI',screenerai:'Screener AI',decision:'AI Decision Center',settings:'Ayarlar'};
 const filterIds=['fBreakout','fVolume','fBollinger','fEma','fRsi','fMacd','fAtr','fSupertrend','fDivergence'];
-const settingIds=['universe','minScore','minVol','setup','donchianLength','volumeSpikeValue','atrRatio','squeezeFactor',...filterIds];
+const settingIds=['universe','minScore','minVol','setup','donchianLength','fMoneyFlow','volumeSpikeValue','atrRatio','squeezeFactor',...filterIds];
 const columns=['star','symbol','name','close','changePct','volumeRatio','rsi','trAtr','breakoutPct','breakoutScore','squeezeScore','moneyFlowScore','rsScore','sector','aiBreakoutProbability','aiRiskScore','compositeScore','support1','resistance1','score','setup'];
 const defaultMarketCards=['XU100','XU030','XBANK','XUSIN','USDTRY','EURTRY','XAUUSD','BTCUSD','BRENT'];
 let marketCardCatalog=[];
 let visibleMarketCards=new Set(safeJsonParse(localStorage.getItem('bistVisibleMarketCards')||'null',null)||defaultMarketCards);
 let visibleColumns=new Set(safeJsonParse(localStorage.getItem('bistVisibleColumns')||JSON.stringify(columns),columns));
-const presets={loose:{minScore:35,minVol:.7,fBreakout:'score',fVolume:'score',fBollinger:'score',fEma:'score',fRsi:'score',fMacd:'score',fAtr:'off',fSupertrend:'score',fDivergence:'score'},normal:{minScore:55,minVol:1,fBreakout:'score',fVolume:'required',fBollinger:'score',fEma:'required',fRsi:'score',fMacd:'score',fAtr:'score',fSupertrend:'score',fDivergence:'score'},strict:{minScore:70,minVol:1.5,fBreakout:'required',fVolume:'required',fBollinger:'off',fEma:'required',fRsi:'required',fMacd:'required',fAtr:'required',fSupertrend:'required',fDivergence:'off'}};
+const presets={loose:{minScore:35,minVol:.7,fMoneyFlow:'score',fBreakout:'score',fVolume:'score',fBollinger:'score',fEma:'score',fRsi:'score',fMacd:'score',fAtr:'off',fSupertrend:'score',fDivergence:'score'},normal:{minScore:55,minVol:1,fBreakout:'score',fMoneyFlow:'score',fVolume:'required',fBollinger:'score',fEma:'required',fRsi:'score',fMacd:'score',fAtr:'score',fSupertrend:'score',fDivergence:'score'},strict:{minScore:70,minVol:1.5,fMoneyFlow:'score',fBreakout:'required',fVolume:'required',fBollinger:'off',fEma:'required',fRsi:'required',fMacd:'required',fAtr:'required',fSupertrend:'required',fDivergence:'off'}};
 function esc(v){return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function n(v,d=2){const x=Number(v);return Number.isFinite(x)?x.toFixed(d):'-'}
 function loadSettings(){const s=safeJsonParse(localStorage.getItem('bistScannerSettings')||'{}',{});settingIds.forEach(k=>{if(s[k]===undefined||!$(k))return;$(k).value=s[k]})}
@@ -25,7 +26,54 @@ function toggleWatch(symbol,event){event?.stopPropagation();watchlist.has(symbol
 window.toggleWatch=toggleWatch;
 function cell(col,html){return visibleColumns.has(col)?`<td data-col="${col}">${html}</td>`:''}
 function rowHtml(r,full=true){return `<tr onclick="showDetail('${esc(r.symbol)}')">${cell('star',`<button class="star ${watchlist.has(r.symbol)?'on':''}" onclick="toggleWatch('${esc(r.symbol)}',event)">★</button>`)}${cell('symbol',`<b>${esc(r.symbol)}</b>`)}${full?cell('name',esc(r.name)):''}${cell('close',n(r.close))}${cell('changePct',`<span class="${r.changePct>=0?'positive':'negative'}">${n(r.changePct)}</span>`)}${cell('volumeRatio',n(r.volumeRatio))}${full?cell('rsi',n(r.rsi,1))+cell('trAtr',n(r.trAtr))+cell('breakoutPct',`<span class="${r.breakoutPct>=0?'positive':'negative'}">${n(r.breakoutPct)}</span>`)+cell('breakoutScore',`<span class="score">${r.breakoutScore??'-'}</span>`)+cell('squeezeScore',`<span class="score">${r.squeezeScore??'-'}</span>`)+cell('moneyFlowScore',`<span class="score">${r.moneyFlowScore??'-'}</span>`)+cell('rsScore',`<span class="score rs-score">${r.rsScore??'-'}</span>`)+cell('sector',`<span class="sector-chip">${esc(r.sector||'Diğer')}</span>`)+cell('aiBreakoutProbability',`<span class="score ai-score">%${r.aiBreakoutProbability??'-'}</span>`)+cell('aiRiskScore',`<span class="score">${r.aiRiskScore??'-'}</span>`)+cell('compositeScore',`<span class="score composite">${r.compositeScore??r.score??'-'}</span>`)+cell('support1',n(r.support1))+cell('resistance1',n(r.resistance1)):''}${cell('score',`<span class="score">${r.score}</span>`)}${cell('setup',`<span class="pill">${esc(r.setup)}</span>`)}</tr>`}
-function filteredRows(){const minScore=+$('minScore').value,minVol=+$('minVol').value,setup=$('setup').value,q=$('search').value.trim().toLocaleLowerCase('tr');return allRows.filter(r=>r.score>=minScore&&r.volumeRatio>=minVol&&(setup==='all'||r.setup===setup)&&(!q||r.symbol.toLocaleLowerCase('tr').includes(q)||r.name.toLocaleLowerCase('tr').includes(q))&&r.passed!==false)}
+function filteredRows(){
+  const minScore = +$('minScore').value;
+  const minVol = +$('minVol').value;
+  const setup = $('setup').value;
+  const q = $('search').value.trim().toLocaleLowerCase('tr');
+
+  const filterMap = {
+    fBreakout: 'breakout',
+    fVolume: 'volumeSpike',
+    fBollinger: 'bollingerSqueeze',
+    fEma: 'emaTrend',
+    fRsi: 'rsiPositive',
+    fMacd: 'macdBullish',
+    fAtr: 'atrExpansion',
+    fSupertrend: 'supertrendBuy',
+    fDivergence: 'positiveDivergence',
+    fMoneyFlow: 'moneyFlowPositive'
+  };
+
+  return allRows.filter(r => {
+    if (r.score < minScore) return false;
+    if (r.volumeRatio < minVol) return false;
+
+    if (setup !== 'all' && r.setup !== setup) {
+      return false;
+    }
+
+    if (
+      q &&
+      !r.symbol.toLocaleLowerCase('tr').includes(q) &&
+      !r.name.toLocaleLowerCase('tr').includes(q)
+    ){
+      return false;
+    }
+
+    const conditions = r.conditions || {};
+
+    for (const [selectId, conditionName] of Object.entries(filterMap)) {
+      const mode = $(selectId)?.value;
+
+      if (mode === 'required' && conditions[conditionName] !== true) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
 function render(){applyColumnVisibility();const rows=filteredRows();$('rows').innerHTML=rows.map(r=>rowHtml(r,true)).join('');$('count').textContent=rows.length;$('breakouts').textContent=rows.filter(r=>r.setup==='Breakout').length;$('avgScore').textContent=rows.length?Math.round(rows.reduce((a,b)=>a+b.score,0)/rows.length):0;$('positiveCount').textContent=rows.filter(r=>r.changePct>0).length;$('resultLabel').textContent=`${rows.length} hisse`;renderDashboard(rows);renderIntelligence(allRows);renderWatch();renderHealthFromRows(allRows);renderPortfolio();renderDecisionCenter()}
 function renderDashboard(rows){const top=[...rows].sort((a,b)=>b.score-a.score).slice(0,7);$('topRows').innerHTML=top.map(r=>`<tr onclick="showDetail('${esc(r.symbol)}')"><td><b>${esc(r.symbol)}</b></td><td class="${r.changePct>=0?'positive':'negative'}">${n(r.changePct)}%</td><td>${n(r.volumeRatio)}x</td><td class="score">${r.score}</td><td><span class="pill">${esc(r.setup)}</span></td><td><button class="star ${watchlist.has(r.symbol)?'on':''}" onclick="toggleWatch('${esc(r.symbol)}',event)">★</button></td></tr>`).join('');const groups=['Breakout','Güçlü Trend','Pozitif Uyumsuzluk','İzleme','Zayıf'];const total=Math.max(rows.length,1);$('distribution').innerHTML=groups.map(g=>{const count=rows.filter(r=>r.setup===g).length;return `<div class="dist-row"><div><span>${g}</span><b>${count}</b></div><div class="bar"><i style="width:${count/total*100}%"></i></div></div>`}).join('')}
 function sectorSummary(rows){
@@ -46,30 +94,188 @@ function renderIntelligence(rows){
 function renderWatch(){const rows=allRows.filter(r=>watchlist.has(r.symbol));$('watchRows').innerHTML=rows.map(r=>rowHtml(r,false)).join('');$('watchEmpty').classList.toggle('hidden',rows.length>0);$('watchCount').textContent=watchlist.size}
 function showView(view){const target=$(`${view}View`);if(!target){console.error('Görünüm bulunamadı:',view);return}document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));target.classList.add('active');document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('pageTitle').textContent=titles[view]||'BIST Scanner Pro';window.scrollTo({top:0,behavior:'smooth'})}
 function setScanState(active){[$('scan'),$('scanTop')].forEach(b=>b.disabled=active);$('scan').textContent=active?'Tarama sürüyor...':'Taramayı Başlat';$('scanTop').textContent=active?'Taranıyor...':'Taramayı Yenile'}
-function updateProgress(job){const total=job.total||0,processed=job.processed||0;$('progressPanel').classList.remove('hidden');$('progressMessage').textContent=job.message||'Tarama sürüyor…';$('progressCounts').textContent=`${processed} / ${total}`;$('progressPercent').textContent=`${job.percent||0}%`;$('progressBar').style.width=`${job.percent||0}%`;$('progressFound').textContent=job.found||0;$('progressFailed').textContent=job.failed||0;$('progressRemaining').textContent=Math.max(0,total-processed)}
-function scanParams(){const map={fBreakout:'breakout',fVolume:'volumeSpike',fBollinger:'bollingerSqueeze',fEma:'emaTrend',fRsi:'rsiPositive',fMacd:'macdBullish',fAtr:'atrExpansion',fSupertrend:'supertrendBuy',fDivergence:'positiveDivergence'};const p=new URLSearchParams({universe:$('universe').value,donchianLength:$('donchianLength').value,volumeSpikeValue:$('volumeSpikeValue').value,atrRatio:$('atrRatio').value,squeezeFactor:$('squeezeFactor').value,_:Date.now()});Object.entries(map).forEach(([id,key])=>p.set(key,$(id).value));return p.toString()}
+function updateProgress(job){
+  console.log("UPDATE PROGRESS JOB:", job);
+
+  const data = job.result || job;
+
+  const total =
+    data.total ||
+    data.requested ||
+    job.total ||
+    0;
+
+  const processed =
+    data.processed ||
+    data.completed ||
+    job.processed ||
+    0;
+
+  const insufficientCount =
+    Array.isArray(data.insufficientHistorySymbols)
+      ? data.insufficientHistorySymbols.length
+      : (data.insufficientHistoryCount || 0);
+
+  const realFailed =
+    Array.isArray(data.failedSymbols)
+      ? data.failedSymbols.length
+      : (data.failed || 0);
+
+  const percent =
+    job.percent ??
+    data.percent ??
+    (total ? Math.round(processed / total * 100) : 0);
+
+  $('progressPanel').classList.remove('hidden');
+
+  $('progressMessage').textContent =
+    job.message || data.message || 'Günlük snapshot yüklendi.';
+
+  $('progressCounts').textContent =
+    `${processed} / ${total}`;
+
+  $('progressPercent').textContent =
+    `${percent}%`;
+
+  $('progressBar').style.width =
+    `${percent}%`;
+
+  $('progressFound').textContent =
+    processed;
+
+  $('progressFailed').textContent =
+    realFailed;
+
+  $('progressRemaining').textContent =
+    Math.max(0, total - processed - insufficientCount);
+}
+function scanParams(){
+  const map={
+    fBreakout:'breakout',
+    fVolume:'volumeSpike',
+    fBollinger:'bollingerSqueeze',
+    fEma:'emaTrend',
+    fRsi:'rsiPositive',
+    fMacd:'macdBullish',
+    fAtr:'atrExpansion',
+    fSupertrend:'supertrendBuy',
+    fDivergence:'positiveDivergence',
+    fMoneyFlow:'moneyFlowPositive'
+  };
+const p = new URLSearchParams({
+    universe: $('universe').value,
+    donchianLength: $('donchianLength').value,
+    volumeSpikeValue: $('volumeSpikeValue').value,
+    atrRatio: $('atrRatio').value,
+    squeezeFactor: $('squeezeFactor').value,
+    _: Date.now()
+});
+
+Object.entries(map).forEach(([id, key]) => {
+    p.set(key, $(id).value);
+});
+
+return p.toString();
+}
 async function scan(){
   if(activeJob)return;
-  setScanState(true);$('warning').classList.add('hidden');$('progressPanel').classList.remove('hidden');
+
+  setScanState(true);
+  $('warning').classList.add('hidden');
+  $('progressPanel').classList.remove('hidden');
+
   try{
-    const job=await fetchJson(`/api/scan/start?${scanParams()}`,{cache:'no-store'});
-    if(!job||!job.id)throw new Error(job?.message||'Tarama işi başlatılamadı.');
-    activeJob=job.id;updateProgress(job);
+    const job=await fetchJson(
+      `/api/scan/start?${scanParams()}`,
+      {cache:'no-store'}
+    );
+
+    if(!job||!job.id){
+      throw new Error(job?.message||'Tarama işi başlatılamadı.');
+    }
+
+    activeJob=job.id;
+    updateProgress(job);
+
     while(activeJob){
       await new Promise(r=>setTimeout(r,700));
-      const state=await fetchJson(`/api/scan/status?job=${encodeURIComponent(activeJob)}&_=${Date.now()}`,{cache:'no-store'});
+
+      const state=await fetchJson(
+        `/api/scan/status?job=${encodeURIComponent(activeJob)}&_=${Date.now()}`,
+        {cache:'no-store'}
+      );
+
       updateProgress(state);
+
       if(state.state==='done'){
-        const data=state.result||{};allRows=Array.isArray(data.rows)?data.rows:[];failedSymbols=Array.isArray(data.failedSymbols)?data.failedSymbols:[];
-        $('updated').textContent=data.updatedAt?.slice(11,16)||'-';
-        $('warning').textContent=data.warning||`Tarama tamamlandı: ${allRows.length}/${data.requested||0} hisse. Son fiyat tarihi: ${allRows[0]?.dataDate||'-'}`;
-        $('warning').classList.remove('hidden');render();evaluateAlarms(allRows);await loadDashboard(true);activeJob=null;
-      }else if(state.state==='error'){throw new Error(state.message||'Tarama tamamlanamadı')}
+        const data=state.result||{};
+
+        allRows=Array.isArray(data.rows)
+          ? data.rows
+          : [];
+
+        failedSymbols=Array.isArray(data.failedSymbols)
+          ? data.failedSymbols
+          : [];
+
+        insufficientHistorySymbols=Array.isArray(data.insufficientHistorySymbols)
+          ? data.insufficientHistorySymbols
+          : [];
+
+        $('updated').textContent=
+          data.updatedAt?.slice(11,16)||'-';
+
+        $('warning').textContent=
+          data.warning||
+          `Tarama tamamlandı: ${allRows.length}/${data.requested||0} hisse. Son fiyat tarihi: ${allRows[0]?.dataDate||'-'}`;
+
+        $('warning').classList.remove('hidden');
+
+        render();
+        evaluateAlarms(allRows);
+        await loadDashboard(true);
+
+        activeJob=null;
+
+      }else if(state.state==='error'){
+        throw new Error(
+          state.message||'Tarama tamamlanamadı'
+        );
+      }
     }
-  }catch(e){activeJob=null;$('warning').textContent=`Tarama başlatılamadı: ${e.message}`;$('warning').classList.remove('hidden')}
-  finally{setScanState(false)}
+
+  }catch(e){
+    activeJob=null;
+    $('warning').textContent=
+      `Tarama başlatılamadı: ${e.message}`;
+    $('warning').classList.remove('hidden');
+
+  }finally{
+  setScanState(false);
 }
-async function loadLast(){try{const data=await fetchJson('/api/last-scan',{cache:'no-store'});if(Array.isArray(data.rows)&&data.rows.length){allRows=data.rows;failedSymbols=Array.isArray(data.failedSymbols)?data.failedSymbols:[];$('updated').textContent=data.updatedAt?.slice(11,16)||'-';render()}}catch(e){}}
+}
+
+async function loadLast(){
+  try{
+    const data=await fetchJson('/api/last-scan',{cache:'no-store'});
+
+    if(Array.isArray(data.rows) && data.rows.length){
+      allRows=data.rows;
+
+      failedSymbols=Array.isArray(data.failedSymbols)
+        ? data.failedSymbols
+        : [];
+
+      insufficientHistorySymbols=Array.isArray(data.insufficientHistorySymbols)
+        ? data.insufficientHistorySymbols
+        : [];
+
+      $('updated').textContent=data.updatedAt?.slice(11,16)||'-';
+
+      render();
+    }
+  }catch(e){}
+}
 function yes(v){return v?'✓':'—'}
 let detailCurrentIndex=-1;
 function showDetail(symbol){const r=allRows.find(x=>x.symbol===symbol);if(!r)return;detailCurrentIndex=allRows.findIndex(x=>x.symbol===symbol);$('detailSymbol').textContent=r.symbol;$('detailName').textContent=r.name;$('detailScore').textContent=r.score;const c=r.conditions||{};$('detailGrid').innerHTML=[['Fiyat',n(r.close)],['Değişim',`${n(r.changePct)}%`],['Teknik skor',r.technicalScore??'-'],['Breakout skoru',r.breakoutScore??'-'],['Sıkışma skoru',r.squeezeScore??'-'],['Composite skor',r.compositeScore??r.score??'-'],['AI breakout olasılığı',`%${r.aiBreakoutProbability??'-'}`],['AI risk skoru',r.aiRiskScore??'-'],['Beklenen 10G getiri',`${n(r.aiExpectedReturn10d)}%`],['Model güveni',r.aiModelConfidence??'-'],['Model örnek sayısı',r.aiSampleSize??0],['Relative Strength',r.rsScore??'-'],['RS trendi',r.rsTrend??'-'],['RS 20G',r.rs20??'-'],['RS 60G',r.rs60??'-'],['RS 120G',r.rs120??'-'],['RS 252G',r.rs252??'-'],['Sektör',r.sector??'Diğer'],['Sektör skoru',r.sectorScore??'-'],['Sektör sırası',r.sectorRank??'-'],['Para akışı skoru',r.moneyFlowScore??'-'],['CMF 20',n(r.cmf20,3)],['OBV eğimi 20G',`${n(r.obvSlope20)}%`],['A/D eğimi 20G',`${n(r.adlSlope20)}%`],['Yükseliş/Düşüş hacmi',`${n(r.upDownVolumeRatio)}x`],['Fiyat-hacim korelasyonu',n(r.priceVolumeCorrelation,3)],['Yakın destek',n(r.support1)],['Desteğe uzaklık',`${n(r.supportDistancePct)}%`],['İkinci destek',n(r.support2)],['Yakın direnç',n(r.resistance1)],['Dirence uzaklık',`${n(r.resistanceDistancePct)}%`],['İkinci direnç',n(r.resistance2)],['Destek temas',r.supportTouches??0],['Direnç temas',r.resistanceTouches??0],['Hacim oranı',`${n(r.volumeRatio)}x`],['RSI',n(r.rsi,1)],['TR / ATR',n(r.trAtr)],['Kırılım',`${n(r.breakoutPct)}%`],['BB genişliği',`${n(r.bbWidth)}%`],['EMA20',n(r.ema20)],['EMA50',n(r.ema50)],['EMA200',n(r.ema200)],['MACD',n(r.macd,3)],['SuperTrend',n(r.supertrend)],['Breakout',yes(c.breakout)],['Hacim patlaması',yes(c.volumeSpike)],['Bollinger sıkışması',yes(c.bollingerSqueeze)],['EMA trend',yes(c.emaTrend)],['MACD pozitif',yes(c.macdBullish)],['SuperTrend AL',yes(c.supertrendBuy)],['Pozitif uyumsuzluk',yes(c.positiveDivergence)],['Para akışı pozitif',yes(c.moneyFlowPositive)],['Durum',r.setup],['Veri tarihi',r.dataDate||'-']].map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('');if($('detailPosition'))$('detailPosition').textContent=`${detailCurrentIndex+1} / ${allRows.length}`;openModal('detailModal')}
@@ -84,8 +290,49 @@ function loadNamedProfile(name){const all=safeJsonParse(localStorage.getItem('bi
 function deleteNamedProfile(){const name=$('savedProfiles').value;if(!name)return;const all=safeJsonParse(localStorage.getItem('bistProfiles')||'{}',{});delete all[name];localStorage.setItem('bistProfiles',JSON.stringify(all));refreshProfiles()}
 function buildColumnPanel(){$('columnPanel').innerHTML=columns.map(c=>`<label><input type="checkbox" data-column="${c}" ${visibleColumns.has(c)?'checked':''}> ${document.querySelector(`#resultTable th[data-col="${c}"]`)?.textContent||c}</label>`).join('');$('columnPanel').querySelectorAll('input').forEach(i=>i.addEventListener('change',()=>{i.checked?visibleColumns.add(i.dataset.column):visibleColumns.delete(i.dataset.column);localStorage.setItem('bistVisibleColumns',JSON.stringify([...visibleColumns]));render()}))}
 function applyColumnVisibility(){document.querySelectorAll('#resultTable [data-col]').forEach(el=>el.classList.toggle('col-hidden',!visibleColumns.has(el.dataset.col)))}
-function showFailed(){ $('failedSummary').textContent=`${failedSymbols.length} sembol için geçerli Yahoo verisi alınamadı.`;$('failedList').innerHTML=failedSymbols.length?failedSymbols.map(s=>`<span>${esc(s)}</span>`).join(''):'<p>Başarısız sembol yok.</p>';openModal('failedModal')}
+function showFailed(){
+  const insufficientCount = insufficientHistorySymbols.length;
+  const realErrorCount = failedSymbols.length;
 
+  $('failedSummary').textContent =
+    `${insufficientCount} sembol yetersiz fiyat geçmişi nedeniyle tam analiz edilemedi.` +
+    (realErrorCount
+      ? ` ${realErrorCount} sembolde gerçek veri/hesaplama hatası var.`
+      : '');
+
+  let html = '';
+
+  if(insufficientCount){
+    html += `
+      <div>
+        <b>Yetersiz geçmiş / yeni hisse (${insufficientCount})</b>
+        <div>
+          ${insufficientHistorySymbols
+            .map(s => `<span>${esc(s)}</span>`)
+            .join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if(realErrorCount){
+    html += `
+      <div>
+        <b>Gerçek hata (${realErrorCount})</b>
+        <div>
+          ${failedSymbols
+            .map(s => `<span>${esc(s)}</span>`)
+            .join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  $('failedList').innerHTML =
+    html || 'Yetersiz geçmiş veya gerçek hata bulunan sembol yok.';
+
+  openModal('failedModal');
+}
 
 function sparkPath(values,w=180,h=90,pad=5){
   if(!Array.isArray(values)||values.length<2)return '';
@@ -122,7 +369,7 @@ function renderExposureChart(rows){
   const svg=$('exposureChart');if(!svg)return;const scores=[...(rows||[])].sort((a,b)=>a.score-b.score).map(r=>Number(r.score)||0);if(scores.length<2){svg.innerHTML='';return}
   const sample=[];for(let i=0;i<Math.min(60,scores.length);i++){const idx=Math.round(i*(scores.length-1)/(Math.min(60,scores.length)-1));sample.push(scores[idx])}
   const path=sample.map((v,i)=>`${i?'L':'M'} ${(i*700/(sample.length-1)).toFixed(1)} ${(220-v*2).toFixed(1)}`).join(' ');const area=`${path} L 700 230 L 0 230 Z`;
-  svg.innerHTML=`<path d="${area}" fill="rgba(245,158,11,.18)"></path><path d="${path}" fill="none" stroke="#f59e0b" stroke-width="3" vector-effect="non-scaling-stroke"></path>`
+  svg.innerHTML=`<path d="${area}" filfilterModesl="rgba(245,158,11,.18)"></path><path d="${path}" fill="none" stroke="#f59e0b" stroke-width="3" vector-effect="non-scaling-stroke"></path>`
 }
 function renderBreadth(b){
   b=b||{};$('breadthAD').textContent=`${b.advancing||0} / ${b.declining||0}`;$('breadthAdvancePct').textContent=`%${b.advancePct||0} yükselen`;$('breadthEma').textContent=`%${b.aboveEmaPct||0}`;$('breadthVolume').textContent=`%${b.volumeSpikePct||0}`;$('breadthStrong').textContent=`%${b.strongPct||0}`;
@@ -218,12 +465,80 @@ function renderBuilderResult(data){
 }
 async function parseBuilder(){const prompt=$('builderPrompt').value.trim();if(!prompt){alert('Önce stratejini yaz.');return}$('parseBuilder').disabled=true;$('parseBuilder').textContent='Çözümleniyor…';$('builderStatus').textContent='Komut analiz ediliyor…';$('builderStatus').classList.remove('hidden');try{const data=await fetchJson(`/api/ai-builder/parse?prompt=${encodeURIComponent(prompt)}&_=${Date.now()}`,{cache:'no-store'});renderBuilderResult(data)}catch(e){$('builderStatus').textContent='Komut çözümlenemedi: '+e.message;$('builderStatus').classList.remove('hidden')}finally{$('parseBuilder').disabled=false;$('parseBuilder').textContent='Komutu Çözümle'}}
 function applyBuilderToScan(){if(!parsedBuilderConfig)return;const c=parsedBuilderConfig.conditions||{},t=parsedBuilderConfig.thresholds||{};const map={breakout:'fBreakout',volume:'fVolume',ema:'fEma',rsi:'fRsi',macd:'fMacd',atr:'fAtr',supertrend:'fSupertrend',divergence:'fDivergence'};Object.values(map).forEach(id=>{if($(id))$(id).value='off'});Object.entries(map).forEach(([k,id])=>{if(c[k]&&$(id))$(id).value='required'});if(t.donchian&&$('donchianLength'))$('donchianLength').value=t.donchian;if(t.volumeMin&&$('volumeSpikeValue'))$('volumeSpikeValue').value=t.volumeMin;if(t.atrMin&&$('atrRatio'))$('atrRatio').value=t.atrMin;showView('scanner');$('warning').textContent='AI Builder ayarları taramaya uygulandı. Taramayı Başlat düğmesine bas.';$('warning').classList.remove('hidden');}
-function applyBuilderToBacktest(){if(!parsedBuilderConfig)return;const c=parsedBuilderConfig.conditions||{},t=parsedBuilderConfig.thresholds||{};const ids={breakout:'btUseBreakout',rsi:'btUseRsi',volume:'btUseVolume',ema:'btUseEma',supertrend:'btUseSupertrend',moneyFlow:'btUseMoneyFlow',squeeze:'btUseSqueeze',rs:'btUseRs'};Object.values(ids).forEach(id=>{if($(id))$(id).checked=false});Object.entries(ids).forEach(([k,id])=>{if($(id))$(id).checked=!!c[k]});if(t.donchian&&$('btDonchian'))$('btDonchian').value=t.donchian;if(t.rsiMin&&$('btRsi'))$('btRsi').value=t.rsiMin;if(t.volumeMin&&$('btVolume'))$('btVolume').value=t.volumeMin;if(t.moneyFlowMin&&$('btMoneyFlow'))$('btMoneyFlow').value=t.moneyFlowMin;if(t.squeezeMin&&$('btSqueeze'))$('btSqueeze').value=t.squeezeMin;if(t.rsMin!==undefined&&$('btRs'))$('btRs').value=t.rsMin;showView('backtest');}
-if($('parseBuilder'))$('parseBuilder').addEventListener('click',parseBuilder);
-if($('applyBuilderScan'))$('applyBuilderScan').addEventListener('click',applyBuilderToScan);
-if($('applyBuilderBacktest'))$('applyBuilderBacktest').addEventListener('click',applyBuilderToBacktest);
-document.querySelectorAll('.builder-example').forEach(b=>b.addEventListener('click',()=>{$('builderPrompt').value=b.textContent.trim();parseBuilder()}));
+function applyBuilderToBacktest(){
+  if(!parsedBuilderConfig) return;
 
+  const c = parsedBuilderConfig.conditions || {};
+  const t = parsedBuilderConfig.thresholds || {};
+
+  showView('backtest');
+
+  const ids = {
+    breakout: 'btUseBreakout',
+    rsi: 'btUseRsi',
+    volume: 'btUseVolume',
+    ema: 'btUseEma',
+    supertrend: 'btUseSupertrend',
+    moneyFlow: 'btUseMoneyFlow',
+    squeeze: 'btUseSqueeze',
+    rs: 'btUseRs'
+  };
+  // AI Builder hazır komut butonları
+document.querySelectorAll('#builderView button').forEach(btn => {
+  const text = btn.textContent.trim();
+
+  const isExample =
+    text.startsWith('RSI 55 üzeri') ||
+    text.startsWith('Son 20 günün zirvesini') ||
+    text.startsWith('Sıkışma skoru 70 üzeri');
+
+  if(!isExample) return;
+
+  btn.addEventListener('click', () => {
+    const prompt = $('builderPrompt');
+    if(!prompt) return;
+
+    prompt.value = text;
+    prompt.focus();
+  });
+});
+
+  // Önce bütün Backtest koşullarını kapat
+  Object.values(ids).forEach(id => {
+    const el = $(id);
+    if(el) el.checked = false;
+  });
+
+  // AI Builder'ın seçtiklerini aç
+  Object.entries(ids).forEach(([key,id]) => {
+    const el = $(id);
+    if(el) el.checked = c[key] === true;
+  });
+
+  // Eşikleri aynen aktar
+  if($('btDonchian') && t.donchian !== undefined)
+    $('btDonchian').value = t.donchian;
+
+  if($('btRsi') && t.rsiMin !== undefined)
+    $('btRsi').value = t.rsiMin;
+
+  if($('btVolume') && t.volumeMin !== undefined)
+    $('btVolume').value = String(t.volumeMin).replace('.', ',');
+
+  if($('btMoneyFlow') && t.moneyFlowMin !== undefined)
+    $('btMoneyFlow').value = t.moneyFlowMin;
+
+  if($('btSqueeze') && t.squeezeMin !== undefined)
+    $('btSqueeze').value = t.squeezeMin;
+
+  if($('btRs') && t.rsMin !== undefined)
+    $('btRs').value = t.rsMin;
+
+  console.log('AI Builder → Backtest:', {
+    conditions: c,
+    thresholds: t
+  });
+}
 
 
 // v2.8 Screener AI
@@ -285,7 +600,7 @@ async function ensureScanData(messageTarget){
   if(allRows.length)return true;
   if(messageTarget)messageTarget.innerHTML='<div class="empty">Tarama otomatik başlatılıyor…</div>';
   if(activeJob){while(activeJob)await new Promise(r=>setTimeout(r,600));}
-  else await scan();
+  
   if(!allRows.length)await loadLast();
   if(!allRows.length)throw new Error('Tarama sonucu oluşmadı. Tarama ekranında veri kaynağı ve sembol listesini kontrol et.');
   return true;
@@ -324,18 +639,88 @@ function money(v){const x=Number(v);return Number.isFinite(x)?x.toLocaleString('
 function portfolioPrice(symbol){const r=allRows.find(x=>String(x.symbol).toUpperCase()===String(symbol).toUpperCase());return r&&Number.isFinite(Number(r.close))?Number(r.close):null}
 function savePortfolio(){localStorage.setItem('bistPortfolio',JSON.stringify(portfolio));renderPortfolio()}
 function addPortfolio(){
-  const symbol=($('pfSymbol')?.value||'').trim().toUpperCase();
-  const lots=Number($('pfLots')?.value),cost=Number($('pfCost')?.value),stop=Number($('pfStop')?.value||0),target=Number($('pfTarget')?.value||0),note=($('pfNote')?.value||'').trim();
-  if(!/^[A-Z0-9]{3,8}$/.test(symbol)){alert('Geçerli bir BIST kodu gir.');return}
-  if(!(lots>0)||!(cost>0)){alert('Lot ve maliyet sıfırdan büyük olmalı.');return}
-  portfolio.push({id:`pf_${Date.now()}_${Math.random().toString(16).slice(2)}`,symbol,lots,cost,stop:stop>0?stop:null,target:target>0?target:null,note,createdAt:new Date().toISOString()});
-  ['pfSymbol','pfCost','pfStop','pfTarget','pfNote'].forEach(id=>{if($(id))$(id).value=''});savePortfolio();
+
+  const symbol = ($('pfSymbol')?.value || '').trim().toUpperCase();
+  const lots = Number($('pfLots')?.value);
+  const cost = Number($('pfCost')?.value);
+  const stop = Number($('pfStop')?.value || 0);
+  const target = Number($('pfTarget')?.value || 0);
+  const note = ($('pfNote')?.value || '').trim();
+
+  if(!/^[A-Z0-9]{3,8}$/.test(symbol)){
+    alert('Geçerli bir BIST kodu gir.');
+    return;
+  }
+
+  if(!(lots > 0) || !(cost > 0)){
+    alert('Lot ve maliyet sıfırdan büyük olmalı.');
+    return;
+  }
+
+  if(editingPortfolioId){
+
+    const p = portfolio.find(x => x.id === editingPortfolioId);
+
+    if(p){
+      p.symbol = symbol;
+      p.lots = lots;
+      p.cost = cost;
+      p.stop = stop > 0 ? stop : null;
+      p.target = target > 0 ? target : null;
+      p.note = note;
+      p.updatedAt = new Date().toISOString();
+    }
+
+    editingPortfolioId = null;
+
+  } else {
+
+    portfolio.push({
+      id: `pf_${Date.now()}_${Math.random().toString(16).slice(2)}`,
+      symbol,
+      lots,
+      cost,
+      stop: stop > 0 ? stop : null,
+      target: target > 0 ? target : null,
+      note,
+      createdAt: new Date().toISOString()
+    });
+
+  }
+
+  ['pfSymbol','pfCost','pfStop','pfTarget','pfNote'].forEach(id => {
+    if($(id)) $(id).value = '';
+  });
+
+  if($('pfLots')) $('pfLots').value = '100';
+
+  const btn = $('pfAdd');
+  if(btn) btn.textContent = 'Pozisyon Ekle';
+
+  savePortfolio();
 }
 function deletePortfolio(id){portfolio=portfolio.filter(x=>x.id!==id);savePortfolio()}
+
+let editingPortfolioId = null;
+
 function editPortfolio(id){
-  const p=portfolio.find(x=>x.id===id);if(!p)return;
-  $('pfSymbol').value=p.symbol;$('pfLots').value=p.lots;$('pfCost').value=p.cost;$('pfStop').value=p.stop||'';$('pfTarget').value=p.target||'';$('pfNote').value=p.note||'';
-  portfolio=portfolio.filter(x=>x.id!==id);savePortfolio();showView('portfolio');
+
+  const p = portfolio.find(x => x.id === id);
+  if(!p) return;
+
+  editingPortfolioId = id;
+
+  $('pfSymbol').value = p.symbol;
+  $('pfLots').value = p.lots;
+  $('pfCost').value = p.cost;
+  $('pfStop').value = p.stop || '';
+  $('pfTarget').value = p.target || '';
+  $('pfNote').value = p.note || '';
+
+  const btn = $('pfAdd');
+  if(btn) btn.textContent = 'Pozisyonu Güncelle';
+
+  showView('portfolio');
 }
 function renderPortfolio(){
   if(!$('pfRows'))return;
@@ -407,27 +792,299 @@ function decisionRisks(r,risk){
 function toggleDecisionFavorite(symbol,e){if(e)e.stopPropagation();decisionFavorites.has(symbol)?decisionFavorites.delete(symbol):decisionFavorites.add(symbol);localStorage.setItem('decisionFavorites',JSON.stringify([...decisionFavorites]));renderDecisionCenter()}
 window.toggleDecisionFavorite=toggleDecisionFavorite;
 function renderDecisionCenter(){
- if(!$('decisionOpportunities'))return; const limit=Number($('decisionLimit')?.value||10);
- const rows=(allRows||[]).map(r=>({...r,_decisionRisk:decisionRisk(r),_decisionReturn:decisionExpectedReturn(r),_decisionConfidence:decisionConfidence(r),_decisionScore:decisionScore(r)})).filter(r=>r.symbol&&r._decisionConfidence>=35).sort((a,b)=>b._decisionScore-a._decisionScore).slice(0,limit);
- $('decisionOpportunityCount').textContent=rows.length; $('decisionAvgConfidence').textContent=rows.length?`${Math.round(rows.reduce((a,b)=>a+b._decisionConfidence,0)/rows.length)}%`:'0%'; $('decisionAvgReturn').textContent=rows.length?`${n(rows.reduce((a,b)=>a+b._decisionReturn,0)/rows.length)}%`:'0%'; $('decisionLowRisk').textContent=rows.filter(r=>r._decisionRisk<=35).length; $('decisionFavoriteCount').textContent=decisionFavorites.size;
- $('decisionOpportunities').innerHTML=rows.length?rows.map((r,i)=>{const reasons=decisionReasons(r),risks=decisionRisks(r,r._decisionRisk);return `<article class="decision-card" onclick="showDetail('${esc(r.symbol)}')"><div class="decision-rank">${i+1}</div><div class="decision-main"><div class="decision-symbol"><b>${esc(r.symbol)}</b><small>${esc(r.name||r.sector||'')}</small></div><div class="decision-metrics"><span><small>Karar</small><b>${r._decisionScore}</b></span><span><small>Güven</small><b>%${r._decisionConfidence}</b></span><span><small>Beklenti</small><b class="${r._decisionReturn>=0?'positive':'negative'}">${n(r._decisionReturn)}%</b></span><span><small>Risk</small><b class="risk-${decisionRiskLabel(r._decisionRisk).toLowerCase()}">${decisionRiskLabel(r._decisionRisk)}</b></span></div><div class="decision-explain"><div>${reasons.map(x=>`<p>✓ ${esc(x)}</p>`).join('')}</div><div class="risk">${risks.map(x=>`<p>! ${esc(x)}</p>`).join('')}</div></div></div><button class="decision-star ${decisionFavorites.has(r.symbol)?'on':''}" onclick="toggleDecisionFavorite('${esc(r.symbol)}',event)">★</button></article>`}).join(''):'<div class="empty">Uygun fırsat bulunamadı. Önce BIST 100 veya BIST Tüm taraması yap.</div>';
- const fav=(allRows||[]).filter(r=>decisionFavorites.has(r.symbol)).map(r=>({...r,_decisionRisk:decisionRisk(r),_decisionReturn:decisionExpectedReturn(r),_decisionConfidence:decisionConfidence(r),_decisionScore:decisionScore(r)})).sort((a,b)=>b._decisionScore-a._decisionScore);
- $('decisionFavorites').innerHTML=fav.length?fav.map(r=>`<div class="decision-fav-row" onclick="showDetail('${esc(r.symbol)}')"><b>${esc(r.symbol)}</b><span>Karar ${r._decisionScore}</span><span>Güven %${r._decisionConfidence}</span><span class="${r._decisionReturn>=0?'positive':'negative'}">${n(r._decisionReturn)}%</span><button onclick="toggleDecisionFavorite('${esc(r.symbol)}',event)">×</button></div>`).join(''):'<div class="empty">Henüz favori aday yok.</div>';
- const matrix=rows.slice(0,20); $('decisionMatrix').innerHTML=matrix.length?matrix.map(r=>`<button class="matrix-point risk-${decisionRiskLabel(r._decisionRisk).toLowerCase()}" style="left:${Math.max(3,Math.min(95,r._decisionRisk))}%;bottom:${Math.max(5,Math.min(92,50+r._decisionReturn*3))}%" title="${esc(r.symbol)} · Risk ${r._decisionRisk} · Beklenti ${n(r._decisionReturn)}%" onclick="showDetail('${esc(r.symbol)}')"><b>${esc(r.symbol)}</b></button>`).join('')+'<span class="matrix-axis-x">Risk →</span><span class="matrix-axis-y">Beklenen getiri ↑</span>':'<div class="empty">Tarama verisi bekleniyor.</div>';
+
+  if(!$('decisionOpportunities')) return;
+
+  const limit = Number($('decisionLimit')?.value || 10);
+
+  const rows = (allRows || [])
+    .map(r => ({
+      ...r,
+      _decisionRisk: decisionRisk(r),
+      _decisionReturn: decisionExpectedReturn(r),
+      _decisionConfidence: decisionConfidence(r),
+      _decisionScore: decisionScore(r)
+    }))
+    .filter(r => r.symbol && r._decisionConfidence >= 35)
+    .sort((a,b) => b._decisionScore - a._decisionScore)
+    .slice(0, limit);
+
+  $('decisionOpportunityCount').textContent = rows.length;
+
+  $('decisionAvgConfidence').textContent = rows.length
+    ? `${Math.round(rows.reduce((a,b) => a + b._decisionConfidence, 0) / rows.length)}%`
+    : '0%';
+
+  $('decisionAvgReturn').textContent = rows.length
+    ? `${n(rows.reduce((a,b) => a + b._decisionReturn, 0) / rows.length)}%`
+    : '0%';
+
+  $('decisionLowRisk').textContent =
+    rows.filter(r => r._decisionRisk <= 35).length;
+
+  $('decisionFavoriteCount').textContent =
+    decisionFavorites.size;
+
+  $('decisionOpportunities').innerHTML = rows.length
+    ? rows.map((r,i) => {
+
+        const reasons = decisionReasons(r);
+        const risks = decisionRisks(r, r._decisionRisk);
+
+        return `
+          <article class="decision-card"
+                   onclick="showDetail('${esc(r.symbol)}')">
+
+            <div class="decision-rank">${i + 1}</div>
+
+            <div class="decision-main">
+
+              <div class="decision-symbol">
+                <b>${esc(r.symbol)}</b>
+                <small>${esc(r.name || r.sector || '')}</small>
+              </div>
+
+              <div class="decision-metrics">
+
+                <span>
+                  <small>Karar</small>
+                  <b>${r._decisionScore}</b>
+                </span>
+
+                <span>
+                  <small>Güven</small>
+                  <b>%${r._decisionConfidence}</b>
+                </span>
+
+                <span>
+                  <small>Beklenti</small>
+                  <b class="${r._decisionReturn >= 0 ? 'positive' : 'negative'}">
+                    ${n(r._decisionReturn)}%
+                  </b>
+                </span>
+
+                <span>
+                  <small>Risk</small>
+                  <b class="risk-${decisionRiskLabel(r._decisionRisk).toLowerCase()}">
+                    ${decisionRiskLabel(r._decisionRisk)}
+                  </b>
+                </span>
+
+              </div>
+
+              <div class="decision-explain">
+
+                <div>
+                  ${reasons.map(x => `✓ ${esc(x)}`).join('<br>')}
+                </div>
+
+                <div class="risk">
+                  ${risks.map(x => `! ${esc(x)}`).join('<br>')}
+                </div>
+
+              </div>
+
+            </div>
+
+            <button
+              class="decision-star ${decisionFavorites.has(r.symbol) ? 'on' : ''}"
+              onclick="toggleDecisionFavorite('${esc(r.symbol)}',event)">
+              ★
+            </button>
+
+          </article>
+        `;
+
+      }).join('')
+    : 'Uygun fırsat bulunamadı. Önce BIST 100 veya BIST Tüm taraması yap.';
+
+
+  const fav = (allRows || [])
+    .filter(r => decisionFavorites.has(r.symbol))
+    .map(r => ({
+      ...r,
+      _decisionRisk: decisionRisk(r),
+      _decisionReturn: decisionExpectedReturn(r),
+      _decisionConfidence: decisionConfidence(r),
+      _decisionScore: decisionScore(r)
+    }))
+    .sort((a,b) => b._decisionScore - a._decisionScore);
+
+  $('decisionFavorites').innerHTML = fav.length
+    ? fav.map(r => `
+        <div class="decision-fav-row"
+             onclick="showDetail('${esc(r.symbol)}')">
+
+          <b>${esc(r.symbol)}</b>
+
+          <span>Karar ${r._decisionScore}</span>
+
+          <span>Güven %${r._decisionConfidence}</span>
+
+          <span class="${r._decisionReturn >= 0 ? 'positive' : 'negative'}">
+            ${n(r._decisionReturn)}%
+          </span>
+
+          <button onclick="toggleDecisionFavorite('${esc(r.symbol)}',event)">
+            ×
+          </button>
+
+        </div>
+      `).join('')
+    : 'Henüz favori aday yok.';
+
+
+  const matrix = rows.slice(0,20);
+
+  $('decisionMatrix').innerHTML = matrix.length
+    ? matrix.map(r => `
+        <button
+          class="matrix-point risk-${decisionRiskLabel(r._decisionRisk).toLowerCase()}"
+          style="
+            left:${Math.max(3,Math.min(95,r._decisionRisk))}%;
+            bottom:${Math.max(5,Math.min(92,50+r._decisionReturn*3))}%;
+          "
+          title="${esc(r.symbol)} · Risk ${r._decisionRisk} · Beklenti ${n(r._decisionReturn)}%"
+          onclick="showDetail('${esc(r.symbol)}')">
+
+          <b>${esc(r.symbol)}</b>
+
+        </button>
+      `).join('') + 'Risk → Beklenen getiri ↑'
+    : 'Tarama verisi bekleniyor.';
 }
 async function refreshDecisionCenter(){
-  const btn=$('refreshDecision');if(btn){btn.disabled=true;btn.textContent='Veri hazırlanıyor…'}
-  try{await ensureScanData($('decisionOpportunities'));renderDecisionCenter()}catch(e){$('decisionOpportunities').innerHTML=`<div class="error-box">Karar Merkezi çalıştırılamadı: ${esc(e.message)}</div>`;$('decisionMatrix').innerHTML='<div class="empty">Tarama verisi yok.</div>'}finally{if(btn){btn.disabled=false;btn.textContent='Karar Merkezini Yenile'}}
+
+  const btn = $('refreshDecision');
+
+  if(btn){
+    btn.disabled = true;
+    btn.textContent = 'Yenileniyor…';
+  }
+
+  try{
+
+    const data = await fetchJson(
+      `/api/last-scan?_=${Date.now()}`,
+      {cache:'no-store'}
+    );
+
+    if(Array.isArray(data.rows) && data.rows.length){
+      allRows = data.rows;
+    }
+
+    renderDecisionCenter();
+
+  }catch(e){
+
+    console.error('Decision Center yenileme hatası:', e);
+
+    $('decisionOpportunities').innerHTML =
+      `<div class="error-box">
+        Karar Merkezi yenilenemedi: ${esc(e.message)}
+      </div>`;
+
+  }finally{
+
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = 'Karar Merkezini Yenile';
+    }
+
+  }
 }
-$('refreshDecision')?.addEventListener('click',refreshDecisionCenter); $('decisionLimit')?.addEventListener('change',renderDecisionCenter); document.querySelector('[data-view="decision"]')?.addEventListener('click',()=>{if(allRows.length)renderDecisionCenter()});
+
+const refreshDecisionBtn = $('refreshDecision');
+
+if(refreshDecisionBtn){
+  refreshDecisionBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await refreshDecisionCenter();
+  });
+}
+
+$('decisionLimit')?.addEventListener(
+  'change',
+  renderDecisionCenter
+);
+
 renderDecisionCenter();
 
 // v2.9.6 shared module bridge
-window.__bistSetRows=function(rows){allRows=Array.isArray(rows)?rows:[]; if(typeof render==='function')render();};
-window.__bistGetRows=function(){return allRows;};
-window.__bistSetKapRows=function(rows){kapRows=Array.isArray(rows)?rows:[];};
-window.__bistGetKapRows=function(){return kapRows;};
-window.renderBuilderResult=renderBuilderResult;
-window.runScreenerAi=runScreenerAi;
-window.renderKap=renderKap;
-window.renderDecisionCenter=renderDecisionCenter;
+window.__bistSetRows = function(rows){
+  allRows = Array.isArray(rows) ? rows : [];
+  if(typeof render === 'function') render();
+};
+
+window.__bistGetRows = function(){
+  return allRows;
+};
+
+window.__bistSetKapRows = function(rows){
+  kapRows = Array.isArray(rows) ? rows : [];
+};
+
+window.__bistGetKapRows = function(){
+  return kapRows;
+};
+
+window.renderBuilderResult = renderBuilderResult;
+window.runScreenerAi = runScreenerAi;
+window.renderKap = renderKap;
+window.renderDecisionCenter = renderDecisionCenter;
+function renderMinerviniResults(){
+  const rows = (allRows || [])
+    .filter(r => r.minervini && r.minervini.passed === true)
+    .sort((a,b) => {
+      const rsDiff = (Number(b.rsScore) || 0) - (Number(a.rsScore) || 0);
+      if(rsDiff !== 0) return rsDiff;
+
+      return (Number(b.score) || 0) - (Number(a.score) || 0);
+    });
+
+  const area = $('minerviniResultArea');
+  const label = $('minerviniResultLabel');
+  const body = $('minerviniRows');
+
+  if(!area || !label || !body) return;
+
+  area.classList.remove('hidden');
+
+  label.textContent =
+    `${rows.length} hisse 8/8 Minervini kriterini karşılıyor`;
+
+  body.innerHTML = rows.length
+    ? rows.map(r => `
+        <tr onclick="showDetail('${esc(r.symbol)}')" style="cursor:pointer;">
+          <td><b>${esc(r.symbol)}</b></td>
+          <td>${n(r.close)}</td>
+          <td>${r.rsScore ?? '-'}</td>
+          <td><b>${r.minervini?.score ?? 0}/8</b></td>
+          <td>${n(r.sma50)}</td>
+          <td>${n(r.sma150)}</td>
+          <td>${n(r.sma200)}</td>
+          <td>${n(r.low52)}</td>
+          <td>${n(r.high52)}</td>
+        </tr>
+      `).join('')
+    : `
+      <tr>
+        <td colspan="9">
+          Minervini kriterlerinin tamamını karşılayan hisse bulunamadı.
+        </td>
+      </tr>
+    `;
+}
+
+$('openMinerviniResults')?.addEventListener('click', async () => {
+  try{
+    if(!allRows.length){
+      await loadLast();
+    }
+
+    renderMinerviniResults();
+
+  }catch(e){
+    alert(`Minervini sonuçları açılamadı: ${e.message}`);
+  }
+});

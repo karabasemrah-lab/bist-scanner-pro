@@ -40,47 +40,66 @@ def main() -> int:
     rows: list[dict] = []
     failed: list[str] = []
     errors: list[str] = []
+    insufficient_history = []
     requested = 0
     for file in files:
         part = json.loads(file.read_text(encoding="utf-8"))
         requested += int(part.get("requested", 0))
         rows.extend(part.get("rows", []))
         failed.extend(part.get("failedSymbols", []))
+        insufficient_history.extend(part.get("insufficientHistorySymbols", []))
         errors.extend(part.get("errors", []))
 
     # Aynı sembol iki kez geldiyse en son kaydı tut.
     unique = {str(row.get("symbol")): row for row in rows if row.get("symbol")}
     rows = list(unique.values())
+
+    # Yetersiz fiyat geçmişi olan hisseleri ana sonuçlardan çıkar.
+    insufficient_set = set(insufficient_history)
+
+    rows = [
+        row
+        for row in rows
+        if str(row.get("symbol")) not in insufficient_set
+    ]
+
     enrichment = server.enrich_relative_sector_composite(rows)
+
     rows.sort(
-        key=lambda item: (item.get("compositeScore", 0), item.get("rsScore", 0)),
+        key=lambda item: (
+            item.get("compositeScore", 0),
+            item.get("rsScore", 0),
+        ),
         reverse=True,
     )
 
     warning_parts = []
+
     if failed:
         warning_parts.append(
-            f"{len(failed)} sembol için geçerli Yahoo verisi alınamadı: "
-            + ", ".join(failed[:12])
-            + ("…" if len(failed) > 12 else "")
+            f"{len(set(failed))} gerçek veri/hesaplama hatası oluştu."
         )
-    if errors:
-        warning_parts.append(f"{len(errors)} veri/hesaplama uyarısı oluştu.")
+
+    if insufficient_history:
+        warning_parts.append(
+            f"{len(set(insufficient_history))} sembol yetersiz fiyat geçmişi nedeniyle tam analiz edilemedi."
+        )
 
     payload = {
-        "schema": 2,
-        "mode": "github-actions-sharded",
-        "rows": rows,
-        "sectorRanking": enrichment.get("sectorRanking", []),
-        "radar": enrichment.get("radar", []),
-        "failedSymbols": sorted(set(failed)),
-        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "universe": "all",
-        "requested": requested or int(manifest.get("count", 0)),
-        "completed": len(rows),
-        "shardCount": len(files),
-        "warning": " ".join(warning_parts) or None,
-    }
+    "schema": 2,
+    "mode": "github-actions-sharded",
+    "rows": rows,
+    "sectorRanking": enrichment.get("sectorRanking", []),
+    "radar": enrichment.get("radar", []),
+    "failedSymbols": sorted(set(failed)),
+    "insufficientHistorySymbols": sorted(set(insufficient_history)),
+    "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+    "universe": "all",
+    "requested": requested or int(manifest.get("count", 0)),
+    "completed": len(rows),
+    "shardCount": len(files),
+    "warning": " ".join(warning_parts) or None,
+}
     write("last_scan.json", payload)
     write("dashboard.json", server.load_scan_dashboard())
 

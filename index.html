@@ -141,6 +141,13 @@
           <label>ATR genişlemesi<select id="fAtr"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
           <label>SuperTrend AL<select id="fSupertrend"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
           <label>Pozitif uyumsuzluk<select id="fDivergence"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
+          <label>Para akışı pozitif
+  <select id="fMoneyFlow">
+    <option value="off">Kapalı</option>
+    <option value="score" selected>Puan</option>
+    <option value="required">Zorunlu</option>
+  </select>
+</label>
         </div>
         <div class="parameter-grid">
           <label>Donchian periyodu<input id="donchianLength" type="number" min="5" max="100" value="20"></label>
@@ -161,7 +168,62 @@
     <section id="watchlistView" class="view"><section class="panel tableWrap"><div class="panel-title"><h3>Watchlist</h3><span>Yıldızladığın hisseler</span></div><table><thead><tr><th>★</th><th>Hisse</th><th>Şirket</th><th>Fiyat</th><th>Değişim %</th><th>Hacim</th><th>Skor</th><th>Durum</th></tr></thead><tbody id="watchRows"></tbody></table><div id="watchEmpty" class="empty hidden">Henüz watchlist'e hisse eklenmedi.</div></section></section>
 
     <section id="breakoutView" class="view"><section class="panel module"><h2>Breakout Motoru</h2><p>Donchian kırılımı, hacim artışı, güçlü kapanış ve ATR genişlemesi birlikte değerlendirilir.</p><div class="module-grid"><div><b>20 Bar Kırılım</b><span>Aktif</span></div><div><b>Hacim Doğrulama</b><span>Aktif</span></div><div><b>ATR Genişleme</b><span>Aktif</span></div><div><b>Güçlü Kapanış</b><span>Aktif</span></div></div><button data-goto="scanner" data-setup="Breakout">Breakout sonuçlarını aç</button></section></section>
-    <section id="minerviniView" class="view"><section class="panel module coming"><h2>Minervini Trend Template</h2><p>SMA50/150/200, 52 haftalık konum, likidite ve relative strength kriterleri bu modüle eklenecek.</p><span>Faz 3</span></section></section>
+<section id="minerviniView" class="view">
+  <section class="panel">
+    <div class="panel-title">
+      <div>
+        <h2>Minervini Trend Template</h2>
+        <span>Trend Template kriterlerine göre hisseleri değerlendirir.</span>
+      </div>
+    </div>
+
+    <div class="module-grid">
+      <div><b>Fiyat &gt; SMA50</b><span>Aktif</span></div>
+      <div><b>Fiyat &gt; SMA150</b><span>Aktif</span></div>
+      <div><b>Fiyat &gt; SMA200</b><span>Aktif</span></div>
+      <div><b>SMA50 &gt; SMA150 &gt; SMA200</b><span>Aktif</span></div>
+      <div><b>SMA200 yükseliyor</b><span>Aktif</span></div>
+      <div><b>52H dipten +%30</b><span>Aktif</span></div>
+      <div><b>52H zirveye ≤ %25</b><span>Aktif</span></div>
+      <div><b>Relative Strength</b><span>Aktif</span></div>
+    </div>
+
+    <div class="detail-note">
+      Minervini kriterlerini karşılayan hisseler mevcut tarama verilerinden filtrelenecek.
+    </div>
+
+    <button class="primary" id="openMinerviniResults">
+      Minervini sonuçlarını aç
+    </button>
+    <div id="minerviniResultArea" class="hidden" style="margin-top:20px;">
+  <div class="panel-title">
+    <div>
+      <h3>Minervini Sonuçları</h3>
+      <span id="minerviniResultLabel">Sonuç bekleniyor</span>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Hisse</th>
+          <th>Fiyat</th>
+          <th>RS</th>
+          <th>Kriter</th>
+          <th>SMA50</th>
+          <th>SMA150</th>
+          <th>SMA200</th>
+          <th>52H Dip</th>
+          <th>52H Zirve</th>
+        </tr>
+      </thead>
+      <tbody id="minerviniRows"></tbody>
+    </table>
+  </div>
+</div>
+  </section>
+</section>
     <section id="relativeView" class="view">
       <section class="panel"><div class="panel-title"><div><h2>Relative Strength ve Sektör Sıralaması</h2><span>XU100'e göre 20, 60, 120 ve 252 günlük yüzdelik güç puanı</span></div></div>
       <div class="rs-layout"><div><h3>En Güçlü Hisseler</h3><div id="rsLeaders" class="ranking-list"></div></div><div><h3>Sektör Sıralaması</h3><div id="sectorRanking" class="ranking-list"></div></div></div></section>
@@ -216,11 +278,26 @@
           <textarea id="builderPrompt" rows="5" placeholder="Örnek: RSI 55 üzeri, hacim 2 kat, EMA trendi pozitif ve son 20 günün zirvesini kıran hisseleri bul."></textarea>
         </label>
         <div class="builder-examples">
-          <button class="secondary builder-example">RSI 55 üzeri, hacim 2 kat ve EMA trendi pozitif hisseleri bul</button>
-          <button class="secondary builder-example">Son 20 günün zirvesini kıran, SuperTrend AL ve para akışı 60 üzeri hisseleri bul</button>
-          <button class="secondary builder-example">Sıkışma skoru 70 üzeri ve XU100'e göre RS güçlü hisseleri backtest et</button>
+          <button type="button" class="secondary builder-example"
+onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+RSI 55 üzeri, hacim 2 kat ve EMA trendi pozitif hisseleri bul
+</button>
+
+<button type="button" class="secondary builder-example"
+onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+Son 20 günün zirvesini kıran, SuperTrend AL ve para akışı 60 üzeri hisseleri bul
+</button>
+
+<button type="button" class="secondary builder-example"
+onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+Sıkışma skoru 70 üzeri ve XU100'e göre RS güçlü hisseleri backtest et
+</button>
         </div>
-        <div class="settings-actions"><button id="parseBuilder">Komutu Çözümle</button><button id="applyBuilderScan" class="secondary" disabled>Taramaya Uygula</button><button id="applyBuilderBacktest" class="secondary" disabled>Backtest'e Uygula</button></div>
+        <div class="settings-actions">
+  <button type="button" id="parseBuilder" onclick="parseBuilder()">Komutu Çözümle</button>
+  <button type="button" id="applyBuilderScan" class="secondary" onclick="applyBuilderToScan()" disabled>Taramaya Uygula</button>
+  <button type="button" id="applyBuilderBacktest" class="secondary" onclick="applyBuilderToBacktest()" disabled>Backtest'e Uygula</button>
+</div>
         <div id="builderStatus" class="warning hidden"></div>
       </section>
       <section class="panel">

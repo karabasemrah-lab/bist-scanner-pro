@@ -1,0 +1,238 @@
+{
+  "ok": true,
+  "updated": "08.08.2026 16:19",
+  "timestamp": 1786195154.5844626,
+  "count": 14,
+  "rows": [
+    {
+      "symbol": "IEYHO",
+      "title": "IŞIKLAR ENERJİ VE YAPI HOLDİNG A.Ş.",
+      "summary": "2026 Yılı 2.Dönem Geçici Vergi Beyannamesine ait Gelir Tablosu",
+      "subject": "Herhangi Bir Otoriteye Mali Tablo Verilmesi",
+      "date": "08.08.2026",
+      "time": "11:20:33",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645934",
+      "disclosureIndex": 1645934,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "OZRDN",
+      "title": "ÖZERDEN AMBALAJ SANAYİ A.Ş.",
+      "summary": "Özel Durum Açıklaması",
+      "subject": "Özel Durum Açıklaması (Genel)",
+      "date": "08.08.2026",
+      "time": "05:46:00",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645933",
+      "disclosureIndex": 1645933,
+      "category": "Genel Açıklama",
+      "impactScore": 52,
+      "sentiment": "Nötr",
+      "stars": 3,
+      "reasons": []
+    },
+    {
+      "symbol": "BOSSA",
+      "title": "BOSSA TİCARET VE SANAYİ İŞLETMELERİ T.A.Ş.",
+      "summary": "",
+      "subject": "Katılım Finansı İlkeleri Bilgi Formu",
+      "date": "08.08.2026",
+      "time": "01:38:54",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645932",
+      "disclosureIndex": 1645932,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "BOSSA",
+      "title": "BOSSA TİCARET VE SANAYİ İŞLETMELERİ T.A.Ş.",
+      "summary": "01.01.2026 - 30.06.2026 Rapor Dönemine Ait Sorumluluk Beyanı",
+      "subject": "Sorumluluk Beyanı (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "01:38:27",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645931",
+      "disclosureIndex": 1645931,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "BOSSA",
+      "title": "BOSSA TİCARET VE SANAYİ İŞLETMELERİ T.A.Ş.",
+      "summary": "01.01.2026 - 30.06.2026 Dönemine Ait Faaliyet Raporu",
+      "subject": "Faaliyet Raporu (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "01:37:49",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645930",
+      "disclosureIndex": 1645930,
+      "category": "Finansal Sonuç",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "faaliyet raporu"
+      ]
+    },
+    {
+      "symbol": "BOSSA",
+      "title": "BOSSA TİCARET VE SANAYİ İŞLETMELERİ T.A.Ş.",
+      "summary": "2026 2.3 Aylık Mali Tablo ve Dipnotlar",
+      "subject": "Finansal Rapor",
+      "date": "08.08.2026",
+      "time": "01:35:46",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645929",
+      "disclosureIndex": 1645929,
+      "category": "Finansal Sonuç",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "finansal rapor"
+      ]
+    },
+    {
+      "symbol": "OZRDN",
+      "title": "ÖZERDEN AMBALAJ SANAYİ A.Ş.",
+      "summary": "Maddi Duran Varlık Satımı",
+      "subject": "Maddi Duran Varlık Satımı",
+      "date": "08.08.2026",
+      "time": "00:59:10",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645928",
+      "disclosureIndex": 1645928,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "",
+      "title": "ICBC TURKEY PORTFÖY YÖNETİMİ A.Ş.",
+      "summary": "30.06.2026 Finansal Rapor",
+      "subject": "Finansal Rapor",
+      "date": "08.08.2026",
+      "time": "00:11:33",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645927",
+      "disclosureIndex": 1645927,
+      "category": "Finansal Sonuç",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "finansal rapor"
+      ]
+    },
+    {
+      "symbol": "",
+      "title": "ICBC TURKEY PORTFÖY YÖNETİMİ A.Ş.",
+      "summary": "30.06.2026 Faaliyet Raporu",
+      "subject": "Faaliyet Raporu (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "00:11:21",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645926",
+      "disclosureIndex": 1645926,
+      "category": "Finansal Sonuç",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "faaliyet raporu"
+      ]
+    },
+    {
+      "symbol": "",
+      "title": "ICBC TURKEY PORTFÖY YÖNETİMİ A.Ş.",
+      "summary": "30.06.2026 Sorumluluk Beyanı",
+      "subject": "Sorumluluk Beyanı (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "00:09:59",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645925",
+      "disclosureIndex": 1645925,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "ALGYO",
+      "title": "ALARKO GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+      "summary": "",
+      "subject": "Katılım Finansı İlkeleri Bilgi Formu",
+      "date": "08.08.2026",
+      "time": "00:07:18",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645924",
+      "disclosureIndex": 1645924,
+      "category": "Genel Açıklama",
+      "impactScore": 50,
+      "sentiment": "Nötr",
+      "stars": 2,
+      "reasons": []
+    },
+    {
+      "symbol": "ALGYO",
+      "title": "ALARKO GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+      "summary": "Alarko Gayrimenkul Yatırım Ortaklığı A.Ş. 30.06.2026 Sorumluluk Beyanı",
+      "subject": "Sorumluluk Beyanı (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "00:07:02",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645923",
+      "disclosureIndex": 1645923,
+      "category": "Yatırım / Kapasite",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "yatırım"
+      ]
+    },
+    {
+      "symbol": "ALGYO",
+      "title": "ALARKO GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+      "summary": "Alarko Gayrimenkul Yatırım Ortaklığı A.Ş. 30.06.2026 Tarihli Faaliyet Raporu",
+      "subject": "Faaliyet Raporu (Konsolide Olmayan)",
+      "date": "08.08.2026",
+      "time": "00:06:41",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645922",
+      "disclosureIndex": 1645922,
+      "category": "Yatırım / Kapasite",
+      "impactScore": 74,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "faaliyet raporu",
+        "yatırım"
+      ]
+    },
+    {
+      "symbol": "ALGYO",
+      "title": "ALARKO GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+      "summary": "Alarko Gayrimenkul Yatırım Ortaklığı A.Ş. 30.06.2026 Tarihli Bireysel Finansal Tablolar",
+      "subject": "Finansal Rapor",
+      "date": "08.08.2026",
+      "time": "00:06:22",
+      "url": "https://www.kap.org.tr/tr/Bildirim/1645921",
+      "disclosureIndex": 1645921,
+      "category": "Yatırım / Kapasite",
+      "impactScore": 80,
+      "sentiment": "Olumlu",
+      "stars": 4,
+      "reasons": [
+        "finansal rapor",
+        "finansal tablo",
+        "yatırım"
+      ]
+    }
+  ],
+  "source": "KAP API",
+  "error": "",
+  "disclaimer": "Etki skoru başlık ve özet metnindeki açıklanabilir anahtar kelimelerden üretilir; yatırım tavsiyesi değildir."
+}

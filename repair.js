@@ -106,7 +106,7 @@
 
   function bind(id, fn){const el=$(id);if(!el)return;el.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();fn();},true);}
   document.addEventListener('DOMContentLoaded',()=>{
-    bind('parseBuilder',builder); bind('runBacktest',backtest); bind('refreshKap',kap); bind('runScreenerAi',screener); bind('refreshDecision',decision);
+    bind('parseBuilder',builder); bind('runBacktest',backtest); bind('refreshKap',kap); bind('runScreenerAi',screener);
     document.querySelectorAll('[data-ai-prompt]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();e.stopImmediatePropagation();if($('screenerAiPrompt'))$('screenerAiPrompt').value=el.dataset.aiPrompt||'';screener();},true));
     health().then(d=>statusBox(`Sistem hazır · v${esc(d.version)} · ${d.masterSymbols||0} BIST Tüm sembolü`)).catch(e=>statusBox(`Başlangıç kontrolü: ${esc(e.message)}`,'error'));
   });

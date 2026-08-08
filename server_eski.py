@@ -135,87 +135,25 @@ def _positive_divergence(close, oscillator, lookback: int = 60) -> bool:
 
 def _supertrend(high, low, close, period: int = 10, multiplier: float = 3.0):
     import pandas as pd
-
     prev = close.shift(1)
-
-    tr = pd.concat(
-        [
-            high - low,
-            (high - prev).abs(),
-            (low - prev).abs(),
-        ],
-        axis=1,
-    ).max(axis=1)
-
-    atr = tr.ewm(
-        alpha=1 / period,
-        adjust=False,
-        min_periods=period,
-    ).mean()
-
+    tr = pd.concat([(high-low), (high-prev).abs(), (low-prev).abs()], axis=1).max(axis=1)
+    atr = tr.ewm(alpha=1/period, adjust=False, min_periods=period).mean()
     hl2 = (high + low) / 2
     upper = hl2 + multiplier * atr
     lower = hl2 - multiplier * atr
-
-    final_upper = upper.copy()
-    final_lower = lower.copy()
-
-    trend = pd.Series(1, index=close.index, dtype="int64")
-
-    valid_positions = [
-        i for i in range(len(atr))
-        if not pd.isna(atr.iloc[i])
-    ]
-
-    if not valid_positions:
-        line = pd.Series(float("nan"), index=close.index)
-        return line, trend
-
-    first = valid_positions[0]
-
-    # ATR'nin ilk geçerli olduğu noktayı başlangıç olarak kabul et.
-    final_upper.iloc[first] = upper.iloc[first]
-    final_lower.iloc[first] = lower.iloc[first]
-    trend.iloc[first] = 1
-
-    for i in range(first + 1, len(close)):
+    final_upper = upper.copy(); final_lower = lower.copy()
+    trend = pd.Series(1, index=close.index, dtype='int64')
+    for i in range(1, len(close)):
         if pd.isna(atr.iloc[i]):
             continue
-
-        prev_upper = final_upper.iloc[i - 1]
-        prev_lower = final_lower.iloc[i - 1]
-        prev_close = close.iloc[i - 1]
-
-        if pd.isna(prev_upper):
-            prev_upper = upper.iloc[i - 1]
-
-        if pd.isna(prev_lower):
-            prev_lower = lower.iloc[i - 1]
-
-        final_upper.iloc[i] = (
-            upper.iloc[i]
-            if upper.iloc[i] < prev_upper or prev_close > prev_upper
-            else prev_upper
-        )
-
-        final_lower.iloc[i] = (
-            lower.iloc[i]
-            if lower.iloc[i] > prev_lower or prev_close < prev_lower
-            else prev_lower
-        )
-
-        if trend.iloc[i - 1] == -1 and close.iloc[i] > prev_upper:
-            trend.iloc[i] = 1
-
-        elif trend.iloc[i - 1] == 1 and close.iloc[i] < prev_lower:
-            trend.iloc[i] = -1
-
-        else:
-            trend.iloc[i] = trend.iloc[i - 1]
-
+        final_upper.iloc[i] = upper.iloc[i] if upper.iloc[i] < final_upper.iloc[i-1] or close.iloc[i-1] > final_upper.iloc[i-1] else final_upper.iloc[i-1]
+        final_lower.iloc[i] = lower.iloc[i] if lower.iloc[i] > final_lower.iloc[i-1] or close.iloc[i-1] < final_lower.iloc[i-1] else final_lower.iloc[i-1]
+        if trend.iloc[i-1] == -1 and close.iloc[i] > final_upper.iloc[i-1]: trend.iloc[i] = 1
+        elif trend.iloc[i-1] == 1 and close.iloc[i] < final_lower.iloc[i-1]: trend.iloc[i] = -1
+        else: trend.iloc[i] = trend.iloc[i-1]
     line = final_lower.where(trend == 1, final_upper)
-
     return line, trend
+
 
 
 
@@ -316,116 +254,108 @@ def _ai_breakout_model(close, high, low, volume, atr_series, rsi_series, ema20, 
 
 def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark_close=None):
     import pandas as pd
-
     config = config or {}
     required = {"Open", "High", "Low", "Close", "Volume"}
+    if df is None or df.empty or not required.issubset(set(map(str, df.columns))): return None
+    clean = pd.concat({"close": _series(df,"Close"), "high": _series(df,"High"), "low": _series(df,"Low"), "volume": _series(df,"Volume")}, axis=1).dropna()
+    if len(clean) < 220: return None
+    close, high, low, volume = clean.close, clean.high, clean.low, clean.volume
+    last_close, prev_close = float(close.iloc[-1]), float(close.iloc[-2])
 
-    if df is None or df.empty or not required.issubset(set(map(str, df.columns))):
-        return None
-
+    if not math.isfinite(last_close) or last_close <= 0: return None
     clean = pd.concat(
-        {
-            "close": _series(df, "Close"),
-            "high": _series(df, "High"),
-            "low": _series(df, "Low"),
-            "volume": _series(df, "Volume"),
-        },
-        axis=1,
-    ).dropna()
+    {
+        "close": _series(df, "Close"),
+        "high": _series(df, "High"),
+        "low": _series(df, "Low"),
+        "volume": _series(df, "Volume"),
+    },
+    axis=1,
+).dropna()
 
-    if len(clean) < 220:
-        return None
+if len(clean) < 220:
+    return None
 
-    close = clean.close
-    high = clean.high
-    low = clean.low
-    volume = clean.volume
+close, high, low, volume = (
+    clean.close,
+    clean.high,
+    clean.low,
+    clean.volume,
+)
 
-    last_close = float(close.iloc[-1])
-    prev_close = float(close.iloc[-2])
+last_close = float(close.iloc[-1])
+prev_close = float(close.iloc[-2])
 
-    if not math.isfinite(last_close) or last_close <= 0:
-        return None
+if not math.isfinite(last_close) or last_close <= 0:
+    return None
 
-    if not math.isfinite(prev_close) or prev_close <= 0:
-        return None
+if not math.isfinite(prev_close) or prev_close <= 0:
+    return None
 
-    change = _finite((last_close / prev_close - 1) * 100)
+change = _finite((last_close / prev_close - 1) * 100)
 
-    recent_volume = volume.shift(1).tail(20)
-    positive_volume_count = int((recent_volume > 0).sum())
-    avg_vol = _finite(recent_volume.mean())
+recent_volume = volume.shift(1).tail(20)
+positive_volume_count = int((recent_volume > 0).sum())
+avg_vol = _finite(recent_volume.mean())
 
-    # Son 20 günün en az 10 gününde pozitif hacim yoksa
-    # veya ortalama hacim sıfırsa veri analiz için geçersizdir.
-    if positive_volume_count < 10 or avg_vol <= 0:
-        return None
+# Son 20 günün en az 10 gününde pozitif hacim yoksa
+# veya ortalama hacim sıfırsa veri analiz için geçersizdir.
+if positive_volume_count < 10 or avg_vol <= 0:
+    return None
 
-    volume_ratio = _finite(volume.iloc[-1] / avg_vol)
-    volume_spike = volume_ratio >= float(config.get("volumeSpike", 1.5))
+volume_ratio = _finite(volume.iloc[-1] / avg_vol)
+volume_spike = volume_ratio >= float(config.get("volumeSpike", 1.5))
 
     delta = close.diff()
-    gain = delta.clip(lower=0).ewm(alpha=1/14, adjust=False, min_periods=14).mean()
-    loss = (-delta.clip(upper=0)).ewm(alpha=1/14, adjust=False, min_periods=14).mean()
+    gain = delta.clip(lower=0).ewm(
+        alpha=1/14, adjust=False, min_periods=14
+    ).mean()
+    loss = (-delta.clip(upper=0)).ewm(
+        alpha=1/14, adjust=False, min_periods=14
+    ).mean()
+
     rsi_series = 100 - 100 / (1 + gain / loss.replace(0, math.nan))
     rsi = _finite(rsi_series.iloc[-1], 50.0)
 
     prev = close.shift(1)
     tr = pd.concat(
-        [(high - low), (high - prev).abs(), (low - prev).abs()],
-        axis=1,
+        [(high-low), (high-prev).abs(), (low-prev).abs()],
+        axis=1
     ).max(axis=1)
-    atr_series = tr.ewm(alpha=1/14, adjust=False, min_periods=14).mean()
+
+    atr_series = tr.ewm(
+        alpha=1/14,
+        adjust=False,
+        min_periods=14
+    ).mean()
+
     atr_value = _finite(atr_series.iloc[-1])
     tr_atr = _finite(tr.iloc[-1] / atr_value) if atr_value > 0 else 0.0
 
     donchian_len = int(config.get("donchianLength", 20))
-    resistance = _finite(high.shift(1).rolling(donchian_len).max().iloc[-1])
-    breakout_pct = _finite((last_close / resistance - 1) * 100) if resistance > 0 else 0.0
+    resistance = _finite(
+        high.shift(1).rolling(donchian_len).max().iloc[-1]
+    )
+    breakout_pct = (
+        _finite((last_close / resistance - 1) * 100)
+        if resistance > 0
+        else 0.0
+    )
     donchian_breakout = breakout_pct > 0
 
     candle_range = float(high.iloc[-1] - low.iloc[-1])
     strong_close = (
         (last_close - float(low.iloc[-1])) / candle_range
         if candle_range > 0
-        else 0.5
+        else .5
     )
 
     ema20 = _ema(close, 20)
     ema50 = _ema(close, 50)
     ema200 = _ema(close, 200)
+
     ema_trend = bool(
         last_close > ema20.iloc[-1] > ema50.iloc[-1] > ema200.iloc[-1]
-    )
-
-    # Minervini Trend Template
-    sma50 = close.rolling(50).mean()
-    sma150 = close.rolling(150).mean()
-    sma200 = close.rolling(200).mean()
-    high52 = high.rolling(252).max()
-    low52 = low.rolling(252).min()
-
-    minervini_price_above_sma50 = bool(last_close > sma50.iloc[-1])
-    minervini_price_above_sma150 = bool(last_close > sma150.iloc[-1])
-    minervini_price_above_sma200 = bool(last_close > sma200.iloc[-1])
-
-    minervini_sma_order = bool(
-        sma50.iloc[-1] > sma150.iloc[-1] > sma200.iloc[-1]
-    )
-
-    minervini_sma200_rising = bool(
-        len(sma200.dropna()) >= 21
-        and sma200.iloc[-1] > sma200.iloc[-21]
-    )
-
-    minervini_above_52w_low = bool(
-        low52.iloc[-1] > 0
-        and last_close >= low52.iloc[-1] * 1.30
-    )
-
-    minervini_near_52w_high = bool(
-        high52.iloc[-1] > 0
-        and last_close >= high52.iloc[-1] * 0.75
     )
 
     bb_mid = close.rolling(20).mean()
@@ -436,33 +366,43 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     bb_width = _finite(
         ((bb_upper - bb_lower) / bb_mid * 100).iloc[-1]
     )
-
     bb_width_avg = _finite(
-        ((bb_upper - bb_lower) / bb_mid * 100).rolling(120).mean().iloc[-1]
+        ((bb_upper - bb_lower) / bb_mid * 100)
+        .rolling(120)
+        .mean()
+        .iloc[-1]
     )
 
     bollinger_squeeze = bool(
         bb_width > 0
         and bb_width_avg > 0
-        and bb_width <= bb_width_avg * float(config.get("squeezeFactor", 0.70))
+        and bb_width
+        <= bb_width_avg * float(config.get("squeezeFactor", .70))
     )
 
     macd_line = _ema(close, 12) - _ema(close, 26)
     macd_signal = _ema(macd_line, 9)
     macd_hist = macd_line - macd_signal
+
     macd_bullish = bool(
         macd_line.iloc[-1] > macd_signal.iloc[-1]
         and macd_hist.iloc[-1] > macd_hist.iloc[-2]
     )
 
     st_line, st_dir = _supertrend(high, low, close, 10, 3.0)
-    supertrend_buy = bool(st_dir.iloc[-1] == 1 and last_close >= st_line.iloc[-1])
+    supertrend_buy = bool(
+        st_dir.iloc[-1] == 1
+        and last_close >= st_line.iloc[-1]
+    )
 
     rsi_div = _positive_divergence(close, rsi_series)
     macd_div = _positive_divergence(close, macd_hist)
     positive_divergence = bool(rsi_div or macd_div)
 
-    supports, resistances, level_tolerance = _pivot_levels(high, low, close, atr_value)
+    supports, resistances, level_tolerance = _pivot_levels(
+        high, low, close, atr_value
+    )
+
     support1 = (
         supports[0]["price"]
         if supports
@@ -471,7 +411,12 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     support2 = supports[1]["price"] if len(supports) > 1 else 0.0
     resistance1 = resistances[0]["price"] if resistances else resistance
     resistance2 = resistances[1]["price"] if len(resistances) > 1 else 0.0
-    support_dist = _finite((last_close / support1 - 1) * 100) if support1 > 0 else 0.0
+
+    support_dist = (
+        _finite((last_close / support1 - 1) * 100)
+        if support1 > 0
+        else 0.0
+    )
     resistance_dist = (
         _finite((resistance1 / last_close - 1) * 100)
         if resistance1 > 0
@@ -489,7 +434,9 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     breakout_score += max(0, min(12, (strong_close - 0.45) * 30))
     breakout_score += max(0, min(10, (tr_atr - 0.7) * 12))
     breakout_score += (
-        12 if ema_trend else (7 if last_close > ema20.iloc[-1] > ema50.iloc[-1] else 0)
+        12
+        if ema_trend
+        else (7 if last_close > ema20.iloc[-1] > ema50.iloc[-1] else 0)
     )
     breakout_score += 8 if macd_bullish else 0
     breakout_score += 6 if supertrend_buy else 0
@@ -497,22 +444,47 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     breakout_score += 5 if positive_divergence else 0
     breakout_score = _clamp_score(breakout_score)
 
-    atr_pct = _finite(atr_value / last_close * 100) if last_close else 0.0
-    atr_pct_avg = _finite((atr_series / close * 100).rolling(120).mean().iloc[-1])
+    atr_pct = (
+        _finite(atr_value / last_close * 100)
+        if last_close
+        else 0
+    )
+
+    atr_pct_avg = _finite(
+        (atr_series / close * 100).rolling(120).mean().iloc[-1]
+    )
+
     range20 = _finite(
-        (high.rolling(20).max().iloc[-1] - low.rolling(20).min().iloc[-1])
+        (
+            high.rolling(20).max().iloc[-1]
+            - low.rolling(20).min().iloc[-1]
+        )
         / last_close
         * 100
     )
+
     range120_avg = _finite(
         (
             (high.rolling(20).max() - low.rolling(20).min())
             / close
             * 100
-        ).rolling(120).mean().iloc[-1]
+        )
+        .rolling(120)
+        .mean()
+        .iloc[-1]
     )
-    vol60 = _finite(volume.shift(1).rolling(60).mean().iloc[-1], avg_vol)
-    vol_dry = _finite(avg_vol / vol60) if avg_vol > 0 and vol60 > 0 else 1.0
+
+    vol60 = _finite(
+        volume.shift(1).rolling(60).mean().iloc[-1],
+        avg_vol
+    )
+
+    vol_dry = (
+        _finite(avg_vol / vol60)
+        if avg_vol > 0 and vol60 > 0
+        else 1
+    )
+
     ema_spread = _finite(
         (
             max(ema20.iloc[-1], ema50.iloc[-1], ema200.iloc[-1])
@@ -523,66 +495,110 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     )
 
     squeeze_score = 0
+
     if bb_width_avg > 0:
         squeeze_score += max(
-            0, min(30, (1 - bb_width / max(bb_width_avg, 0.0001)) * 60)
+            0,
+            min(30, (1 - bb_width / max(bb_width_avg, 0.0001)) * 60)
         )
+
     if atr_pct_avg > 0:
         squeeze_score += max(
-            0, min(20, (1 - atr_pct / max(atr_pct_avg, 0.0001)) * 40)
+            0,
+            min(20, (1 - atr_pct / max(atr_pct_avg, 0.0001)) * 40)
         )
+
     if range120_avg > 0:
         squeeze_score += max(
-            0, min(20, (1 - range20 / max(range120_avg, 0.0001)) * 40)
+            0,
+            min(20, (1 - range20 / max(range120_avg, 0.0001)) * 40)
         )
+
     squeeze_score += max(0, min(15, (1 - vol_dry) * 30))
     squeeze_score += max(0, min(15, (3.0 - ema_spread) * 5))
     squeeze_score = _clamp_score(squeeze_score)
 
     # Para Akışı / Kurumsal Birikim
     hl_range = (high - low).replace(0, math.nan)
-    money_flow_multiplier = (((close - low) - (high - close)) / hl_range).fillna(0.0)
+
+    money_flow_multiplier = (
+        ((close - low) - (high - close)) / hl_range
+    ).fillna(0.0)
+
     money_flow_volume = money_flow_multiplier * volume
+
     volume20_sum = _finite(volume.rolling(20).sum().iloc[-1])
+
     cmf20 = (
-        _finite(money_flow_volume.rolling(20).sum().iloc[-1] / volume20_sum)
+        _finite(
+            money_flow_volume.rolling(20).sum().iloc[-1]
+            / volume20_sum
+        )
         if volume20_sum > 0
         else 0.0
     )
 
     direction = close.diff().fillna(0.0)
+
     signed_volume = volume.where(
         direction > 0,
-        -volume.where(direction < 0, 0.0),
+        -volume.where(direction < 0, 0.0)
     )
+
     obv = signed_volume.cumsum()
     obv_base = abs(_finite(obv.iloc[-21], 1.0)) or 1.0
-    obv_slope20 = _finite((obv.iloc[-1] - obv.iloc[-21]) / obv_base * 100)
+    obv_slope20 = _finite(
+        (obv.iloc[-1] - obv.iloc[-21])
+        / obv_base
+        * 100
+    )
 
     adl = money_flow_volume.cumsum()
     adl_base = abs(_finite(adl.iloc[-21], 1.0)) or 1.0
-    adl_slope20 = _finite((adl.iloc[-1] - adl.iloc[-21]) / adl_base * 100)
+    adl_slope20 = _finite(
+        (adl.iloc[-1] - adl.iloc[-21])
+        / adl_base
+        * 100
+    )
 
-    up_volume = _finite(volume.where(direction > 0, 0.0).tail(20).sum())
-    down_volume = _finite(volume.where(direction < 0, 0.0).tail(20).sum())
+    up_volume = _finite(
+        volume.where(direction > 0, 0.0).tail(20).sum()
+    )
+    down_volume = _finite(
+        volume.where(direction < 0, 0.0).tail(20).sum()
+    )
+
     up_down_volume_ratio = (
         up_volume / down_volume
         if down_volume > 0
         else (3.0 if up_volume > 0 else 1.0)
     )
+
     pv_confirmation = _finite(
-        close.pct_change().tail(20).corr(volume.pct_change().tail(20)),
-        0.0,
+        close.pct_change()
+        .tail(20)
+        .corr(volume.pct_change().tail(20)),
+        0.0
     )
 
     money_flow_score = 0
     money_flow_score += max(0, min(30, 15 + cmf20 * 75))
     money_flow_score += max(0, min(25, 12.5 + obv_slope20 * 1.25))
     money_flow_score += max(0, min(20, 10 + adl_slope20))
-    money_flow_score += max(0, min(15, (up_down_volume_ratio - 0.5) * 10))
-    money_flow_score += max(0, min(10, 5 + pv_confirmation * 10))
+    money_flow_score += max(
+        0,
+        min(15, (up_down_volume_ratio - 0.5) * 10)
+    )
+    money_flow_score += max(
+        0,
+        min(10, 5 + pv_confirmation * 10)
+    )
+
     money_flow_score = _clamp_score(money_flow_score)
-    money_flow_positive = bool(money_flow_score >= 60 and cmf20 > 0)
+
+    money_flow_positive = bool(
+        money_flow_score >= 60 and cmf20 > 0
+    )
 
     conditions = {
         "breakout": donchian_breakout,
@@ -608,12 +624,17 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
         "supertrendBuy": 10,
         "positiveDivergence": 7,
     }
+
     technical_score = sum(
         weights.get(k, 0)
         for k, v in conditions.items()
         if v
     )
-    technical_score += min(5, max(0, round(max(0, breakout_pct) * 2)))
+
+    technical_score += min(
+        5,
+        max(0, round(max(0, breakout_pct) * 2))
+    )
     technical_score = _clamp_score(technical_score)
 
     # XU100 göreceli performans
@@ -622,38 +643,70 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
 
     if benchmark_close is not None and len(benchmark_close) > 0:
         aligned = pd.concat(
-            {"stock": close, "bench": benchmark_close},
+            {
+                "stock": close,
+                "bench": benchmark_close,
+            },
             axis=1,
         ).dropna()
+
         for days in (20, 60, 120, 252):
             if len(aligned) > days:
                 stock_ret = _finite(
-                    (aligned.stock.iloc[-1] / aligned.stock.iloc[-days - 1] - 1) * 100
+                    (
+                        aligned.stock.iloc[-1]
+                        / aligned.stock.iloc[-days - 1]
+                        - 1
+                    )
+                    * 100
                 )
+
                 bench_ret = _finite(
-                    (aligned.bench.iloc[-1] / aligned.bench.iloc[-days - 1] - 1) * 100
+                    (
+                        aligned.bench.iloc[-1]
+                        / aligned.bench.iloc[-days - 1]
+                        - 1
+                    )
+                    * 100
                 )
+
                 rs_excess[str(days)] = stock_ret - bench_ret
                 benchmark_returns[str(days)] = bench_ret
             else:
                 rs_excess[str(days)] = 0.0
                 benchmark_returns[str(days)] = 0.0
     else:
-        rs_excess = {str(d): 0.0 for d in (20, 60, 120, 252)}
-        benchmark_returns = {str(d): 0.0 for d in (20, 60, 120, 252)}
+        rs_excess = {
+            str(d): 0.0
+            for d in (20, 60, 120, 252)
+        }
+        benchmark_returns = {
+            str(d): 0.0
+            for d in (20, 60, 120, 252)
+        }
 
     score = _clamp_score(
-        technical_score * 0.35
-        + breakout_score * 0.32
-        + squeeze_score * 0.13
-        + money_flow_score * 0.20
+        technical_score * .35
+        + breakout_score * .32
+        + squeeze_score * .13
+        + money_flow_score * .20
     )
 
     ai = _ai_breakout_model(
-        close, high, low, volume, atr_series, rsi_series, ema20, ema50, ema200, macd_hist
+        close,
+        high,
+        low,
+        volume,
+        atr_series,
+        rsi_series,
+        ema20,
+        ema50,
+        ema200,
+        macd_hist,
     )
 
     modes = config.get("modes", {})
+
     passed = all(
         conditions.get(k, False)
         for k, v in modes.items()
@@ -702,8 +755,14 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
         "aiExpectedReturn10d": ai["expectedReturn"],
         "aiSampleSize": ai["samples"],
         "aiModelConfidence": ai["confidence"],
-        "rsExcess": {k: round(_finite(v), 2) for k, v in rs_excess.items()},
-        "benchmarkReturns": {k: round(_finite(v), 2) for k, v in benchmark_returns.items()},
+        "rsExcess": {
+            k: round(_finite(v), 2)
+            for k, v in rs_excess.items()
+        },
+        "benchmarkReturns": {
+            k: round(_finite(v), 2)
+            for k, v in benchmark_returns.items()
+        },
         "cmf20": round(cmf20, 3),
         "obvSlope20": round(obv_slope20, 2),
         "adlSlope20": round(adl_slope20, 2),
@@ -712,20 +771,6 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
         "setup": setup,
         "passed": passed,
         "conditions": conditions,
-                "minervini": {
-            "priceAboveSma50": minervini_price_above_sma50,
-            "priceAboveSma150": minervini_price_above_sma150,
-            "priceAboveSma200": minervini_price_above_sma200,
-            "smaOrder": minervini_sma_order,
-            "sma200Rising": minervini_sma200_rising,
-            "above52wLow": minervini_above_52w_low,
-            "near52wHigh": minervini_near_52w_high,
-        },
-        "sma50": round(_finite(sma50.iloc[-1]), 2),
-        "sma150": round(_finite(sma150.iloc[-1]), 2),
-        "sma200": round(_finite(sma200.iloc[-1]), 2),
-        "high52": round(_finite(high52.iloc[-1]), 2),
-        "low52": round(_finite(low52.iloc[-1]), 2),
         "support1": round(_finite(support1), 2),
         "support2": round(_finite(support2), 2),
         "resistance1": round(_finite(resistance1), 2),
@@ -748,7 +793,6 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
             else str(clean.index[-1])
         ),
     }
-
 
 def _percentile_scores(values: list[float]) -> list[int]:
     if not values:
@@ -774,33 +818,6 @@ def enrich_relative_sector_composite(rows: list[dict]) -> dict:
         for period in periods:
             r[f"rs{period}"] = period_scores[period][i]
         r["rsScore"] = _clamp_score(sum(r[f"rs{p}"] * weights[p] for p in periods))
-        minervini = r.get("minervini") or {}
-
-        minervini["relativeStrength"] = r["rsScore"] >= 70
-
-        minervini["passed"] = all([
-            minervini.get("priceAboveSma50", False),
-            minervini.get("priceAboveSma150", False),
-            minervini.get("priceAboveSma200", False),
-            minervini.get("smaOrder", False),
-            minervini.get("sma200Rising", False),
-            minervini.get("above52wLow", False),
-            minervini.get("near52wHigh", False),
-            minervini.get("relativeStrength", False),
-        ])
-
-        minervini["score"] = sum([
-            minervini.get("priceAboveSma50", False),
-            minervini.get("priceAboveSma150", False),
-            minervini.get("priceAboveSma200", False),
-            minervini.get("smaOrder", False),
-            minervini.get("sma200Rising", False),
-            minervini.get("above52wLow", False),
-            minervini.get("near52wHigh", False),
-            minervini.get("relativeStrength", False),
-        ])
-
-        r["minervini"] = minervini
         r["rsTrend"] = "Yükseliyor" if r["rs20"] >= r["rs60"] >= max(1, r["rs120"]-8) else ("Zayıflıyor" if r["rs20"]+8 < r["rs60"] else "Dengeli")
 
     sectors = {}
@@ -1264,199 +1281,53 @@ def classify_kap_notification(title, summary=""):
     stars=max(1,min(5,round(score/20)))
     return {"category":category,"impactScore":int(score),"sentiment":sentiment,"stars":stars,"reasons":reasons[:4]}
 
-def _kap_company_key(text):
-    import re
-    import unicodedata
-
-    t = _kap_normalize(text or "").casefold()
-
-    # Türkçe / Unicode farklarını sadeleştir
-    t = unicodedata.normalize("NFKD", t)
-    t = "".join(ch for ch in t if not unicodedata.combining(ch))
-
-    t = (
-        t.replace("ı", "i")
-         .replace("ş", "s")
-         .replace("ğ", "g")
-         .replace("ü", "u")
-         .replace("ö", "o")
-         .replace("ç", "c")
-    )
-
-    # Şirket unvanındaki noktalama farklarını kaldır
-    t = re.sub(r"[^a-z0-9]+", " ", t)
-
-    # A.Ş. / AŞ gibi son ekleri temizle
-    t = re.sub(r"\b(a s|as)\b$", "", t)
-
-    return re.sub(r"\s+", " ", t).strip()
-
-
-def load_symbol_name_map():
-    try:
-        data = json.loads(
-            (ROOT / "symbols_tr.json").read_text(encoding="utf-8")
-        )
-
-        symbols = data.get("symbols", {})
-        result = []
-
-        for symbol, info in symbols.items():
-            name = info.get("name") or ""
-            key = _kap_company_key(name)
-
-            if key:
-                result.append((symbol, key))
-
-        return result
-
-    except Exception:
-        return []
-
-
-KAP_SYMBOL_NAME_MAP = load_symbol_name_map()
-
-
-KAP_SYMBOL_NAME_MAP = load_symbol_name_map()
 def fetch_kap_notifications(force=False, limit=80):
-    now = time.time()
-
+    now=time.time()
     with KAP_CACHE_LOCK:
         if KAP_CACHE_FILE.exists() and not force:
             try:
-                cached = json.loads(
-                    KAP_CACHE_FILE.read_text(encoding="utf-8")
-                )
-                if now - float(cached.get("timestamp", 0)) < 600:
-                    return cached
-            except Exception:
-                pass
-
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Accept-Language": "tr",
-        "Content-Type": "application/json"
-    }
-
-    api_url = "https://www.kap.org.tr/tr/api/disclosure/list/light"
-
-    rows = []
-    last_error = ""
-
-    try:
-        response = requests.get(
-            api_url,
-            headers=headers,
-            timeout=20
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        if not isinstance(data, list):
-            raise ValueError("KAP API beklenen listeyi döndürmedi.")
-
-        for item in data[:limit]:
-
-            subject = _kap_normalize(item.get("subject") or "")
-            summary = _kap_normalize(item.get("summary") or "")
-            company = _kap_normalize(item.get("title") or "")
-            publish_date = item.get("publishDate") or ""
-            disclosure_index = item.get("disclosureIndex")
-
-            # AI etki analizi
-            analysis = classify_kap_notification(
-                subject,
-                f"{company} {summary}"
-            )
-
-            date_value = ""
-            time_value = ""
-
-            if publish_date:
-                parts = publish_date.split(" ")
-
-                if parts:
-                    date_value = parts[0]
-
-                if len(parts) > 1:
-                    time_value = parts[1]
-
-            # Light API doğrudan hisse kodu vermediği için
-            # bilinen sembolleri metin içinde aramayı deniyoruz.
-            symbol = ""
-
-            company_key = _kap_company_key(company)
-
-            for code, name_key in KAP_SYMBOL_NAME_MAP:
-                if company_key == name_key:
-                    symbol = code
-                    break
-
-            
-
-            url = ""
-
-            if disclosure_index:
-                url = (
-                    f"https://www.kap.org.tr/tr/Bildirim/"
-                    f"{disclosure_index}"
-                )
-
-            rows.append({
-                "symbol": symbol,
-                "title": company,
-                "summary": summary,
-                "subject": subject,
-                "date": date_value,
-                "time": time_value,
-                "url": url,
-                "disclosureIndex": disclosure_index,
-                **analysis
-            })
-
-    except Exception as exc:
-        last_error = str(exc)
-
-    payload = {
-        "ok": bool(rows),
-        "updated": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "timestamp": now,
-        "count": len(rows),
-        "rows": rows,
-        "source": "KAP API",
-        "error": last_error if not rows else "",
-        "disclaimer": (
-            "Etki skoru başlık ve özet metnindeki açıklanabilir "
-            "anahtar kelimelerden üretilir; yatırım tavsiyesi değildir."
-        )
-    }
-
-    if rows:
+                cached=json.loads(KAP_CACHE_FILE.read_text(encoding="utf-8"))
+                if now-float(cached.get("timestamp",0))<600: return cached
+            except Exception: pass
+    headers={"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/123 Safari/537.36","Accept-Language":"tr-TR,tr;q=0.9"}
+    urls=["https://www.kap.org.tr/tr/", "https://www.kap.org.tr/tr/bildirim-sorgu"]
+    rows=[]; last_error=""
+    for url in urls:
         try:
-            KAP_CACHE_FILE.write_text(
-                json.dumps(
-                    payload,
-                    ensure_ascii=False,
-                    indent=2
-                ),
-                encoding="utf-8"
-            )
-        except Exception:
-            pass
-
+            response=requests.get(url,headers=headers,timeout=20); response.raise_for_status()
+            soup=BeautifulSoup(response.text,"lxml")
+            seen=set()
+            for a in soup.select('a[href*="/tr/Bildirim/"], a[href*="/tr/bildirim/"]'):
+                href=a.get("href","")
+                if href.startswith("/"): href="https://www.kap.org.tr"+href
+                if not href or href in seen: continue
+                seen.add(href)
+                title=_kap_normalize(a.get_text(" ",strip=True))
+                parent=a.find_parent(["tr","li","div","article"])
+                block=_kap_normalize(parent.get_text(" ",strip=True) if parent else title)
+                if len(title)<4: title=block[:180]
+                symbol=""
+                import re
+                candidates=re.findall(r"(?<![A-Z0-9])[A-Z]{3,6}(?![A-Z0-9])",block)
+                ignore={"KAP","BIST","TURK","GENEL","OZEL","AÇIKLAMA","AŞ","TL","USD","EUR"}
+                for c in candidates:
+                    if c not in ignore and c+".IS" in SYMBOLS_BY_YAHOO:
+                        symbol=c; break
+                date_match=re.search(r"\b(\d{2}[./]\d{2}[./]\d{4})\b",block)
+                time_match=re.search(r"\b(\d{2}:\d{2}(?::\d{2})?)\b",block)
+                analysis=classify_kap_notification(title,block)
+                rows.append({"symbol":symbol,"title":title[:260],"summary":block[:500],"date":date_match.group(1) if date_match else "","time":time_match.group(1) if time_match else "","url":href,**analysis})
+                if len(rows)>=limit: break
+            if rows: break
+        except Exception as exc: last_error=str(exc)
+    payload={"ok":bool(rows),"updated":datetime.now().strftime("%d.%m.%Y %H:%M"),"timestamp":now,"count":len(rows),"rows":rows,"source":"KAP","error":last_error if not rows else "","disclaimer":"Etki skoru başlık ve özet metnindeki açıklanabilir anahtar kelimelerden üretilir; yatırım tavsiyesi değildir."}
+    if rows:
+        try: KAP_CACHE_FILE.write_text(json.dumps(payload,ensure_ascii=False,indent=2),encoding="utf-8")
+        except Exception: pass
     elif KAP_CACHE_FILE.exists():
         try:
-            cached = json.loads(
-                KAP_CACHE_FILE.read_text(encoding="utf-8")
-            )
-            cached["stale"] = True
-            cached["error"] = last_error
-            return cached
-        except Exception:
-            pass
-
+            cached=json.loads(KAP_CACHE_FILE.read_text(encoding="utf-8")); cached["stale"]=True; cached["error"]=last_error; return cached
+        except Exception: pass
     return payload
 
 def parse_ai_builder_prompt(prompt: str) -> dict:
@@ -1547,7 +1418,6 @@ class Handler(SimpleHTTPRequestHandler):
                 raw=query.get(name,["true" if default else "false"])[0]
                 return str(raw).strip().lower() in {"1","true","yes","on"}
             cfg={"period":query.get("period",["10y"])[0],"donchian":int(query.get("donchian",["20"])[0]),"rsiMin":float(query.get("rsiMin",["55"])[0]),"volumeMin":float(query.get("volumeMin",["1.5"])[0]),"moneyFlowMin":float(query.get("moneyFlowMin",["55"])[0]),"squeezeMin":float(query.get("squeezeMin",["60"])[0]),"rsMin":float(query.get("rsMin",["0"])[0]),"targetPct":float(query.get("targetPct",["5"])[0]),"stopPct":float(query.get("stopPct",["3"])[0]),"holdingDays":int(query.get("holdingDays",["10"])[0]),"maxSymbols":int(query.get("maxSymbols",["100"])[0]),"useBreakout":qbool("useBreakout",True),"useRsi":qbool("useRsi",True),"useVolume":qbool("useVolume",True),"useEma":qbool("useEma"),"useSupertrend":qbool("useSupertrend"),"useMoneyFlow":qbool("useMoneyFlow"),"useSqueeze":qbool("useSqueeze"),"useRs":qbool("useRs")}
-            print("BACKTEST GELEN:", query.get("universe",["?"])[0], cfg)
             return self._json(start_backtest(query.get("universe",["30"])[0],cfg))
         if parsed.path=="/api/backtest/status":
             job_id=query.get("job",[""])[0]
