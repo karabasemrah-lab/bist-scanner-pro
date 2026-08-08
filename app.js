@@ -100,36 +100,61 @@ function updateProgress(job){
   const data = job.result || job;
 
   const total =
-    data.total ||
-    data.requested ||
-    job.total ||
+    Number(data.total) ||
+    Number(data.requested) ||
+    Number(job.total) ||
     0;
 
-  const processed =
-    data.processed ||
-    data.completed ||
-    job.processed ||
-    0;
+  const rows = Array.isArray(data.rows)
+    ? data.rows
+    : [];
 
   const insufficientCount =
     Array.isArray(data.insufficientHistorySymbols)
       ? data.insufficientHistorySymbols.length
-      : (data.insufficientHistoryCount || 0);
+      : Number(data.insufficientHistoryCount || 0);
 
   const realFailed =
     Array.isArray(data.failedSymbols)
       ? data.failedSymbols.length
-      : (data.failed || 0);
+      : Number(data.failed || 0);
 
-  const percent =
-    job.percent ??
-    data.percent ??
-    (total ? Math.round(processed / total * 100) : 0);
+  const isDone =
+    job.state === 'done' ||
+    data.state === 'done' ||
+    Number(job.percent) >= 100 ||
+    Number(data.percent) >= 100;
+
+  const processedRaw =
+    Number(data.processed) ||
+    Number(data.completed) ||
+    Number(job.processed) ||
+    0;
+
+  const processed = isDone
+    ? total
+    : processedRaw;
+
+  const found = rows.length;
+
+  const percent = isDone
+    ? 100
+    : (
+        job.percent ??
+        data.percent ??
+        (total ? Math.round(processed / total * 100) : 0)
+      );
+
+  const remaining = isDone
+    ? 0
+    : Math.max(0, total - processed);
 
   $('progressPanel').classList.remove('hidden');
 
   $('progressMessage').textContent =
-    job.message || data.message || 'Günlük snapshot yüklendi.';
+    job.message ||
+    data.message ||
+    (isDone ? 'Tarama tamamlandı.' : 'Tarama sürüyor...');
 
   $('progressCounts').textContent =
     `${processed} / ${total}`;
@@ -141,13 +166,13 @@ function updateProgress(job){
     `${percent}%`;
 
   $('progressFound').textContent =
-    processed;
+    found;
 
   $('progressFailed').textContent =
     realFailed;
 
   $('progressRemaining').textContent =
-    Math.max(0, total - processed - insufficientCount);
+    remaining;
 }
 function scanParams(){
   const map={
