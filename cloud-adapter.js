@@ -22,9 +22,13 @@
     return {prompt:decodeURIComponent(prompt), conditions:[...new Set(conditions)], thresholds, explanation:'Komut çevrim içi statik kurallarla çözümlendi.'};
   };
   const IS_LOCAL =
-  location.hostname === '127.0.0.1' ||
-  location.hostname === 'localhost';
-  window.__BIST_CLOUD__ = true;
+location.hostname === '127.0.0.1' ||
+location.hostname === 'localhost';
+
+const IS_GITHUB_PAGES =
+location.hostname.endsWith('github.io');
+
+window.BIST_CLOUD = IS_GITHUB_PAGES;
   window.fetch = async (input, init={}) => {
 
 const raw = typeof input === 'string' ? input : input.url;
@@ -35,7 +39,9 @@ if (!u.pathname.includes('/api/')) return nativeFetch(input, init);
 
 // Yerel Python sunucusunda gerçek API'yi kullan.
 // GitHub Pages'te ise aşağıdaki snapshot adapteri çalışmaya devam eder.
-if (IS_LOCAL) return nativeFetch(input, init);
+if (IS_LOCAL || !IS_GITHUB_PAGES) {
+  return nativeFetch(input, init);
+}
     const path = u.pathname;
     if (path.endsWith('/api/health')) return jsonResponse({ok:true, mode:'github-pages', message:'Çevrim içi günlük snapshot modu'});
     if (path.endsWith('/api/last-scan')) return jsonResponse(await loadJson('data/last_scan.json',{rows:[],updatedAt:null,warning:'İlk otomatik tarama henüz oluşmadı.'}));
