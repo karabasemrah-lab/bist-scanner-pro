@@ -459,9 +459,29 @@ function renderMarketLists(lists){
   $('declinersList').innerHTML = moverRows(decliners,'change');
   $('volumeLeadersList').innerHTML = moverRows(lists.volumeLeaders || [],'volume');
 
-  const heat = Array.isArray(lists.heatmap) ? lists.heatmap : [];
-  const heat=Array.isArray(lists.heatmap)?lists.heatmap:[];$('heatmapUniverse').textContent=heat.length?`${heat.length} hisse`:'Son tarama';
-  $('marketHeatmap').innerHTML=heat.length?heat.map(r=>{const size=Math.max(1,Math.min(3,Math.round((Number(r.score)||0)/35)));return `<div class="heat-tile ${heatClass(r.changePct)}" style="--heat-size:${size}" onclick="showDetail('${esc(r.symbol)}')" title="${esc(r.name||r.symbol)} | Skor ${r.score||0} | Hacim ${n(r.volumeRatio)}x"><b>${esc(r.symbol)}</b><span>${Number(r.changePct)>=0?'+':''}${n(r.changePct)}%</span><small>Skor ${r.score||0}</small></div>`}).join(''):'<div class="empty">Sıcaklık haritası için BIST 100 veya BIST Tüm taraması yapın.</div>'
+  
+  const heatRows = Array.isArray(lists.heatmap) ? lists.heatmap : [];
+
+$('heatmapUniverse').textContent =
+  heatRows.length ? `${heatRows.length} hisse` : 'Son tarama';
+
+$('marketHeatmap').innerHTML = heatRows.length
+  ? heatRows.map(r => {
+      const size = Math.max(
+        1,
+        Math.min(3, Math.round((Number(r.score) || 0) / 35))
+      );
+
+      return `<div class="heat-tile ${heatClass(r.changePct)}"
+        style="--heat-size:${size}"
+        onclick="showDetail('${esc(r.symbol)}')"
+        title="${esc(r.name || r.symbol)} | Skor ${r.score || 0} | Hacim ${n(r.volumeRatio)}x">
+        <b>${esc(r.symbol)}</b>
+        <span>${Number(r.changePct) >= 0 ? '+' : ''}${n(r.changePct)}%</span>
+        <small>Skor ${r.score || 0}</small>
+      </div>`;
+    }).join('')
+  : 'Sıcaklık haritası için BIST 100 veya BIST Tüm taraması yapın.';
 }
 async function loadMarketCards(force=false){
   const box=$('marketCards');
