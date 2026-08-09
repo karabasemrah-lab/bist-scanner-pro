@@ -492,6 +492,98 @@ async function loadMarketCards(force=false){
     setTimeout(()=>{const b=$('retryMarketCards');if(b)b.onclick=()=>loadMarketCards(true)},0);
   }
 }
+
+async function loadMarketMovers(force=false){
+  try{
+    const data = await fetchJson(
+      `/api/market-movers?force=${force ? 1 : 0}&_=${Date.now()}`,
+      {cache:'no-store'}
+    );
+
+    if(!data || data.ok === false){
+      throw new Error(data?.error || 'Piyasa verileri alınamadı.');
+    }
+
+    // Yükselenler
+    $('advancersList').innerHTML =
+      moverRows(data.advancers || [], 'change');
+
+    // Düşenler
+    $('declinersList').innerHTML =
+      moverRows(data.decliners || [], 'change');
+
+    // Hacimliler
+    $('volumeLeadersList').innerHTML =
+      moverRows(data.volumeLeaders || [], 'volume');
+
+
+    // Hisse sıcaklık haritası - maksimum 40 hisse
+    const heat = Array.isArray(data.heatmap)
+      ? data.heatmap.slice(0,40)
+      : [];
+
+    $('heatmapUniverse').textContent =
+      heat.length ? `${heat.length} hisse` : '-';
+
+    $('marketHeatmap').innerHTML = heat.length
+      ? heat.map(r => `
+          <div
+            class="heat-tile ${heatClass(r.changePct)}"
+            onclick="showDetail('${esc(r.symbol)}')"
+            title="${esc(r.symbol)} | ${n(r.changePct)}%"
+          >
+            <b>${esc(r.symbol)}</b>
+            <span>
+              ${Number(r.changePct) >= 0 ? '+' : ''}${n(r.changePct)}%
+            </span>
+          </div>
+        `).join('')
+      : '<div class="empty">Hisse verisi bulunamadı.</div>';
+
+
+    // Sektör sıcaklık haritası
+    const sectors = Array.isArray(data.sectorHeatmap)
+      ? data.sectorHeatmap
+      : [];
+
+    $('sectorHeatmapCount').textContent =
+      sectors.length ? `${sectors.length} sektör` : '-';
+
+    $('sectorHeatmap').innerHTML = sectors.length
+      ? sectors.map(r => `
+          <div
+            class="heat-tile ${heatClass(r.changePct)}"
+            title="${esc(r.sector)} | ${n(r.changePct)}% | ${r.count || 0} hisse"
+          >
+            <b>${esc(r.sector)}</b>
+            <span>
+              ${Number(r.changePct) >= 0 ? '+' : ''}${n(r.changePct)}%
+            </span>
+            <small>${r.count || 0} hisse</small>
+          </div>
+        `).join('')
+      : '<div class="empty">Sektör verisi bulunamadı.</div>';
+
+  }catch(e){
+    console.error('Market movers:', e);
+
+    $('advancersList').innerHTML =
+      '<div class="empty">Piyasa verisi alınamadı.</div>';
+
+    $('declinersList').innerHTML =
+      '<div class="empty">Piyasa verisi alınamadı.</div>';
+
+    $('volumeLeadersList').innerHTML =
+      '<div class="empty">Piyasa verisi alınamadı.</div>';
+
+    $('marketHeatmap').innerHTML =
+      '<div class="empty">Hisse sıcaklık verisi alınamadı.</div>';
+
+    $('sectorHeatmap').innerHTML =
+      '<div class="empty">Sektör sıcaklık verisi alınamadı.</div>';
+  }
+}
+
 async function loadScanDashboard(){
   try{
     const data=await fetchJson(`/api/dashboard-scan?_=${Date.now()}`,{cache:'no-store'});
@@ -507,7 +599,11 @@ async function loadScanDashboard(){
   }
 }
 async function loadDashboard(force=false){
-  await Promise.allSettled([loadMarketCards(force),loadScanDashboard()]);
+  await Promise.allSettled([
+  loadMarketCards(force),
+  loadMarketMovers(force),
+  loadScanDashboard()
+]);
 }
 
 function download(path){window.location.href=path}

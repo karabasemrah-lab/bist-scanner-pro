@@ -680,9 +680,7 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
         "sector": symbol_sector(symbol),
         "close":round(last_close,2),
 "changePct":round(change,2),
-"changeWeekly":round(change_weekly,2),
-"changeMonthly":round(change_monthly,2),
-"changeYearly":round(change_yearly,2),
+
         "volumeRatio": round(volume_ratio, 2),
         "volume": int(_finite(volume.iloc[-1])),
         "avgVolume20": int(avg_vol),
@@ -1506,6 +1504,216 @@ def parse_ai_builder_prompt(prompt: str) -> dict:
     labels={'breakout':'Breakout','rsi':'RSI','volume':'Hacim','ema':'EMA Trend','supertrend':'SuperTrend','moneyFlow':'Para Akışı','squeeze':'Sıkışma','rs':'RS','macd':'MACD','atr':'ATR','divergence':'Pozitif Uyumsuzluk'}
     return {'ok':bool(active),'prompt':raw,'intent':intent,'conditions':conditions,'thresholds':thresholds,'strategyName':' + '.join(labels[k] for k in active) or 'Tanımsız Strateji','notes':notes}
 
+MARKET_MOVERS_CACHE = {
+    "timestamp": 0,
+    "updatedAt": None,
+    "advancers": [],
+    "decliners": [],
+    "volumeLeaders": [],
+    "heatmap": [],
+    "sectorHeatmap": [],
+}
+
+MARKET_MOVERS_LOCK = threading.Lock()
+
+
+def load_market_movers(force=False):
+    global MARKET_MOVERS_CACHE
+
+    now = time.time()
+
+    if (
+        not force
+        and MARKET_MOVERS_CACHE.get("advancers")
+        and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 300
+    ):
+        return {
+            "ok": True,
+            **MARKET_MOVERS_CACHE,
+        }
+
+    with MARKET_MOVERS_LOCK:
+        now = time.time()
+
+        if (
+            not force
+            and MARKET_MOVERS_CACHE.get("advancers")
+            and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 300
+        ):
+            return {
+                "ok": True,
+                **MARKET_MOVERS_CACHE,
+            }
+
+        try:
+            import yfinance as yf
+
+            symbols, _ = symbols_for_universe("all")
+            symbols = [canonical_symbol(s) for s in symbols]
+            tickers = [yahoo_ticker(s) for s in symbols]
+
+            rows = []
+
+            batches = [
+                tickers[i:i + 60]
+                for i in range(0, len(tickers), 60)
+            ]
+
+            for batch in batches:
+                try:
+                    data = yf.download(
+                        batch,
+                        period="5d",
+                        interval="1d",
+                        auto_adjust=False,
+                        actions=False,
+                        progress=False,
+                        threads=True,
+                        group_by="ticker",
+                        timeout=25,
+                    )
+                except Exception:
+                    continue
+
+                for ticker in batch:
+                    try:
+                        symbol = ticker.replace(".IS", "")
+
+                        if len(batch) == 1:
+                            frame = data
+                        else:
+                            if ticker not in data.columns.get_level_values(0):
+                                continue
+                            frame = data[ticker]
+
+                        if frame is None or frame.empty:
+                            continue
+
+                        close = frame["Close"].dropna()
+                        volume = frame["Volume"].dropna()
+
+                        if len(close) < 2:
+                            continue
+
+                        last_close = float(close.iloc[-1])
+                        prev_close = float(close.iloc[-2])
+
+                        if last_close <= 0 or prev_close <= 0:
+                            continue
+
+                        change_pct = (
+                            (last_close / prev_close) - 1
+                        ) * 100
+
+                        last_volume = (
+                            float(volume.iloc[-1])
+                            if len(volume)
+                            else 0
+                        )
+
+                        rows.append({
+                            "symbol": symbol,
+                            "sector": symbol_sector(symbol),
+                            "close": round(last_close, 2),
+                            "changePct": round(change_pct, 2),
+                            "volume": int(max(0, last_volume)),
+                        })
+
+                    except Exception:
+                        continue
+
+            advancers = sorted(
+                [r for r in rows if r["changePct"] > 0],
+                key=lambda r: r["changePct"],
+                reverse=True,
+            )[:20]
+
+            decliners = sorted(
+                [r for r in rows if r["changePct"] < 0],
+                key=lambda r: r["changePct"],
+            )[:20]
+
+            volume_leaders = sorted(
+                rows,
+                key=lambda r: r["volume"],
+                reverse=True,
+            )[:20]
+
+            # Hisse sıcaklık haritası:
+            # en yüksek hacimli 40 hisse
+            heatmap = sorted(
+                rows,
+                key=lambda r: r["volume"],
+                reverse=True,
+            )[:40]
+
+            # Sektör sıcaklık haritası
+            sector_groups = {}
+
+            for r in rows:
+                sector = r.get("sector") or "Diğer"
+
+                if sector not in sector_groups:
+                    sector_groups[sector] = {
+                        "changes": [],
+                        "volume": 0,
+                        "count": 0,
+                    }
+
+                sector_groups[sector]["changes"].append(
+                    float(r.get("changePct", 0))
+                )
+
+                sector_groups[sector]["volume"] += int(
+                    r.get("volume", 0)
+                )
+
+                sector_groups[sector]["count"] += 1
+
+            sector_heatmap = []
+
+            for sector, values in sector_groups.items():
+                changes = values["changes"]
+
+                if not changes:
+                    continue
+
+                avg_change = sum(changes) / len(changes)
+
+                sector_heatmap.append({
+                    "sector": sector,
+                    "changePct": round(avg_change, 2),
+                    "volume": values["volume"],
+                    "count": values["count"],
+                })
+
+            sector_heatmap.sort(
+                key=lambda x: abs(x["changePct"]),
+                reverse=True,
+            )
+
+            MARKET_MOVERS_CACHE = {
+                "timestamp": now,
+                "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "advancers": advancers,
+                "decliners": decliners,
+                "volumeLeaders": volume_leaders,
+                "heatmap": heatmap,
+                "sectorHeatmap": sector_heatmap,
+            }
+
+            return {
+                "ok": True,
+                **MARKET_MOVERS_CACHE,
+            }
+
+        except Exception as exc:
+            return {
+                "ok": False,
+                "error": str(exc),
+                **MARKET_MOVERS_CACHE,
+            }
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*args,**kwargs): super().__init__(*args,directory=str(WEB),**kwargs)
     def do_GET(self):
@@ -1523,6 +1731,11 @@ class Handler(SimpleHTTPRequestHandler):
         if parsed.path=="/api/kap/notifications": return self._json(fetch_kap_notifications(force=query.get("force",["0"])[0]=="1",limit=int(query.get("limit",["80"])[0])))
         if parsed.path=="/api/ai-builder/parse": return self._json(parse_ai_builder_prompt(query.get("prompt",[""])[0]))
         if parsed.path=="/api/market-cards": return self._json(load_market_cards(force=query.get("force",["0"])[0]=="1"))
+        if parsed.path=="/api/market-movers": return self._json(
+    load_market_movers(
+        force=query.get("force",["0"])[0]=="1"
+    )
+)
         if parsed.path=="/api/dashboard-scan": return self._json(load_scan_dashboard())
         if parsed.path=="/api/dashboard": return self._json(load_market_dashboard(force=query.get("force",["0"])[0]=="1"))
         if parsed.path=="/api/scan/start":
