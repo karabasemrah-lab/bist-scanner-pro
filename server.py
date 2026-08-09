@@ -346,17 +346,7 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
 
     change = _finite((last_close / prev_close - 1) * 100)
 
-    def period_change(days):
-        if len(close) <= days:
-            return 0.0
-        base = _finite(close.iloc[-1-days])
-        if base <= 0:
-            return 0.0
-        return _finite((last_close / base - 1) * 100)
-
-    change_weekly = period_change(5)
-    change_monthly = period_change(21)
-    change_yearly = period_change(252)
+    
 
     recent_volume = volume.shift(1).tail(20)
     positive_volume_count = int((recent_volume > 0).sum())
@@ -1030,9 +1020,7 @@ def market_lists_from_rows(rows: list[dict]) -> dict:
         "name": r.get("name"),
         "close": round(_finite(r.get("close")), 2),
         "changePct": round(_finite(r.get("changePct")), 2),
-        "changeWeekly": round(_finite(r.get("changeWeekly")), 2),
-        "changeMonthly": round(_finite(r.get("changeMonthly")), 2),
-        "changeYearly": round(_finite(r.get("changeYearly")), 2),
+
         "volumeRatio": round(_finite(r.get("volumeRatio")), 2),
         "volume": int(_finite(r.get("volume"))),
         "score": int(r.get("score", 0)),

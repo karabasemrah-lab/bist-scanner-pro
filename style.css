@@ -240,46 +240,10 @@ body.modal-open{overflow:hidden}
   }
 }
 
-/* Günlük / Haftalık / Aylık / Yıllık dönem sekmeleri */
-.market-period-tabs{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  margin:8px 0 8px;
-  padding:4px;
-  border-radius:10px;
-  background:rgba(255,255,255,.025);
-}
 
-.market-period{
-  flex:1;
-  border:0;
-  background:transparent;
-  color:var(--muted);
-  padding:8px 3px;
-  border-radius:8px;
-  font-size:11px;
-  font-weight:700;
-}
 
-.market-period.active{
-  background:rgba(45,104,255,.18);
-  color:#fff;
-  box-shadow:inset 0 -2px 0 #2d68ff;
-}
 
 @media(max-width:760px){
-  .market-period-tabs{
-    position:sticky;
-    top:0;
-    z-index:15;
-  }
-
-  .market-period{
-    font-size:10px;
-    padding:7px 2px;
-  }
-
   .mover-row{
     display:grid;
     grid-template-columns:1fr auto auto;

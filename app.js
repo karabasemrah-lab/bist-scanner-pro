@@ -399,14 +399,6 @@ function renderExposureChart(rows){
 function renderBreadth(b){
   b=b||{};$('breadthAD').textContent=`${b.advancing||0} / ${b.declining||0}`;$('breadthAdvancePct').textContent=`%${b.advancePct||0} yükselen`;$('breadthEma').textContent=`%${b.aboveEmaPct||0}`;$('breadthVolume').textContent=`%${b.volumeSpikePct||0}`;$('breadthStrong').textContent=`%${b.strongPct||0}`;
 }
-let marketPeriod = 'daily';
-
-function marketPeriodValue(r){
-  if(marketPeriod === 'weekly') return Number(r.changeWeekly);
-  if(marketPeriod === 'monthly') return Number(r.changeMonthly);
-  if(marketPeriod === 'yearly') return Number(r.changeYearly);
-  return Number(r.changePct);
-}
 
 function moverRows(items,type){
   if(!Array.isArray(items) || !items.length){
@@ -414,34 +406,38 @@ function moverRows(items,type){
   }
 
   return items.slice(0,20).map(r => {
-    const periodValue = marketPeriodValue(r);
-    const cls = Number(periodValue) >= 0 ? 'up' : 'down';
+    const change = Number(r.changePct) || 0;
+    const cls = change >= 0 ? 'up' : 'down';
 
     return `
       <div class="mover-row" onclick="showDetail('${esc(r.symbol)}')">
         <b>${esc(r.symbol)}</b>
         <small>${n(r.close)}</small>
         <span class="mover-value ${cls}">
-          ${periodValue >= 0 ? '+' : ''}${n(periodValue)}%
+          ${change >= 0 ? '+' : ''}${n(change)}%
         </span>
       </div>
     `;
   }).join('');
 }
-function heatClass(change){const c=Number(change)||0;if(c>=4)return'heat-positive-3';if(c>=2)return'heat-positive-2';if(c>.15)return'heat-positive-1';if(c<=-4)return'heat-negative-3';if(c<=-2)return'heat-negative-2';if(c<-.15)return'heat-negative-1';return'heat-neutral'}
+
+function heatClass(change){
+  const c=Number(change)||0;
+  if(c>=4)return'heat-positive-3';
+  if(c>=2)return'heat-positive-2';
+  if(c>.15)return'heat-positive-1';
+  if(c<=-4)return'heat-negative-3';
+  if(c<=-2)return'heat-negative-2';
+  if(c<-.15)return'heat-negative-1';
+  return'heat-neutral';
+}
+
 function renderMarketLists(lists){
   lists = lists || {};
 
-  const all = Array.isArray(lists.all) ? [...lists.all] : [];
+  const advancers = lists.advancers || [];
+  const decliners = lists.decliners || [];
 
-  const periodKey =
-    marketPeriod === 'weekly' ? 'changeWeekly' :
-    marketPeriod === 'monthly' ? 'changeMonthly' :
-    marketPeriod === 'yearly' ? 'changeYearly' :
-    'changePct';
-
-  let advancers = lists.advancers || [];
-  let decliners = lists.decliners || [];
 
   if (all.length) {
     advancers = all
@@ -1188,47 +1184,28 @@ $('openMinerviniResults')?.addEventListener('click', async () => {
   }
 });
 
-// Mobil piyasa sekmeleri - dinamik ve güvenli tıklama yönetimi
-document.addEventListener('click', async (event) => {
-
+// Yükselenler / Düşenler / Hacimliler sekmeleri
+document.addEventListener('click', (event) => {
   const marketTab = event.target.closest('.market-tab');
 
-  if (marketTab) {
-    const selected = marketTab.dataset.marketTab;
+  if (!marketTab) return;
 
-    document.querySelectorAll('.market-tab').forEach(tab => {
-      tab.classList.toggle(
-        'active',
-        tab.dataset.marketTab === selected
-      );
-    });
+  const selected = marketTab.dataset.marketTab;
 
-    document.querySelectorAll('.market-tab-panel').forEach(panel => {
-      panel.classList.toggle(
-        'active',
-        panel.dataset.marketPanel === selected
-      );
-    });
+  document.querySelectorAll('.market-tab').forEach(tab => {
+    tab.classList.toggle(
+      'active',
+      tab.dataset.marketTab === selected
+    );
+  });
 
-    return;
-  }
-
-
-  const periodTab = event.target.closest('.market-period');
-
-  if (periodTab) {
-    marketPeriod = periodTab.dataset.period || 'daily';
-
-    document.querySelectorAll('.market-period').forEach(tab => {
-      tab.classList.toggle(
-        'active',
-        tab.dataset.period === marketPeriod
-      );
-    });
-
-    await loadScanDashboard();
-
-    return;
-  }
-
+  document.querySelectorAll('.market-tab-panel').forEach(panel => {
+    panel.classList.toggle(
+      'active',
+      panel.dataset.marketPanel === selected
+    );
+  });
 });
+
+
+
