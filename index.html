@@ -40,7 +40,13 @@
 
   <main class="main-area">
     <header class="topbar">
-      <div><h1 id="pageTitle">Dashboard</h1><p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p></div>
+      <div class="topbar-title">
+  <h1 id="pageTitle">Dashboard</h1>
+  <p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p>
+  <small id="dashboardLastUpdated" class="dashboard-last-updated">
+    Son güncelleme: -
+  </small>
+</div>
       <div class="top-actions"><span class="badge">v4.0.2 Stable</span><button id="scanTop">Taramayı Yenile</button></div>
     </header>
 
@@ -48,14 +54,7 @@
       <span id="dashboardUpdated" style="display:none"></span>
       
 
-      <section class="panel screener-ai-hero">
-        <div class="screener-ai-title"><div><span class="eyebrow">SCREENER AI</span></div><span class="ai-live-badge">Açıklanabilir AI</span></div>
-        <div class="screener-ai-command"><input id="screenerAiPrompt" type="text" placeholder="Örn: Patlamaya hazır hisseleri bul"><button id="runScreenerAi">AI ile Tara</button></div>
-        <div id="screenerAiLibrary" class="ai-command-library">
-          <button data-ai-prompt="Patlamaya hazır hisseleri bul">📈 Breakout Adayları</button><button data-ai-prompt="Hacim patlaması yapan hisseleri bul">🔥 Hacim Patlaması</button><button data-ai-prompt="Güçlü para girişi olan hisseleri bul">💰 Para Girişi</button><button data-ai-prompt="Bugün en güçlü trend hisselerini göster">🚀 Güçlü Trend</button><button data-ai-prompt="Momentum hisselerini göster">⚡ Momentum</button><button data-ai-prompt="Banka hisselerinde breakout ara">🏦 Bankalar</button><button data-ai-prompt="Sanayi hisselerinde güçlü adayları göster">⚙️ Sanayi</button><button data-ai-prompt="Savunma hisselerinde fırsat ara">🛡️ Savunma</button><button data-ai-prompt="Enerji hisselerinde güçlü adayları bul">🌱 Enerji</button>
-        </div>
-        <div id="screenerAiInterpretation" class="ai-interpretation hidden"></div>
-      </section>
+
       <div id="marketCards" class="market-cards"><div class="market-loading">Piyasa kartları yükleniyor…</div></div>
       <section class="breadth-strip">
         <article><small>Yükselen / Düşen</small><b id="breadthAD">0 / 0</b><span id="breadthAdvancePct">%0 yükselen</span></article>
@@ -136,20 +135,66 @@
   </div>
 </section>
       <section class="panel health-panel">
-        <div class="panel-title"><h3>Piyasa Sağlığı ve Pozisyon Oranı</h3><span id="healthDate">-</span></div>
-        <div class="health-layout">
-          <div class="gauge-wrap">
-            <div class="gauge" id="healthGauge"><div><strong id="marketScore">0</strong><small>/100</small></div></div>
-            <span id="healthLabel" class="health-label">Tarama bekleniyor</span>
-            <div class="health-mini"><span>Pozitif hisseler <b id="positivePct">0%</b></span><span>EMA trend uyumu <b id="trendPct">0%</b></span><span>Breakout <b id="healthBreakouts">0</b></span></div>
-          </div>
-          <div class="exposure-chart-wrap">
-            <div class="chart-caption">Tarama skoru dağılımı</div>
-            <svg id="exposureChart" class="exposure-chart" viewBox="0 0 700 230" preserveAspectRatio="none"></svg>
-          </div>
-          <div class="score-reasons"><h4>Skor neden böyle?</h4><div id="scoreReasons"></div></div>
+  <div class="panel-title">
+    <h3>Piyasa Sağlığı ve Pozisyon Oranı</h3>
+    <span id="healthDate">-</span>
+  </div>
+
+  <div class="health-layout health-layout-compact">
+
+    <!-- SOL: Piyasa skoru -->
+    <div class="gauge-wrap">
+      <div class="gauge" id="healthGauge">
+        <div>
+          <strong id="marketScore">0</strong>
+          <small>/100</small>
         </div>
-      </section>
+      </div>
+
+      <span id="healthLabel" class="health-label">
+        Tarama bekleniyor
+      </span>
+
+      <div class="health-mini">
+        <span>
+          Pozitif hisseler
+          <b id="positivePct">0%</b>
+        </span>
+
+        <span>
+          EMA trend uyumu
+          <b id="trendPct">0%</b>
+        </span>
+
+        <span>
+          Breakout
+          <b id="healthBreakouts">0</b>
+        </span>
+      </div>
+    </div>
+
+    <!-- SAĞ: Tarama skor dağılımı -->
+    <div class="exposure-chart-wrap">
+      <div class="chart-caption">
+        Tarama skoru dağılımı
+      </div>
+
+      <svg
+        id="exposureChart"
+        class="exposure-chart"
+        viewBox="0 0 700 230"
+        preserveAspectRatio="none">
+      </svg>
+    </div>
+
+    <!-- ALT -->
+    <div class="score-reasons">
+      <h4>Skor neden böyle?</h4>
+      <div id="scoreReasons"></div>
+    </div>
+
+  </div>
+</section>
 
 
       <section class="intelligence-grid">
@@ -165,10 +210,83 @@
         <div><span id="updated">-</span><small>Tarama saati</small></div>
       </section>
 
-      <div class="dashboard-grid v12-grid">
-        <section class="panel tableWrap compact candidates-panel"><div class="panel-title"><div><h3>En Güçlü Tarama Adayları</h3><span>Skora göre ilk hisseler</span></div><button class="link-btn" data-goto="scanner">Tümünü aç</button></div><table><thead><tr><th>Hisse</th><th>Değişim</th><th>Hacim</th><th>Skor</th><th>Durum</th><th></th></tr></thead><tbody id="topRows"></tbody></table></section>
-        <section class="panel insight"><div class="panel-title"><h3>Tarama dağılımı</h3></div><div id="distribution" class="distribution"></div><div class="note">Skor; trend, momentum, hacim, volatilite, breakout ve uyumsuzluk koşullarından hesaplanır.</div></section>
+<div class="dashboard-grid v12-grid">
+
+  <section class="panel tableWrap compact candidates-panel">
+    <div class="panel-title">
+      <div>
+        <h3>En Güçlü Tarama Adayları</h3>
+        <span>Skora göre ilk hisseler</span>
       </div>
+      <button class="link-btn" data-goto="scanner">Tümünü aç</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Hisse</th>
+          <th>Değişim</th>
+          <th>Hacim</th>
+          <th>Skor</th>
+          <th>Durum</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="topRows"></tbody>
+    </table>
+  </section>
+
+
+  <!-- SCREENER AI -->
+  <section class="panel screener-ai-hero">
+    <div class="screener-ai-title">
+      <div>
+        <span class="eyebrow">SCREENER AI</span>
+      </div>
+      <span class="ai-live-badge">Açıklanabilir AI</span>
+    </div>
+
+    <div class="screener-ai-command">
+      <input
+        id="screenerAiPrompt"
+        type="text"
+        placeholder="Örn: Patlamaya hazır hisseleri bul">
+
+      <button id="runScreenerAi">AI ile Tara</button>
+    </div>
+
+    <div id="screenerAiLibrary" class="ai-command-library">
+      <button data-ai-prompt="Patlamaya hazır hisseleri bul">📈 Breakout Adayları</button>
+      <button data-ai-prompt="Hacim patlaması yapan hisseleri bul">🔥 Hacim Patlaması</button>
+      <button data-ai-prompt="Güçlü para girişi olan hisseleri bul">💰 Para Girişi</button>
+      <button data-ai-prompt="Bugün en güçlü trend hisselerini göster">🚀 Güçlü Trend</button>
+      <button data-ai-prompt="Momentum hisselerini göster">⚡ Momentum</button>
+      <button data-ai-prompt="Banka hisselerinde breakout ara">🏦 Bankalar</button>
+      <button data-ai-prompt="Sanayi hisselerinde güçlü adayları göster">⚙️ Sanayi</button>
+      <button data-ai-prompt="Savunma hisselerinde fırsat ara">🛡️ Savunma</button>
+      <button data-ai-prompt="Enerji hisselerinde güçlü adayları bul">🌱 Enerji</button>
+    </div>
+
+    <div
+      id="screenerAiInterpretation"
+      class="ai-interpretation hidden">
+    </div>
+  </section>
+
+
+  <section class="panel insight">
+    <div class="panel-title">
+      <h3>Tarama dağılımı</h3>
+    </div>
+
+    <div id="distribution" class="distribution"></div>
+
+    <div class="note">
+      Skor; trend, momentum, hacim, volatilite, breakout ve uyumsuzluk koşullarından hesaplanır.
+    </div>
+  </section>
+
+</div>
     </section>
 
     <section id="scannerView" class="view">

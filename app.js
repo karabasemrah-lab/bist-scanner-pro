@@ -600,10 +600,22 @@ async function loadScanDashboard(){
 }
 async function loadDashboard(force=false){
   await Promise.allSettled([
-  loadMarketCards(force),
-  loadMarketMovers(force),
-  loadScanDashboard()
-]);
+    loadMarketCards(force),
+    loadMarketMovers(force),
+    loadScanDashboard()
+  ]);
+
+  const lastUpdated = $('dashboardLastUpdated');
+
+  if(lastUpdated){
+    const now = new Date();
+
+    lastUpdated.textContent =
+      `Son güncelleme: ${now.toLocaleDateString('tr-TR')} ${now.toLocaleTimeString('tr-TR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      })}`;
+  }
 }
 
 function download(path){window.location.href=path}
