@@ -864,7 +864,7 @@ def run_scan_job(job_id: str, universe: str, config: dict | None = None):
         benchmark_close = None
     _set_job(job_id, total=len(symbols), phase="download", message="Yahoo Finance verileri indiriliyor…")
     raw_by_ticker = {}; download_errors=[]; completed_batches=0
-    with ThreadPoolExecutor(max_workers=min(4,len(batches))) as pool:
+    with ThreadPoolExecutor(max_workers=min(6,len(batches))) as pool:
         futures = {pool.submit(_download_batch,b,"2y","1d"): b for b in batches}
         for future in as_completed(futures):
             try: raw_by_ticker.update(future.result())
@@ -1525,7 +1525,7 @@ def load_market_movers(force=False):
     if (
         not force
         and MARKET_MOVERS_CACHE.get("advancers")
-        and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 300
+        and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 120
     ):
         return {
             "ok": True,
@@ -1538,7 +1538,7 @@ def load_market_movers(force=False):
         if (
             not force
             and MARKET_MOVERS_CACHE.get("advancers")
-            and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 300
+            and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 120
         ):
             return {
                 "ok": True,
@@ -1559,22 +1559,29 @@ def load_market_movers(force=False):
                 for i in range(0, len(tickers), 60)
             ]
 
-            for batch in batches:
-                try:
-                    data = yf.download(
-                        batch,
-                        period="5d",
-                        interval="1d",
-                        auto_adjust=False,
-                        actions=False,
-                        progress=False,
-                        threads=True,
-                        group_by="ticker",
-                        timeout=25,
-                    )
-                except Exception:
-                    continue
+            def _fetch_mover_batch(batch):
+                return batch, yf.download(
+                    batch,
+                    period="5d",
+                    interval="1d",
+                    auto_adjust=False,
+                    actions=False,
+                    progress=False,
+                    threads=True,
+                    group_by="ticker",
+                    timeout=25,
+                )
 
+            batch_results = []
+            with ThreadPoolExecutor(max_workers=min(4, len(batches))) as pool:
+                futures = [pool.submit(_fetch_mover_batch, batch) for batch in batches]
+                for future in as_completed(futures):
+                    try:
+                        batch_results.append(future.result())
+                    except Exception:
+                        continue
+
+            for batch, data in batch_results:
                 for ticker in batch:
                     try:
                         symbol = ticker.replace(".IS", "")
@@ -1603,7 +1610,13 @@ def load_market_movers(force=False):
 
                         change_pct = (
                             (last_close / prev_close) - 1
-                        ) * 100
+                                ) * 100
+
+                            # BIST hisselerinde olağandışı günlük değişimleri ele.
+                            # Bölünme / bedelsiz / Yahoo veri düzeltmesi gibi durumların
+                            # Yükselenler-Düşenler ve sıcaklık haritasını bozmasını engeller.
+                        if abs(change_pct) > 11.0:
+                                continue
 
                         last_volume = (
                             float(volume.iloc[-1])

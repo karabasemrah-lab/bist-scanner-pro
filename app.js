@@ -11,7 +11,7 @@ const watchlist=new Set(safeJsonParse(localStorage.getItem('bistScannerWatchlist
 const titles={dashboard:'Dashboard',scanner:'Tarama',watchlist:'Watchlist',breakout:'Breakout',minervini:'Minervini',relative:'Relative Strength',ai:'AI Breakout',backtest:'Backtest',builder:'AI Builder',alarms:'Alarm Merkezi',portfolio:'Portföy',kap:'KAP AI',screenerai:'Screener AI',decision:'AI Decision Center',settings:'Ayarlar'};
 const filterIds=['fBreakout','fVolume','fBollinger','fEma','fRsi','fMacd','fAtr','fSupertrend','fDivergence'];
 const settingIds=['universe','minScore','minVol','setup','donchianLength','fMoneyFlow','volumeSpikeValue','atrRatio','squeezeFactor',...filterIds];
-const columns=['star','symbol','name','close','changePct','volumeRatio','rsi','trAtr','breakoutPct','breakoutScore','squeezeScore','moneyFlowScore','rsScore','sector','aiBreakoutProbability','aiRiskScore','compositeScore','support1','resistance1','score','setup'];
+const columns=['star','symbol','close','changePct','volumeRatio','rsi','trAtr','breakoutPct','breakoutScore','squeezeScore','moneyFlowScore','rsScore','sector','aiBreakoutProbability','aiRiskScore','compositeScore','support1','resistance1','score','setup'];
 const defaultMarketCards=['XU100','XU030','XBANK','XUSIN','USDTRY','EURTRY','XAUUSD','BTCUSD','BRENT'];
 let marketCardCatalog=[];
 let visibleMarketCards=new Set(safeJsonParse(localStorage.getItem('bistVisibleMarketCards')||'null',null)||defaultMarketCards);
@@ -25,7 +25,7 @@ function persistWatch(){localStorage.setItem('bistScannerWatchlist',JSON.stringi
 function toggleWatch(symbol,event){event?.stopPropagation();watchlist.has(symbol)?watchlist.delete(symbol):watchlist.add(symbol);persistWatch();render();renderWatch()}
 window.toggleWatch=toggleWatch;
 function cell(col,html){return visibleColumns.has(col)?`<td data-col="${col}">${html}</td>`:''}
-function rowHtml(r,full=true){return `<tr onclick="showDetail('${esc(r.symbol)}')">${cell('star',`<button class="star ${watchlist.has(r.symbol)?'on':''}" onclick="toggleWatch('${esc(r.symbol)}',event)">★</button>`)}${cell('symbol',`<b>${esc(r.symbol)}</b>`)}${full?cell('name',esc(r.name)):''}${cell('close',n(r.close))}${cell('changePct',`<span class="${r.changePct>=0?'positive':'negative'}">${n(r.changePct)}</span>`)}${cell('volumeRatio',n(r.volumeRatio))}${full?cell('rsi',n(r.rsi,1))+cell('trAtr',n(r.trAtr))+cell('breakoutPct',`<span class="${r.breakoutPct>=0?'positive':'negative'}">${n(r.breakoutPct)}</span>`)+cell('breakoutScore',`<span class="score">${r.breakoutScore??'-'}</span>`)+cell('squeezeScore',`<span class="score">${r.squeezeScore??'-'}</span>`)+cell('moneyFlowScore',`<span class="score">${r.moneyFlowScore??'-'}</span>`)+cell('rsScore',`<span class="score rs-score">${r.rsScore??'-'}</span>`)+cell('sector',`<span class="sector-chip">${esc(r.sector||'Diğer')}</span>`)+cell('aiBreakoutProbability',`<span class="score ai-score">%${r.aiBreakoutProbability??'-'}</span>`)+cell('aiRiskScore',`<span class="score">${r.aiRiskScore??'-'}</span>`)+cell('compositeScore',`<span class="score composite">${r.compositeScore??r.score??'-'}</span>`)+cell('support1',n(r.support1))+cell('resistance1',n(r.resistance1)):''}${cell('score',`<span class="score">${r.score}</span>`)}${cell('setup',`<span class="pill">${esc(r.setup)}</span>`)}</tr>`}
+function rowHtml(r,full=true){return `<tr onclick="showDetail('${esc(r.symbol)}')">${cell('star',`<button class="star ${watchlist.has(r.symbol)?'on':''}" onclick="toggleWatch('${esc(r.symbol)}',event)">★</button>`)}${cell('symbol',`<b>${esc(r.symbol)}</b>`)}${cell('close',n(r.close))}${cell('changePct',`<span class="${r.changePct>=0?'positive':'negative'}">${n(r.changePct)}</span>`)}${cell('volumeRatio',n(r.volumeRatio))}${full?cell('rsi',n(r.rsi,1))+cell('trAtr',n(r.trAtr))+cell('breakoutPct',`<span class="${r.breakoutPct>=0?'positive':'negative'}">${n(r.breakoutPct)}</span>`)+cell('breakoutScore',`<span class="score">${r.breakoutScore??'-'}</span>`)+cell('squeezeScore',`<span class="score">${r.squeezeScore??'-'}</span>`)+cell('moneyFlowScore',`<span class="score">${r.moneyFlowScore??'-'}</span>`)+cell('rsScore',`<span class="score rs-score">${r.rsScore??'-'}</span>`)+cell('sector',`<span class="sector-chip">${esc(r.sector||'Diğer')}</span>`)+cell('aiBreakoutProbability',`<span class="score ai-score">%${r.aiBreakoutProbability??'-'}</span>`)+cell('aiRiskScore',`<span class="score">${r.aiRiskScore??'-'}</span>`)+cell('compositeScore',`<span class="score composite">${r.compositeScore??r.score??'-'}</span>`)+cell('support1',n(r.support1))+cell('resistance1',n(r.resistance1)):''}${cell('score',`<span class="score">${r.score}</span>`)}${cell('setup',`<span class="pill">${esc(r.setup)}</span>`)}</tr>`}
 function filteredRows(){
   const minScore = +$('minScore').value;
   const minVol = +$('minVol').value;
@@ -87,11 +87,21 @@ function renderIntelligence(rows){
   if($('radarCards'))$('radarCards').innerHTML=radar.length?radar.map(r=>`<button class="radar-card" onclick="showDetail('${esc(r.symbol)}')"><div><b>${esc(r.symbol)}</b><span>${'★'.repeat(r.stars||Math.max(1,Math.round((r.compositeScore||r.score)/20)))}</span></div><strong>${r.compositeScore??r.score}</strong><small>RS ${r.rsScore??'-'} · Para ${r.moneyFlowScore??'-'} · ${esc(r.sector||'Diğer')}</small></button>`).join(''):'<div class="empty">Radar koşullarına uyan aday yok.</div>';
   const sectors=sectorSummary(rows);
   if($('sectorLeaders'))$('sectorLeaders').innerHTML=sectors.slice(0,8).map((x,i)=>`<div class="sector-row"><b>${i+1}</b><span>${esc(x.sector)}<small>${x.count} hisse · ${x.changePct>=0?'+':''}${n(x.changePct)}%</small></span><strong>${x.score}</strong></div>`).join('')||'<div class="empty">Tarama bekleniyor</div>';
-  if($('rsLeaders'))$('rsLeaders').innerHTML=[...rows].sort((a,b)=>(b.rsScore||0)-(a.rsScore||0)).slice(0,30).map((r,i)=>`<div class="rank-row" onclick="showDetail('${esc(r.symbol)}')"><b>${i+1}</b><span>${esc(r.symbol)}<small>${esc(r.name||'')} · ${esc(r.sector||'Diğer')}</small></span><em>${r.rsScore??'-'}</em><i>${esc(r.rsTrend||'')}</i></div>`).join('')||'<div class="empty">Tarama bekleniyor</div>';
+  if($('rsLeaders'))$('rsLeaders').innerHTML=[...rows].sort((a,b)=>(b.rsScore||0)-(a.rsScore||0)).slice(0,30).map((r,i)=>`<div class="rank-row" onclick="showDetail('${esc(r.symbol)}')"><b>${i+1}</b><span>${esc(r.symbol)}<small>${esc(r.sector||'Diğer')}</small></span><em>${r.rsScore??'-'}</em><i>${esc(r.rsTrend||'')}</i></div>`).join('')||'<div class="empty">Tarama bekleniyor</div>';
   if($('sectorRanking'))$('sectorRanking').innerHTML=sectors.map((x,i)=>`<div class="rank-row"><b>${i+1}</b><span>${esc(x.sector)}<small>${x.count} hisse · RS ${Math.round(x.rsScore)}</small></span><em>${x.score}</em><i>${x.changePct>=0?'+':''}${n(x.changePct)}%</i></div>`).join('')||'<div class="empty">Tarama bekleniyor</div>';
   if($('aiLeaders')){const ai=[...rows].sort((a,b)=>(b.aiBreakoutProbability??0)-(a.aiBreakoutProbability??0)).slice(0,25);$('aiLeaders').innerHTML=ai.map(r=>`<tr onclick="showDetail('${esc(r.symbol)}')"><td><b>${esc(r.symbol)}</b></td><td><span class="score ai-score">%${r.aiBreakoutProbability??'-'}</span></td><td>${r.aiRiskScore??'-'}</td><td class="${(r.aiExpectedReturn10d??0)>=0?'positive':'negative'}">${n(r.aiExpectedReturn10d)}%</td><td>${r.aiModelConfidence??'-'}</td><td>${r.aiSampleSize??0}</td></tr>`).join('')||'<tr><td colspan="6">Tarama bekleniyor</td></tr>';}
 }
-function renderWatch(){const rows=allRows.filter(r=>watchlist.has(r.symbol));$('watchRows').innerHTML=rows.map(r=>rowHtml(r,false)).join('');$('watchEmpty').classList.toggle('hidden',rows.length>0);$('watchCount').textContent=watchlist.size}
+function renderWatch(){
+  const rows=allRows.filter(r=>watchlist.has(r.symbol));
+  $('watchRows').innerHTML=rows.map(r=>`<tr onclick="showDetail('${esc(r.symbol)}')">
+    <td><button class="star watch-star ${watchlist.has(r.symbol)?'on':''}" onclick="toggleWatch('${esc(r.symbol)}',event)">★</button></td>
+    <td><b>${esc(r.symbol)}</b></td><td>${n(r.close)}</td>
+    <td class="${Number(r.changePct)>=0?'positive':'negative'}">${n(r.changePct)}%</td>
+    <td>${n(r.volumeRatio)}x</td><td class="score">${r.score??'-'}</td>
+    <td><span class="pill">${esc(r.setup||'-')}</span></td></tr>`).join('');
+  $('watchEmpty').classList.toggle('hidden',rows.length>0);
+  $('watchCount').textContent=watchlist.size;
+}
 function showView(view){const target=$(`${view}View`);if(!target){console.error('Görünüm bulunamadı:',view);return}document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));target.classList.add('active');document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===view));$('pageTitle').textContent=titles[view]||'BIST Scanner Pro';window.scrollTo({top:0,behavior:'smooth'})}
 function setScanState(active){[$('scan'),$('scanTop')].forEach(b=>b.disabled=active);$('scan').textContent=active?'Tarama sürüyor...':'Taramayı Başlat';$('scanTop').textContent=active?'Taranıyor...':'Taramayı Yenile'}
 function updateProgress(job){
@@ -303,7 +313,7 @@ async function loadLast(){
 }
 function yes(v){return v?'✓':'—'}
 let detailCurrentIndex=-1;
-function showDetail(symbol){const r=allRows.find(x=>x.symbol===symbol);if(!r)return;detailCurrentIndex=allRows.findIndex(x=>x.symbol===symbol);$('detailSymbol').textContent=r.symbol;$('detailName').textContent=r.name;$('detailScore').textContent=r.score;const c=r.conditions||{};$('detailGrid').innerHTML=[['Fiyat',n(r.close)],['Değişim',`${n(r.changePct)}%`],['Teknik skor',r.technicalScore??'-'],['Breakout skoru',r.breakoutScore??'-'],['Sıkışma skoru',r.squeezeScore??'-'],['Composite skor',r.compositeScore??r.score??'-'],['AI breakout olasılığı',`%${r.aiBreakoutProbability??'-'}`],['AI risk skoru',r.aiRiskScore??'-'],['Beklenen 10G getiri',`${n(r.aiExpectedReturn10d)}%`],['Model güveni',r.aiModelConfidence??'-'],['Model örnek sayısı',r.aiSampleSize??0],['Relative Strength',r.rsScore??'-'],['RS trendi',r.rsTrend??'-'],['RS 20G',r.rs20??'-'],['RS 60G',r.rs60??'-'],['RS 120G',r.rs120??'-'],['RS 252G',r.rs252??'-'],['Sektör',r.sector??'Diğer'],['Sektör skoru',r.sectorScore??'-'],['Sektör sırası',r.sectorRank??'-'],['Para akışı skoru',r.moneyFlowScore??'-'],['CMF 20',n(r.cmf20,3)],['OBV eğimi 20G',`${n(r.obvSlope20)}%`],['A/D eğimi 20G',`${n(r.adlSlope20)}%`],['Yükseliş/Düşüş hacmi',`${n(r.upDownVolumeRatio)}x`],['Fiyat-hacim korelasyonu',n(r.priceVolumeCorrelation,3)],['Yakın destek',n(r.support1)],['Desteğe uzaklık',`${n(r.supportDistancePct)}%`],['İkinci destek',n(r.support2)],['Yakın direnç',n(r.resistance1)],['Dirence uzaklık',`${n(r.resistanceDistancePct)}%`],['İkinci direnç',n(r.resistance2)],['Destek temas',r.supportTouches??0],['Direnç temas',r.resistanceTouches??0],['Hacim oranı',`${n(r.volumeRatio)}x`],['RSI',n(r.rsi,1)],['TR / ATR',n(r.trAtr)],['Kırılım',`${n(r.breakoutPct)}%`],['BB genişliği',`${n(r.bbWidth)}%`],['EMA20',n(r.ema20)],['EMA50',n(r.ema50)],['EMA200',n(r.ema200)],['MACD',n(r.macd,3)],['SuperTrend',n(r.supertrend)],['Breakout',yes(c.breakout)],['Hacim patlaması',yes(c.volumeSpike)],['Bollinger sıkışması',yes(c.bollingerSqueeze)],['EMA trend',yes(c.emaTrend)],['MACD pozitif',yes(c.macdBullish)],['SuperTrend AL',yes(c.supertrendBuy)],['Pozitif uyumsuzluk',yes(c.positiveDivergence)],['Para akışı pozitif',yes(c.moneyFlowPositive)],['Durum',r.setup],['Veri tarihi',r.dataDate||'-']].map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('');if($('detailPosition'))$('detailPosition').textContent=`${detailCurrentIndex+1} / ${allRows.length}`;openModal('detailModal')}
+function showDetail(symbol){const r=allRows.find(x=>x.symbol===symbol);if(!r)return;detailCurrentIndex=allRows.findIndex(x=>x.symbol===symbol);$('detailSymbol').textContent=r.symbol;$('detailName').textContent='';$('detailScore').textContent=r.score;const c=r.conditions||{};$('detailGrid').innerHTML=[['Fiyat',n(r.close)],['Değişim',`${n(r.changePct)}%`],['Teknik skor',r.technicalScore??'-'],['Breakout skoru',r.breakoutScore??'-'],['Sıkışma skoru',r.squeezeScore??'-'],['Composite skor',r.compositeScore??r.score??'-'],['AI breakout olasılığı',`%${r.aiBreakoutProbability??'-'}`],['AI risk skoru',r.aiRiskScore??'-'],['Beklenen 10G getiri',`${n(r.aiExpectedReturn10d)}%`],['Model güveni',r.aiModelConfidence??'-'],['Model örnek sayısı',r.aiSampleSize??0],['Relative Strength',r.rsScore??'-'],['RS trendi',r.rsTrend??'-'],['RS 20G',r.rs20??'-'],['RS 60G',r.rs60??'-'],['RS 120G',r.rs120??'-'],['RS 252G',r.rs252??'-'],['Sektör',r.sector??'Diğer'],['Sektör skoru',r.sectorScore??'-'],['Sektör sırası',r.sectorRank??'-'],['Para akışı skoru',r.moneyFlowScore??'-'],['CMF 20',n(r.cmf20,3)],['OBV eğimi 20G',`${n(r.obvSlope20)}%`],['A/D eğimi 20G',`${n(r.adlSlope20)}%`],['Yükseliş/Düşüş hacmi',`${n(r.upDownVolumeRatio)}x`],['Fiyat-hacim korelasyonu',n(r.priceVolumeCorrelation,3)],['Yakın destek',n(r.support1)],['Desteğe uzaklık',`${n(r.supportDistancePct)}%`],['İkinci destek',n(r.support2)],['Yakın direnç',n(r.resistance1)],['Dirence uzaklık',`${n(r.resistanceDistancePct)}%`],['İkinci direnç',n(r.resistance2)],['Destek temas',r.supportTouches??0],['Direnç temas',r.resistanceTouches??0],['Hacim oranı',`${n(r.volumeRatio)}x`],['RSI',n(r.rsi,1)],['TR / ATR',n(r.trAtr)],['Kırılım',`${n(r.breakoutPct)}%`],['BB genişliği',`${n(r.bbWidth)}%`],['EMA20',n(r.ema20)],['EMA50',n(r.ema50)],['EMA200',n(r.ema200)],['MACD',n(r.macd,3)],['SuperTrend',n(r.supertrend)],['Breakout',yes(c.breakout)],['Hacim patlaması',yes(c.volumeSpike)],['Bollinger sıkışması',yes(c.bollingerSqueeze)],['EMA trend',yes(c.emaTrend)],['MACD pozitif',yes(c.macdBullish)],['SuperTrend AL',yes(c.supertrendBuy)],['Pozitif uyumsuzluk',yes(c.positiveDivergence)],['Para akışı pozitif',yes(c.moneyFlowPositive)],['Durum',r.setup],['Veri tarihi',r.dataDate||'-']].map(([k,v])=>`<div><small>${esc(k)}</small><b>${esc(v)}</b></div>`).join('');if($('detailPosition'))$('detailPosition').textContent=`${detailCurrentIndex+1} / ${allRows.length}`;openModal('detailModal')}
 function showAdjacentDetail(delta){if(!allRows.length)return;const next=(detailCurrentIndex+delta+allRows.length)%allRows.length;showDetail(allRows[next].symbol)}
 window.showDetail=showDetail;
 
@@ -433,51 +443,13 @@ function heatClass(change){
 }
 
 function renderMarketLists(lists){
-  lists = lists || {};
-
-  const advancers = lists.advancers || [];
-  const decliners = lists.decliners || [];
-
-
-  if (all.length) {
-    advancers = all
-      .filter(r => Number(r[periodKey]) > 0)
-      .sort((a,b) => Number(b[periodKey]) - Number(a[periodKey]))
-      .slice(0,20);
-
-    decliners = all
-      .filter(r => Number(r[periodKey]) < 0)
-      .sort((a,b) => Number(a[periodKey]) - Number(b[periodKey]))
-      .slice(0,20);
-  }
-
-  $('advancersList').innerHTML = moverRows(advancers,'change');
-  $('declinersList').innerHTML = moverRows(decliners,'change');
-  $('volumeLeadersList').innerHTML = moverRows(lists.volumeLeaders || [],'volume');
-
-  
-  const heatRows = Array.isArray(lists.heatmap) ? lists.heatmap : [];
-
-$('heatmapUniverse').textContent =
-  heatRows.length ? `${heatRows.length} hisse` : 'Son tarama';
-
-$('marketHeatmap').innerHTML = heatRows.length
-  ? heatRows.map(r => {
-      const size = Math.max(
-        1,
-        Math.min(3, Math.round((Number(r.score) || 0) / 35))
-      );
-
-      return `<div class="heat-tile ${heatClass(r.changePct)}"
-        style="--heat-size:${size}"
-        onclick="showDetail('${esc(r.symbol)}')"
-        title="${esc(r.name || r.symbol)} | Skor ${r.score || 0} | Hacim ${n(r.volumeRatio)}x">
-        <b>${esc(r.symbol)}</b>
-        <span>${Number(r.changePct) >= 0 ? '+' : ''}${n(r.changePct)}%</span>
-        <small>Skor ${r.score || 0}</small>
-      </div>`;
-    }).join('')
-  : 'Sıcaklık haritası için BIST 100 veya BIST Tüm taraması yapın.';
+  lists=lists||{};
+  $('advancersList').innerHTML=moverRows(lists.advancers||[],'change');
+  $('declinersList').innerHTML=moverRows(lists.decliners||[],'change');
+  $('volumeLeadersList').innerHTML=moverRows(lists.volumeLeaders||[],'volume');
+  const heatRows=Array.isArray(lists.heatmap)?lists.heatmap:[];
+  $('heatmapUniverse').textContent=heatRows.length?`${heatRows.length} hisse`:'Son tarama';
+  $('marketHeatmap').innerHTML=heatRows.length?heatRows.map(r=>`<div class="heat-tile ${heatClass(r.changePct)}" onclick="showDetail('${esc(r.symbol)}')" title="${esc(r.symbol)} | ${n(r.changePct)}%"><b>${esc(r.symbol)}</b><span>${Number(r.changePct)>=0?'+':''}${n(r.changePct)}%</span></div>`).join(''):'<div class="empty">Hisse verisi bulunamadı.</div>';
 }
 async function loadMarketCards(force=false){
   const box=$('marketCards');
@@ -641,7 +613,7 @@ function renderBacktest(data){
   $('btWinRate').textContent=`${n(s.winRate,1)}%`;$('btAvgReturn').textContent=`${n(s.avgReturn)}%`;$('btMaxDd').textContent=`${n(s.maxDrawdown)}%`;
   $('btUpdated').textContent=data?.updatedAt?`Son test: ${data.updatedAt} · ${s.strategy||''}`:'Henüz çalıştırılmadı';
   const rows=Array.isArray(data?.symbols)?data.symbols:[];
-  $('btRows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.symbol)}</b><small>${esc(r.name||'')}</small></td><td>${r.signals}</td><td class="positive">${r.wins}</td><td class="negative">${r.losses}</td><td><span class="score">%${n(r.winRate,1)}</span></td><td class="${r.avgReturn>=0?'positive':'negative'}">${n(r.avgReturn)}%</td><td class="negative">${n(r.maxDrawdown)}%</td><td>${n(r.avgMfe)}%</td></tr>`).join('')||'<tr><td colspan="8">Backtest sonucu yok.</td></tr>';
+  $('btRows').innerHTML=rows.map(r=>`<tr><td><b>${esc(r.symbol)}</b></td><td>${r.signals}</td><td class="positive">${r.wins}</td><td class="negative">${r.losses}</td><td><span class="score">%${n(r.winRate,1)}</span></td><td class="${r.avgReturn>=0?'positive':'negative'}">${n(r.avgReturn)}%</td><td class="negative">${n(r.maxDrawdown)}%</td><td>${n(r.avgMfe)}%</td></tr>`).join('')||'<tr><td colspan="8">Backtest sonucu yok.</td></tr>';
 }
 async function loadLastBacktest(){try{renderBacktest(await fetchJson(`/api/backtest/last?_=${Date.now()}`,{cache:'no-store'}))}catch(e){$('btUpdated').textContent='Backtest verisi alınamadı: '+e.message}}
 async function runBacktest(){
@@ -795,7 +767,7 @@ function renderScreenerAi(spec){
   const rows=allRows.filter(r=>screenerAiMatch(r,spec)).map(r=>({...r,_aiConfidence:screenerAiConfidence(r,spec),_aiText:screenerAiExplain(r,spec)})).sort((a,b)=>b._aiConfidence-a._aiConfidence).slice(0,spec.limit);
   $('screenerAiCriteria').innerHTML=spec.criteria.map(x=>`<span>${esc(x)}</span>`).join('');
   $('screenerAiResultLabel').textContent=`“${spec.prompt}” · ${rows.length} sonuç`;
-  $('screenerAiResults').innerHTML=rows.length?rows.map(r=>`<article class="ai-result-card" onclick="showDetail('${esc(r.symbol)}')"><div class="ai-result-head"><div><b>${esc(r.symbol)}</b><span>${'★'.repeat(Math.max(1,Math.round(r._aiConfidence/20)))}</span><small>${esc(r.name||'')} · ${esc(r.sector||'Diğer')}</small></div><strong>%${r._aiConfidence}<small>AI güveni</small></strong></div><div class="ai-result-scores"><span>Composite <b>${r.compositeScore??r.score}</b></span><span>Breakout <b>${r.breakoutScore??'-'}</b></span><span>Sıkışma <b>${r.squeezeScore??'-'}</b></span><span>RS <b>${r.rsScore??'-'}</b></span><span>Para <b>${r.moneyFlowScore??'-'}</b></span></div><div class="ai-result-reasons"><div><h4>Seçilme nedenleri</h4>${r._aiText.why.map(x=>`<p>✓ ${esc(x)}</p>`).join('')||'<p>✓ Genel teknik uyum</p>'}</div><div class="risk"><h4>Risk</h4>${r._aiText.risk.map(x=>`<p>• ${esc(x)}</p>`).join('')||'<p>• Belirgin ek risk sinyali yok</p>'}</div></div></article>`).join(''):'<div class="empty">Bu komuta uyan hisse bulunamadı. Daha geniş bir ifade deneyebilirsin.</div>';
+  $('screenerAiResults').innerHTML=rows.length?rows.map(r=>`<article class="ai-result-card" onclick="showDetail('${esc(r.symbol)}')"><div class="ai-result-head"><div><b>${esc(r.symbol)}</b><span>${'★'.repeat(Math.max(1,Math.round(r._aiConfidence/20)))}</span><small>${esc(r.sector||'Diğer')}</small></div><strong>%${r._aiConfidence}<small>AI güveni</small></strong></div><div class="ai-result-scores"><span>Composite <b>${r.compositeScore??r.score}</b></span><span>Breakout <b>${r.breakoutScore??'-'}</b></span><span>Sıkışma <b>${r.squeezeScore??'-'}</b></span><span>RS <b>${r.rsScore??'-'}</b></span><span>Para <b>${r.moneyFlowScore??'-'}</b></span></div><div class="ai-result-reasons"><div><h4>Seçilme nedenleri</h4>${r._aiText.why.map(x=>`<p>✓ ${esc(x)}</p>`).join('')||'<p>✓ Genel teknik uyum</p>'}</div><div class="risk"><h4>Risk</h4>${r._aiText.risk.map(x=>`<p>• ${esc(x)}</p>`).join('')||'<p>• Belirgin ek risk sinyali yok</p>'}</div></div></article>`).join(''):'<div class="empty">Bu komuta uyan hisse bulunamadı. Daha geniş bir ifade deneyebilirsin.</div>';
   $('screenerAiInterpretation').innerHTML=`<b>AI yorumu:</b> ${spec.criteria.map(esc).join(' · ')} <button id="openAiResults">Sonuçları aç (${rows.length})</button>`;$('screenerAiInterpretation').classList.remove('hidden');$('openAiResults').onclick=()=>showView('screenerai');
   showView('screenerai');
 }
@@ -814,7 +786,15 @@ async function runScreenerAi(){
   showView('screenerai');$('screenerAiResultLabel').textContent='Tarama verisi hazırlanıyor…';
   try{await ensureScanData($('screenerAiResults'));renderScreenerAi(lastScreenerAiSpec)}catch(e){$('screenerAiResultLabel').textContent='Screener AI çalıştırılamadı';$('screenerAiResults').innerHTML=`<div class="error-box">${esc(e.message)} <button class="secondary" onclick="showView('scanner')">Tarama ekranını aç</button></div>`}finally{$('runScreenerAi').disabled=false;$('runScreenerAi').textContent='AI ile Tara'}
 }
-$('runScreenerAi')?.addEventListener('click',runScreenerAi);$('screenerAiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter')runScreenerAi()});$('rerunScreenerAi')?.addEventListener('click',()=>{if(lastScreenerAiSpec)renderScreenerAi(lastScreenerAiSpec)});document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',()=>{$('screenerAiPrompt').value=b.dataset.aiPrompt;runScreenerAi()}));
+$('runScreenerAi')?.addEventListener('click',runScreenerAi);
+$('screenerAiPrompt')?.addEventListener('keydown',e=>{if(e.key==='Enter')runScreenerAi()});
+$('rerunScreenerAi')?.addEventListener('click',()=>{if(lastScreenerAiSpec)renderScreenerAi(lastScreenerAiSpec)});
+document.querySelectorAll('[data-ai-prompt]').forEach(b=>b.addEventListener('click',async()=>{
+  const prompt=b.dataset.aiPrompt||''; if($('screenerAiPrompt'))$('screenerAiPrompt').value=prompt;
+  lastScreenerAiPrompt=prompt; lastScreenerAiSpec=screenerAiSpec(prompt);
+  try{await ensureScanData($('screenerAiResults'));renderScreenerAi(lastScreenerAiSpec);showView('screenerai')}
+  catch(e){if($('screenerAiResults'))$('screenerAiResults').innerHTML=`<div class="error-box">${esc(e.message)}</div>`}
+}));
 
 // v2.5 Alarm Merkezi
 let alarms=safeJsonParse(localStorage.getItem('bistAlarms')||'[]',[]);
@@ -1044,7 +1024,7 @@ function renderDecisionCenter(){
 
               <div class="decision-symbol">
                 <b>${esc(r.symbol)}</b>
-                <small>${esc(r.name || r.sector || '')}</small>
+                <small>${esc(r.sector || '')}</small>
               </div>
 
               <div class="decision-metrics">
@@ -1317,3 +1297,17 @@ document.addEventListener('click', (event) => {
 
 
 
+
+// Excel tipi tablo sıralama
+const tableSortState=new WeakMap();
+function sortableValue(text,type){const raw=String(text??'').trim();if(type==='number'){const v=Number(raw.replace(/\./g,'').replace(',','.').replace(/[^\d.+-]/g,''));return Number.isFinite(v)?v:Number.NEGATIVE_INFINITY}return raw.toLocaleLowerCase('tr')}
+function enableTableSorting(){document.querySelectorAll('table').forEach(table=>{const head=table.tHead;if(!head||table.dataset.sortReady==='1')return;table.dataset.sortReady='1';[...head.rows[0].cells].forEach((th,index)=>{if(th.dataset.sortType==='none'||th.textContent.trim()==='★'||th.textContent.trim()==='')return;th.classList.add('sortable-th');th.addEventListener('click',()=>{const body=table.tBodies[0];if(!body)return;const prev=tableSortState.get(table)||{};const dir=prev.index===index&&prev.dir==='asc'?'desc':'asc';const type=th.dataset.sortType||(/Fiyat|Değişim|Hacim|Skor|RSI|ATR|Olasılık|Risk|Composite|Destek|Direnç|Kırılım|Sıkışma|Para Akışı|RS/i.test(th.textContent)?'number':'text');const rows=[...body.rows];rows.sort((a,b)=>{const av=sortableValue(a.cells[index]?.textContent,type),bv=sortableValue(b.cells[index]?.textContent,type);const cmp=typeof av==='number'?(av-bv):String(av).localeCompare(String(bv),'tr',{numeric:true});return dir==='asc'?cmp:-cmp});rows.forEach(r=>body.appendChild(r));[...head.querySelectorAll('th')].forEach(x=>x.classList.remove('sort-asc','sort-desc'));th.classList.add(dir==='asc'?'sort-asc':'sort-desc');tableSortState.set(table,{index,dir})})})})}
+document.addEventListener('DOMContentLoaded',enableTableSorting);new MutationObserver(enableTableSorting).observe(document.documentElement,{childList:true,subtree:true});
+
+// Dashboard açıkken hafif piyasa verilerini 2 dakikada bir yenile; tam tarama otomatik çalışmaz.
+const DASHBOARD_REFRESH_MS=120000;let dashboardRefreshTimer=null;
+function dashboardIsVisible(){return $('dashboardView')?.classList.contains('active')&&!document.hidden}
+async function refreshDashboardIfVisible(){if(!dashboardIsVisible()||activeJob)return;await loadDashboard(false)}
+function startDashboardAutoRefresh(){if(dashboardRefreshTimer)clearInterval(dashboardRefreshTimer);dashboardRefreshTimer=setInterval(refreshDashboardIfVisible,DASHBOARD_REFRESH_MS)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&dashboardIsVisible())refreshDashboardIfVisible()});
+window.addEventListener('focus',()=>{if(dashboardIsVisible())refreshDashboardIfVisible()});startDashboardAutoRefresh();

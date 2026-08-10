@@ -9,7 +9,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <title>BIST Scanner Pro</title>
-  <link rel="stylesheet" href="style.css?v=2.7">
+  <link rel="stylesheet" href="style.css?v=4.0.3">
 </head>
 <body>
 <div class="app-shell">
@@ -239,22 +239,7 @@
 
   <!-- SCREENER AI -->
   <section class="panel screener-ai-hero">
-    <div class="screener-ai-title">
-      <div>
-        <span class="eyebrow">SCREENER AI</span>
-      </div>
-      <span class="ai-live-badge">Açıklanabilir AI</span>
-    </div>
-
-    <div class="screener-ai-command">
-      <input
-        id="screenerAiPrompt"
-        type="text"
-        placeholder="Örn: Patlamaya hazır hisseleri bul">
-
-      <button id="runScreenerAi">AI ile Tara</button>
-    </div>
-
+    <input id="screenerAiPrompt" type="hidden" value="">
     <div id="screenerAiLibrary" class="ai-command-library">
       <button data-ai-prompt="Patlamaya hazır hisseleri bul">📈 Breakout Adayları</button>
       <button data-ai-prompt="Hacim patlaması yapan hisseleri bul">🔥 Hacim Patlaması</button>
@@ -291,12 +276,11 @@
 
     <section id="scannerView" class="view">
       <section class="panel controls">
-        <label>Veri kaynağı<select id="mode" disabled><option value="live">Canlı Yahoo Finance</option></select></label>
         <label>Endeks<select id="universe"><option value="all">BIST Tüm</option><option value="30">BIST 30</option><option value="50">BIST 50</option><option value="100">BIST 100</option></select></label>
         <label>Minimum skor<input id="minScore" type="number" min="0" max="100" value="55"></label>
         <label>Minimum hacim<input id="minVol" type="number" min="0" step="0.1" value="1.0"></label>
         <label>Kurulum<select id="setup"><option value="all">Tümü</option><option>Breakout</option><option>Güçlü Trend</option><option>Pozitif Uyumsuzluk</option><option>İzleme</option><option>Zayıf</option></select></label>
-        <label>Arama<input id="search" type="search" placeholder="THYAO veya şirket"></label>
+        <label>Arama<input id="search" type="search" placeholder="THYAO"></label>
         <button id="scan">Taramayı Başlat</button><button id="save" class="secondary">Ayarları Kaydet</button>
       </section>
       <section class="panel technical-filters">
@@ -338,10 +322,10 @@
         <div class="progress-track"><i id="progressBar"></i></div>
         <div class="progress-meta"><span>Veri Alınan: <b id="progressFound">0</b></span><span>Başarısız: <b id="progressFailed">0</b></span><span>Kalan: <b id="progressRemaining">0</b></span></div>
       </section>
-      <section class="panel tableWrap"><div class="panel-title"><h3>Tarama sonuçları</h3><div class="result-actions"><span id="resultLabel">0 hisse</span><button id="columnButton" class="secondary small">Sütunlar</button><button id="failedButton" class="secondary small">Başarısızlar</button><button id="exportCsv" class="secondary small">CSV</button><button id="exportExcel" class="secondary small">Excel</button></div></div><div id="columnPanel" class="column-panel hidden"></div><table id="resultTable"><thead><tr><th data-col="star">★</th><th data-col="symbol">Hisse</th><th data-col="name">Şirket</th><th data-col="close">Fiyat</th><th data-col="changePct">Değişim %</th><th data-col="volumeRatio">Hacim</th><th data-col="rsi">RSI</th><th data-col="trAtr">TR/ATR</th><th data-col="breakoutPct">Kırılım %</th><th data-col="breakoutScore">Breakout</th><th data-col="squeezeScore">Sıkışma</th><th data-col="moneyFlowScore">Para Akışı</th><th data-col="rsScore">RS</th><th data-col="sector">Sektör</th><th data-col="aiBreakoutProbability">AI Olasılık</th><th data-col="aiRiskScore">Risk</th><th data-col="compositeScore">Composite</th><th data-col="support1">Destek</th><th data-col="resistance1">Direnç</th><th data-col="score">Skor</th><th data-col="setup">Durum</th></tr></thead><tbody id="rows"></tbody></table></section>
+      <section class="panel tableWrap"><div class="panel-title"><h3>Tarama sonuçları</h3><div class="result-actions"><span id="resultLabel">0 hisse</span><button id="columnButton" class="secondary small">Sütunlar</button><button id="failedButton" class="secondary small">Başarısızlar</button><button id="exportCsv" class="secondary small">CSV</button><button id="exportExcel" class="secondary small">Excel</button></div></div><div id="columnPanel" class="column-panel hidden"></div><table id="resultTable"><thead><tr><th data-col="star">★</th><th data-col="symbol">Hisse</th><th data-col="close">Fiyat</th><th data-col="changePct">Değişim %</th><th data-col="volumeRatio">Hacim</th><th data-col="rsi">RSI</th><th data-col="trAtr">TR/ATR</th><th data-col="breakoutPct">Kırılım %</th><th data-col="breakoutScore">Breakout</th><th data-col="squeezeScore">Sıkışma</th><th data-col="moneyFlowScore">Para Akışı</th><th data-col="rsScore">RS</th><th data-col="sector">Sektör</th><th data-col="aiBreakoutProbability">AI Olasılık</th><th data-col="aiRiskScore">Risk</th><th data-col="compositeScore">Composite</th><th data-col="support1">Destek</th><th data-col="resistance1">Direnç</th><th data-col="score">Skor</th><th data-col="setup">Durum</th></tr></thead><tbody id="rows"></tbody></table></section>
     </section>
 
-    <section id="watchlistView" class="view"><section class="panel tableWrap"><div class="panel-title"><h3>Watchlist</h3><span>Yıldızladığın hisseler</span></div><table><thead><tr><th>★</th><th>Hisse</th><th>Şirket</th><th>Fiyat</th><th>Değişim %</th><th>Hacim</th><th>Skor</th><th>Durum</th></tr></thead><tbody id="watchRows"></tbody></table><div id="watchEmpty" class="empty hidden">Henüz watchlist'e hisse eklenmedi.</div></section></section>
+    <section id="watchlistView" class="view"><section class="panel tableWrap watchlist-panel"><div class="panel-title"><h3>Watchlist</h3><span>Yıldızladığın hisseler</span></div><table id="watchTable"><thead><tr><th data-sort-type="none">★</th><th data-sort-type="text">Hisse</th><th data-sort-type="number">Fiyat</th><th data-sort-type="number">Değişim %</th><th data-sort-type="number">Hacim</th><th data-sort-type="number">Skor</th><th data-sort-type="text">Durum</th></tr></thead><tbody id="watchRows"></tbody></table><div id="watchEmpty" class="empty hidden">Henüz watchlist'e hisse eklenmedi.</div></section></section>
 
     <section id="breakoutView" class="view"><section class="panel module"><h2>Breakout Motoru</h2><p>Donchian kırılımı, hacim artışı, güçlü kapanış ve ATR genişlemesi birlikte değerlendirilir.</p><div class="module-grid"><div><b>20 Bar Kırılım</b><span>Aktif</span></div><div><b>Hacim Doğrulama</b><span>Aktif</span></div><div><b>ATR Genişleme</b><span>Aktif</span></div><div><b>Güçlü Kapanış</b><span>Aktif</span></div></div><button data-goto="scanner" data-setup="Breakout">Breakout sonuçlarını aç</button></section></section>
 <section id="minerviniView" class="view">
@@ -585,7 +569,7 @@ Sıkışma skoru 70 üzeri ve XU100'e göre RS güçlü hisseleri backtest et
 </div>
 <div id="detailModal" class="modal hidden"><div class="modal-card"><button id="closeDetail" class="modal-close">×</button><div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div><div id="detailGrid" class="detail-grid"></div><div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır.</div></div></div>
 <script src="cloud-adapter.js?v=4.0.2"></script>
-<script src="app.js?v=3.3.3"></script>
+<script src="app.js?v=4.0.3"></script>
 <script src="repair.js?v=4.0.2"></script>
 <div id="failedModal" class="modal hidden"><div class="modal-card"><button id="closeFailed" class="modal-close">×</button><h2>Başarısız semboller</h2><p id="failedSummary" class="muted"></p><div id="failedList" class="failed-list"></div></div></div><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));}</script>
 </body></html>

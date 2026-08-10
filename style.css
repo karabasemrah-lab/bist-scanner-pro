@@ -767,3 +767,19 @@ body.modal-open{overflow:hidden}
     white-space:normal !important;
   }
 }
+/* v4.0.3 toplu düzeltmeler */
+.sortable-th{cursor:pointer;user-select:none}.sortable-th::after{content:"";display:inline-block;width:12px;margin-left:5px;color:#7ca5ff}.sortable-th.sort-asc::after{content:"▲"}.sortable-th.sort-desc::after{content:"▼"}
+.watch-star{font-size:14px!important;width:22px!important;height:22px!important}.watchlist-panel table{min-width:720px}.watchlist-panel th:first-child,.watchlist-panel td:first-child{width:42px;text-align:center}.watchlist-panel th:nth-child(2),.watchlist-panel td:nth-child(2){text-align:left}
+.mover-row{grid-template-columns:minmax(105px,1.25fr) minmax(78px,.72fr) minmax(86px,.72fr)!important;column-gap:18px!important}.mover-row small{text-align:left!important}.mover-value{text-align:right!important}
+.dashboard-v12 .screener-ai-hero{padding:12px 14px!important}.dashboard-v12 .ai-command-library{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:7px!important;margin-top:0!important}.dashboard-v12 .ai-command-library button{min-width:0!important;height:38px!important;padding:5px 7px!important;font-size:10px!important;line-height:1.1!important;white-space:normal!important}
+.controls{grid-template-columns:repeat(5,minmax(120px,1fr))}.tri-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.parameter-grid{grid-template-columns:repeat(4,minmax(0,1fr))!important}.tri-grid label,.parameter-grid label{min-width:0}.tri-grid select,.parameter-grid input{width:100%;min-width:0}
+.topbar{padding-top:15px!important;padding-bottom:15px!important}.topbar h1{font-size:25px!important}.dashboard-last-updated{margin-top:2px!important}
+@media(max-width:760px){
+.sidebar{position:sticky!important;top:0!important;z-index:60!important;height:auto!important;padding:7px 8px!important;background:#0a1122!important}.sidebar nav{width:max-content}.nav-item{padding:9px 11px!important}
+.topbar{position:static!important;padding:11px 14px!important;min-height:72px!important}.topbar h1{font-size:22px!important;line-height:1.05!important}.top-actions #scanTop{height:42px!important;padding:0 12px!important;font-size:12px!important}
+.breadth-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:7px!important}.breadth-strip article{min-width:0!important;padding:10px!important}
+#scannerView .controls{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important;padding:12px!important}#scannerView .controls label,#scannerView .controls input,#scannerView .controls select,#scannerView .controls button{min-width:0!important;width:100%!important}#scannerView .controls button{font-size:12px!important;padding:0 7px!important}
+#scannerView .tri-grid,#scannerView .parameter-grid{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:5px!important;padding:7px!important}#scannerView .tri-grid label{padding:6px!important;font-size:9px!important;gap:4px!important}#scannerView .tri-grid select,#scannerView .parameter-grid input{height:34px!important;padding:0 6px!important;font-size:11px!important}#scannerView .parameter-grid label{font-size:9px!important;gap:4px!important}
+.dashboard-v12 .ai-command-library{grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:4px!important}.dashboard-v12 .ai-command-library button{height:42px!important;padding:4px!important;font-size:8.5px!important}
+.mover-row{grid-template-columns:minmax(125px,1.35fr) minmax(72px,.62fr) minmax(82px,.68fr)!important;column-gap:12px!important}.mover-row small{padding-left:2px!important}.watch-star{font-size:12px!important;width:20px!important;height:20px!important}
+}
