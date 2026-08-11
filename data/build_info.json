@@ -1,8 +1,8 @@
 {
   "universe": "BIST Tüm",
   "requested": 621,
-  "completed": 477,
-  "failed": 144,
+  "completed": 474,
+  "failed": 147,
   "shardCount": 4,
-  "updatedAt": "2026-08-10 20:00:39"
+  "updatedAt": "2026-08-11 20:06:25"
 }
