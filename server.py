@@ -26,6 +26,7 @@ DATA = ROOT / "data"
 DATA.mkdir(exist_ok=True)
 MASTER_PATH = ROOT / "symbols_tr.json"
 MASTER_ALL_PATH = ROOT / "bist_all_master.json"
+VERIFIED_PATH = ROOT / "bist_verified.txt"
 LAST_SCAN_PATH = DATA / "last_scan.json"
 LAST_BACKTEST_PATH = DATA / "last_backtest.json"
 AI_LEARNING_PATH = DATA / "ai_learning_history.json"
@@ -62,10 +63,38 @@ def yahoo_ticker(symbol: str) -> str:
     return SYMBOL_MASTER.get(symbol, {}).get("yahoo", f"{symbol}.IS")
 
 def load_bist_all_master() -> tuple[list[str], str | None]:
+    # Canlı/yerel taramada öncelik daha önce Yahoo ile doğrulanmış sembol listesinde.
+    # Böylece KAP tablosundaki "Şirket", "Borsa Kodu" gibi başlıkların sembol sanılması engellenir.
+    if VERIFIED_PATH.exists():
+        try:
+            verified = []
+            seen = set()
+            for raw in VERIFIED_PATH.read_text(encoding="utf-8-sig").splitlines():
+                code = canonical_symbol(raw.strip().upper().removesuffix(".IS"))
+                if not code or code.startswith("#") or not re.fullmatch(r"[A-Z0-9]{3,6}", code):
+                    continue
+                if code not in seen:
+                    seen.add(code)
+                    verified.append(code)
+            if len(verified) >= 300:
+                return verified, f"Doğrulanmış BIST Tüm listesi: {len(verified)} sembol."
+        except Exception:
+            pass
+
     try:
         payload = json.loads(MASTER_ALL_PATH.read_text(encoding="utf-8"))
-        symbols = [canonical_symbol(str(x).strip().upper()) for x in payload.get("symbols", [])]
-        symbols = list(dict.fromkeys(x for x in symbols if re.fullmatch(r"[A-Z0-9]{4,5}", x)))
+        companies = payload.get("companies", {}) or {}
+        symbols = []
+        seen = set()
+        banned = {"BORSA", "KODU"}
+        for raw in payload.get("symbols", []):
+            code = canonical_symbol(str(raw).strip().upper())
+            company = str(companies.get(raw, companies.get(code, ""))).strip().casefold()
+            if code in banned or company in {"şirket", "sirket", "borsa kodu", "kod"}:
+                continue
+            if re.fullmatch(r"[A-Z0-9]{3,6}", code) and code not in seen:
+                seen.add(code)
+                symbols.append(code)
         if len(symbols) < 300:
             return [], "BIST Tüm ana sembol listesi eksik. Önce SEMBOL_LISTESINI_GUNCELLE.bat dosyasını çalıştırın."
         return symbols, f"Yerel BIST Tüm listesi: {len(symbols)} sembol, güncelleme {payload.get('updatedAt','bilinmiyor')}."
@@ -112,6 +141,64 @@ def _download_batch(batch: list[str], period: str, interval: str):
     import yfinance as yf
     raw = yf.download(tickers=batch, period=period, interval=interval, group_by="ticker", auto_adjust=False, actions=False, progress=False, threads=min(8, len(batch)), timeout=35)
     return {ticker: frame for ticker in batch if not (frame := _ticker_frame(raw, ticker)).empty}
+
+def _internet_available(timeout: float = 3.0) -> bool:
+    """Yahoo veri indirmesi için dış ağ erişimini hafifçe kontrol eder."""
+    try:
+        with socket.create_connection(("query1.finance.yahoo.com", 443), timeout=timeout):
+            return True
+    except OSError:
+        return False
+
+def _wait_for_internet(job_id: str | None = None, poll_seconds: int = 5) -> None:
+    """Bağlantı yokken sembolleri başarısız saymak yerine bağlantının geri gelmesini bekler."""
+    announced = False
+    while not _internet_available():
+        if job_id:
+            _set_job(job_id, phase="waiting_network", message="İnternet bağlantısı bekleniyor… Tarama kaldığı yerden devam edecek.")
+        announced = True
+        time.sleep(poll_seconds)
+    if announced and job_id:
+        _set_job(job_id, phase="download", message="İnternet geri geldi. Veri indirme devam ediyor…")
+
+def _download_batch_resilient(batch: list[str], period: str, interval: str, job_id: str | None = None, attempts: int = 3):
+    """Geçici internet kesintilerinde bekler; çevrimiçi hatalarda kontrollü retry yapar."""
+    downloaded: dict = {}
+    remaining = list(dict.fromkeys(batch))
+    errors: list[str] = []
+    online_failures = 0
+
+    while remaining:
+        _wait_for_internet(job_id)
+        try:
+            part = _download_batch(remaining, period, interval)
+            downloaded.update(part)
+            remaining = [ticker for ticker in remaining if ticker not in downloaded]
+            if not remaining:
+                break
+
+            # İstek sırasında internet koptuysa eksikleri başarısız sayma.
+            if not _internet_available():
+                continue
+
+            online_failures += 1
+            if online_failures >= attempts:
+                break
+            if job_id:
+                _set_job(job_id, phase="download_retry", message=f"Eksik veri partisi yeniden deneniyor ({online_failures + 1}/{attempts})…")
+            time.sleep(min(6, online_failures * 2))
+        except Exception as exc:
+            if not _internet_available():
+                continue
+            online_failures += 1
+            errors.append(str(exc))
+            if online_failures >= attempts:
+                break
+            if job_id:
+                _set_job(job_id, phase="download_retry", message=f"Veri indirme yeniden deneniyor ({online_failures + 1}/{attempts})…")
+            time.sleep(min(6, online_failures * 2))
+
+    return downloaded, errors
 
 def _ema(series, length: int):
     return series.ewm(span=length, adjust=False, min_periods=length).mean()
@@ -344,7 +431,14 @@ def _analyze(symbol: str, ticker: str, df, config: dict | None = None, benchmark
     last_close, prev_close = float(close.iloc[-1]), float(close.iloc[-2])
     if not math.isfinite(last_close) or last_close <= 0: return None
 
-    change = _finite((last_close / prev_close - 1) * 100)
+    # Günlük yüzde için Adj Close tercih edilir. Bölünme/bedelsiz gibi şirket
+    # aksiyonlarında ham Close yanlış +%10/+%20 gösterebilir.
+    change_close = close
+    if "Adj Close" in df.columns:
+        adj = _series(df, "Adj Close").dropna()
+        if len(adj) >= 2 and float(adj.iloc[-2]) > 0:
+            change_close = adj
+    change = _finite((float(change_close.iloc[-1]) / float(change_close.iloc[-2]) - 1) * 100)
 
     
 
@@ -865,13 +959,17 @@ def run_scan_job(job_id: str, universe: str, config: dict | None = None):
     _set_job(job_id, total=len(symbols), phase="download", message="Yahoo Finance verileri indiriliyor…")
     raw_by_ticker = {}; download_errors=[]; completed_batches=0
     with ThreadPoolExecutor(max_workers=min(6,len(batches))) as pool:
-        futures = {pool.submit(_download_batch,b,"2y","1d"): b for b in batches}
+        futures = {pool.submit(_download_batch_resilient,b,"2y","1d",job_id,3): b for b in batches}
         for future in as_completed(futures):
-            try: raw_by_ticker.update(future.result())
-            except Exception as exc: download_errors.append(str(exc))
+            try:
+                downloaded, retry_errors = future.result()
+                raw_by_ticker.update(downloaded)
+                download_errors.extend(retry_errors)
+            except Exception as exc:
+                download_errors.append(str(exc))
             completed_batches += 1
             estimated = min(len(symbols), round(completed_batches/len(batches)*len(symbols)*0.45))
-            _set_job(job_id, processed=estimated, percent=round(estimated/len(symbols)*100), message=f"Veri partileri indiriliyor: {completed_batches}/{len(batches)}")
+            _set_job(job_id, phase="download", processed=estimated, percent=round(estimated/len(symbols)*100), message=f"Veri partileri indiriliyor: {completed_batches}/{len(batches)}")
     rows=[]; failed=[]
     _set_job(job_id, phase="analyze", message="Teknik göstergeler hesaplanıyor…")
     for index,(symbol,ticker) in enumerate(zip(symbols,tickers),start=1):
@@ -1006,12 +1104,11 @@ def market_breadth_from_rows(rows: list[dict]) -> dict:
     }
 
 def market_lists_from_rows(rows: list[dict]) -> dict:
-    """Son taramadan yükselen, düşen, hacimli ve sıcaklık haritası verileri."""
+    """Son taramadan yalnızca kullanılan yükselen, düşen ve hacimli listeleri üretir."""
     clean = [r for r in rows if isinstance(r, dict) and r.get("symbol")]
     advancers = sorted(clean, key=lambda r: _finite(r.get("changePct")), reverse=True)[:20]
     decliners = sorted(clean, key=lambda r: _finite(r.get("changePct")))[:20]
     volume_leaders = sorted(clean, key=lambda r: (_finite(r.get("volumeRatio")), _finite(r.get("volume"))), reverse=True)[:20]
-    heatmap = sorted(clean, key=lambda r: (int(r.get("score", 0)), abs(_finite(r.get("changePct")))), reverse=True)[:80]
     def slim(r):
         return {
         "symbol": r.get("symbol"),
@@ -1028,8 +1125,6 @@ def market_lists_from_rows(rows: list[dict]) -> dict:
     "advancers": [slim(r) for r in advancers if _finite(r.get("changePct")) > 0],
     "decliners": [slim(r) for r in decliners if _finite(r.get("changePct")) < 0],
     "volumeLeaders": [slim(r) for r in volume_leaders],
-    "heatmap": [slim(r) for r in heatmap],
-    "all": [slim(r) for r in clean],
 }
 
 def market_health_from_rows(rows: list[dict]) -> dict:
@@ -1510,8 +1605,6 @@ MARKET_MOVERS_CACHE = {
     "advancers": [],
     "decliners": [],
     "volumeLeaders": [],
-    "heatmap": [],
-    "sectorHeatmap": [],
 }
 
 MARKET_MOVERS_LOCK = threading.Lock()
@@ -1597,6 +1690,7 @@ def load_market_movers(force=False):
                             continue
 
                         close = frame["Close"].dropna()
+                        change_close = frame["Adj Close"].dropna() if "Adj Close" in frame.columns else close
                         volume = frame["Volume"].dropna()
 
                         if len(close) < 2:
@@ -1608,9 +1702,10 @@ def load_market_movers(force=False):
                         if last_close <= 0 or prev_close <= 0:
                             continue
 
-                        change_pct = (
-                            (last_close / prev_close) - 1
-                                ) * 100
+                        if len(change_close) >= 2 and float(change_close.iloc[-2]) > 0:
+                            change_pct = (float(change_close.iloc[-1]) / float(change_close.iloc[-2]) - 1) * 100
+                        else:
+                            change_pct = ((last_close / prev_close) - 1) * 100
 
                             # BIST hisselerinde olağandışı günlük değişimleri ele.
                             # Bölünme / bedelsiz / Yahoo veri düzeltmesi gibi durumların
@@ -1652,58 +1747,6 @@ def load_market_movers(force=False):
                 reverse=True,
             )[:20]
 
-            # Hisse sıcaklık haritası:
-            # en yüksek hacimli 40 hisse
-            heatmap = sorted(
-                rows,
-                key=lambda r: r["volume"],
-                reverse=True,
-            )[:40]
-
-            # Sektör sıcaklık haritası
-            sector_groups = {}
-
-            for r in rows:
-                sector = r.get("sector") or "Diğer"
-
-                if sector not in sector_groups:
-                    sector_groups[sector] = {
-                        "changes": [],
-                        "volume": 0,
-                        "count": 0,
-                    }
-
-                sector_groups[sector]["changes"].append(
-                    float(r.get("changePct", 0))
-                )
-
-                sector_groups[sector]["volume"] += int(
-                    r.get("volume", 0)
-                )
-
-                sector_groups[sector]["count"] += 1
-
-            sector_heatmap = []
-
-            for sector, values in sector_groups.items():
-                changes = values["changes"]
-
-                if not changes:
-                    continue
-
-                avg_change = sum(changes) / len(changes)
-
-                sector_heatmap.append({
-                    "sector": sector,
-                    "changePct": round(avg_change, 2),
-                    "volume": values["volume"],
-                    "count": values["count"],
-                })
-
-            sector_heatmap.sort(
-                key=lambda x: abs(x["changePct"]),
-                reverse=True,
-            )
 
             MARKET_MOVERS_CACHE = {
                 "timestamp": now,
@@ -1711,8 +1754,6 @@ def load_market_movers(force=False):
                 "advancers": advancers,
                 "decliners": decliners,
                 "volumeLeaders": volume_leaders,
-                "heatmap": heatmap,
-                "sectorHeatmap": sector_heatmap,
             }
 
             return {

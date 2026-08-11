@@ -1,575 +1,462 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#0b1428">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.webmanifest">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <title>BIST Scanner Pro</title>
-  <link rel="stylesheet" href="style.css?v=4.0.3">
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#0b1428" name="theme-color"/>
+<meta content="yes" name="mobile-web-app-capable"/>
+<meta content="yes" name="apple-mobile-web-app-capable"/>
+<link href="manifest.webmanifest" rel="manifest"/>
+<link href="icons/icon-192.png" rel="icon" sizes="192x192" type="image/png"/>
+<title>BIST Scanner Pro</title>
+<link href="style.css?v=4.1.3" rel="stylesheet"/>
 </head>
 <body>
 <div class="app-shell">
-  <aside class="sidebar">
-    <div class="brand">
-      <div class="brand-mark">BS</div>
-      <div><strong>BIST Scanner Pro</strong><small>Emrah için özel sürüm</small></div>
-    </div>
-    <nav id="nav">
-      <button class="nav-item active" data-view="dashboard">◫ <span>Dashboard</span></button>
-      <button class="nav-item" data-view="scanner">⌕ <span>Tarama</span></button>
-      <button class="nav-item" data-view="watchlist">★ <span>Watchlist</span></button>
-      <button class="nav-item" data-view="breakout">↗ <span>Breakout</span></button>
-      <button class="nav-item" data-view="minervini">M <span>Minervini</span></button>
-      <button class="nav-item" data-view="relative">RS <span>Relative Strength</span></button>
-      <button class="nav-item" data-view="ai">AI <span>AI Breakout</span></button>
-      <button class="nav-item" data-view="backtest">BT <span>Backtest</span></button>
-      <button class="nav-item" data-view="builder">✦ <span>AI Builder</span></button>
-      <button class="nav-item" data-view="alarms">⏰ <span>Alarm Merkezi</span><em id="alarmNavCount" class="nav-count">0</em></button>
-      <button class="nav-item" data-view="portfolio">▣ <span>Portföy</span></button>
-      <button class="nav-item" data-view="kap">KAP <span>KAP AI</span></button>
-      <button class="nav-item" data-view="screenerai">✦ <span>Screener AI</span></button>
-      <button class="nav-item" data-view="decision">◈ <span>AI Decision Center</span></button>
-      <button class="nav-item" data-view="settings">⚙ <span>Ayarlar</span></button>
-    </nav>
-    <div class="sidebar-footer"><span class="status-dot"></span> Yerel sunucu çalışıyor</div>
-  </aside>
+<aside class="sidebar">
+<div class="brand">
+<div class="brand-mark">BS</div>
+<div><strong>BIST Scanner Pro</strong><small>Emrah için özel sürüm</small></div>
+</div>
+<nav id="nav">
+<button class="nav-item active" data-view="dashboard">◫ <span>Dashboard</span></button>
+<button class="nav-item" data-view="scanner">⌕ <span>Tarama</span></button>
+<button class="nav-item" data-view="watchlist">★ <span>Watchlist</span></button><button class="nav-item" data-view="tracker">◎ <span>Takip Merkezi</span></button>
+<button class="nav-item" data-view="minervini">M <span>Minervini</span></button>
+<button class="nav-item" data-view="relative">RS <span>Relative Strength</span></button>
 
-  <main class="main-area">
-    <header class="topbar">
-      <div class="topbar-title">
-  <h1 id="pageTitle">Dashboard</h1>
-  <p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p>
-  <small id="dashboardLastUpdated" class="dashboard-last-updated">
+<button class="nav-item" data-view="alarms">⏰ <span>Alarm Merkezi</span><em class="nav-count" id="alarmNavCount">0</em></button>
+<button class="nav-item" data-view="portfolio">▣ <span>Portföy</span></button>
+<button class="nav-item" data-view="kap">KAP <span>KAP AI</span></button>
+<button class="nav-item" data-view="decision">◈ <span>AI Decision Center</span></button>
+
+<button class="nav-item" data-view="settings">⚙ <span>Ayarlar</span></button>
+</nav>
+<div class="sidebar-footer"><span class="status-dot"></span> Yerel sunucu çalışıyor</div>
+</aside>
+<main class="main-area">
+<header class="topbar">
+<div class="topbar-title">
+<h1 id="pageTitle">Dashboard</h1>
+<p>Türkiye piyasasına özel teknik analiz ve tarama merkezi</p>
+<small class="dashboard-last-updated" id="dashboardLastUpdated">
     Son güncelleme: -
   </small>
 </div>
-      <div class="top-actions"><span class="badge">v4.0.2 Stable</span><button id="scanTop">Taramayı Yenile</button></div>
-    </header>
-
-    <section id="dashboardView" class="view active dashboard-v12">
-      <span id="dashboardUpdated" style="display:none"></span>
-      
-
-
-      <div id="marketCards" class="market-cards"><div class="market-loading">Piyasa kartları yükleniyor…</div></div>
-      <section class="breadth-strip">
-        <article><small>Yükselen / Düşen</small><b id="breadthAD">0 / 0</b><span id="breadthAdvancePct">%0 yükselen</span></article>
-        <article><small>EMA trend uyumu</small><b id="breadthEma">%0</b><span>EMA20 &gt; EMA50 &gt; EMA200</span></article>
-        <article><small>Hacim patlaması</small><b id="breadthVolume">%0</b><span>Ortalamanın üzerinde hacim</span></article>
-        <article><small>70+ teknik skor</small><b id="breadthStrong">%0</b><span>Güçlü aday oranı</span></article>
-      </section>
-      
-      <div class="market-list-tabs">
-      <article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
+<div class="top-actions"><span class="badge">v4.1.3 Stable</span><button id="scanTop">Taramayı Yenile</button></div>
+</header>
+<section class="view active dashboard-v12" id="dashboardView">
+<span id="dashboardUpdated" style="display:none"></span>
+<div class="market-cards" id="marketCards"><div class="market-loading">Piyasa kartları yükleniyor…</div></div>
+<section class="breadth-strip">
+<article><small>Yükselen / Düşen</small><b id="breadthAD">0 / 0</b><span id="breadthAdvancePct">%0 yükselen</span></article>
+<article><small>EMA trend uyumu</small><b id="breadthEma">%0</b><span>EMA20 &gt; EMA50 &gt; EMA200</span></article>
+<article><small>Hacim patlaması</small><b id="breadthVolume">%0</b><span>Ortalamanın üzerinde hacim</span></article>
+<article><small>70+ teknik skor</small><b id="breadthStrong">%0</b><span>Güçlü aday oranı</span></article>
+</section>
+<div class="market-list-tabs">
+<article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
   ...
 </article>
-
 <article class="panel mover-panel market-tab-panel" data-market-panel="decliners">
   ...
 </article>
-
 <article class="panel mover-panel market-tab-panel" data-market-panel="volume">
   ...
 </article>
-      </div>
-
-      <div class="market-list-tabs">
-  <button type="button" class="market-tab active" data-market-tab="advancers">Yükselenler</button>
-  <button type="button" class="market-tab" data-market-tab="decliners">Düşenler</button>
-  <button type="button" class="market-tab" data-market-tab="volume">Hacimliler</button>
 </div>
-
+<div class="market-list-tabs">
+<button class="market-tab active" data-market-tab="advancers" type="button">Yükselenler</button>
+<button class="market-tab" data-market-tab="decliners" type="button">Düşenler</button>
+<button class="market-tab" data-market-tab="volume" type="button">Hacimliler</button>
+</div>
 <section class="market-lists-grid">
-  <article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
-    <div class="panel-title">
-      <h3>BIST Yükselenler</h3>
-      <span>İlk 20 günlük en güçlü</span>
-    </div>
-    <div id="advancersList" class="mover-list">
-      <div class="empty">Tarama bekleniyor</div>
-    </div>
-  </article>
-
-  <article class="panel mover-panel market-tab-panel" data-market-panel="decliners">
-    <div class="panel-title">
-      <h3>BIST Düşenler</h3>
-      <span>İlk 20 günlük en zayıf</span>
-    </div>
-    <div id="declinersList" class="mover-list">
-      <div class="empty">Tarama bekleniyor</div>
-    </div>
-  </article>
-
-  <article class="panel mover-panel market-tab-panel" data-market-panel="volume">
-    <div class="panel-title">
-      <h3>En Hacimliler</h3>
-      <span>İlk 20 · 20 günlük ortalamaya göre</span>
-    </div>
-    <div id="volumeLeadersList" class="mover-list">
-      <div class="empty">Tarama bekleniyor</div>
-    </div>
-  </article>
+<article class="panel mover-panel market-tab-panel active" data-market-panel="advancers">
+<div class="panel-title">
+<h3>BIST Yükselenler</h3>
+<span>İlk 20 günlük en güçlü</span>
+</div>
+<div class="mover-list" id="advancersList">
+<div class="empty">Tarama bekleniyor</div>
+</div>
+</article>
+<article class="panel mover-panel market-tab-panel" data-market-panel="decliners">
+<div class="panel-title">
+<h3>BIST Düşenler</h3>
+<span>İlk 20 günlük en zayıf</span>
+</div>
+<div class="mover-list" id="declinersList">
+<div class="empty">Tarama bekleniyor</div>
+</div>
+</article>
+<article class="panel mover-panel market-tab-panel" data-market-panel="volume">
+<div class="panel-title">
+<h3>En Hacimliler</h3>
+<span>İlk 20 · 20 günlük ortalamaya göre</span>
+</div>
+<div class="mover-list" id="volumeLeadersList">
+<div class="empty">Tarama bekleniyor</div>
+</div>
+</article>
 </section>
-
-      <section class="panel heatmap-panel">
-        <div class="panel-title"><div><h3>BIST Sıcaklık Haritası</h3><span>Renk günlük değişimi, kutu büyüklüğü teknik skoru gösterir.</span></div><span id="heatmapUniverse">Son tarama</span></div>
-        <div id="marketHeatmap" class="market-heatmap"><div class="empty">Sıcaklık haritası için BIST 100 veya BIST Tüm taraması yapın.</div></div>
-      </section>
-<section class="panel heatmap-panel">
-  <div class="panel-title">
-    <div>
-      <h3>Sektör Sıcaklık Haritası</h3>
-      <span>Sektörlerin ortalama günlük değişimi.</span>
-    </div>
-    <span id="sectorHeatmapCount">-</span>
-  </div>
-
-  <div id="sectorHeatmap" class="market-heatmap">
-    <div class="empty">
-      Sektör verileri yükleniyor...
-    </div>
-  </div>
-</section>
-      <section class="panel health-panel">
-  <div class="panel-title">
-    <h3>Piyasa Sağlığı ve Pozisyon Oranı</h3>
-    <span id="healthDate">-</span>
-  </div>
-
-  <div class="health-layout health-layout-compact">
-
-    <!-- SOL: Piyasa skoru -->
-    <div class="gauge-wrap">
-      <div class="gauge" id="healthGauge">
-        <div>
-          <strong id="marketScore">0</strong>
-          <small>/100</small>
-        </div>
-      </div>
-
-      <span id="healthLabel" class="health-label">
+<section class="panel health-panel">
+<div class="panel-title">
+<h3>Piyasa Sağlığı ve Pozisyon Oranı</h3>
+<span id="healthDate">-</span>
+</div>
+<div class="health-layout health-layout-compact">
+<!-- SOL: Piyasa skoru -->
+<div class="gauge-wrap">
+<div class="gauge" id="healthGauge">
+<div>
+<strong id="marketScore">0</strong>
+<small>/100</small>
+</div>
+</div>
+<span class="health-label" id="healthLabel">
         Tarama bekleniyor
       </span>
-
-      <div class="health-mini">
-        <span>
+<div class="health-mini">
+<span>
           Pozitif hisseler
           <b id="positivePct">0%</b>
-        </span>
-
-        <span>
+</span>
+<span>
           EMA trend uyumu
           <b id="trendPct">0%</b>
-        </span>
-
-        <span>
+</span>
+<span>
           Breakout
           <b id="healthBreakouts">0</b>
-        </span>
-      </div>
-    </div>
-
-    <!-- SAĞ: Tarama skor dağılımı -->
-    <div class="exposure-chart-wrap">
-      <div class="chart-caption">
+</span>
+</div>
+</div>
+<!-- SAĞ: Tarama skor dağılımı -->
+<div class="exposure-chart-wrap">
+<div class="chart-caption">
         Tarama skoru dağılımı
       </div>
-
-      <svg
-        id="exposureChart"
-        class="exposure-chart"
-        viewBox="0 0 700 230"
-        preserveAspectRatio="none">
-      </svg>
-    </div>
-
-    <!-- ALT -->
-    <div class="score-reasons">
-      <h4>Skor neden böyle?</h4>
-      <div id="scoreReasons"></div>
-    </div>
-
-  </div>
+<svg class="exposure-chart" id="exposureChart" preserveaspectratio="none" viewbox="0 0 700 230">
+</svg>
+</div>
+<!-- ALT -->
+<div class="score-reasons">
+<h4>Skor neden böyle?</h4>
+<div id="scoreReasons"></div>
+</div>
+</div>
 </section>
-
-
-      <section class="intelligence-grid">
-        <article class="panel radar-panel"><div class="panel-title"><div><h3>Radar</h3><span>Bugün öncelikli incelenecek güçlü adaylar</span></div><b id="radarCount">0 aday</b></div><div id="radarCards" class="radar-cards"><div class="empty">Tarama bekleniyor</div></div></article>
-        <article class="panel sector-panel"><div class="panel-title"><div><h3>En Güçlü Sektörler</h3><span>RS, günlük performans ve para akışı birleşimi</span></div><button class="link-btn" data-goto="relative">Tümünü aç</button></div><div id="sectorLeaders" class="sector-leaders"><div class="empty">Tarama bekleniyor</div></div></article>
-      </section>
-      <section class="stats six dashboard-stats">
-        <div><span id="count">0</span><small>Filtrelenen</small></div>
-        <div><span id="breakouts">0</span><small>Breakout</small></div>
-        <div><span id="watchCount">0</span><small>Watchlist</small></div>
-        <div><span id="avgScore">0</span><small>Ort. skor</small></div>
-        <div><span id="positiveCount">0</span><small>Pozitif hisse</small></div>
-        <div><span id="updated">-</span><small>Tarama saati</small></div>
-      </section>
-
+<section class="intelligence-grid">
+<article class="panel radar-panel"><div class="panel-title"><div><h3>Radar</h3><span>Bugün öncelikli incelenecek güçlü adaylar</span></div><b id="radarCount">0 aday</b></div><div class="radar-cards" id="radarCards"><div class="empty">Tarama bekleniyor</div></div></article>
+<article class="panel sector-panel"><div class="panel-title"><div><h3>En Güçlü Sektörler</h3><span>RS, günlük performans ve para akışı birleşimi</span></div><button class="link-btn" data-goto="relative">Tümünü aç</button></div><div class="sector-leaders" id="sectorLeaders"><div class="empty">Tarama bekleniyor</div></div></article>
+</section>
+<section class="stats six dashboard-stats">
+<div><span id="count">0</span><small>Filtrelenen</small></div>
+<div><span id="breakouts">0</span><small>Breakout</small></div>
+<div><span id="watchCount">0</span><small>Watchlist</small></div>
+<div><span id="avgScore">0</span><small>Ort. skor</small></div>
+<div><span id="positiveCount">0</span><small>Pozitif hisse</small></div>
+<div><span id="updated">-</span><small>Tarama saati</small></div>
+</section>
 <div class="dashboard-grid v12-grid">
-
-  <section class="panel tableWrap compact candidates-panel">
-    <div class="panel-title">
-      <div>
-        <h3>En Güçlü Tarama Adayları</h3>
-        <span>Skora göre ilk hisseler</span>
-      </div>
-      <button class="link-btn" data-goto="scanner">Tümünü aç</button>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>Hisse</th>
-          <th>Değişim</th>
-          <th>Hacim</th>
-          <th>Skor</th>
-          <th>Durum</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="topRows"></tbody>
-    </table>
-  </section>
-
-
-  <!-- SCREENER AI -->
-  <section class="panel screener-ai-hero">
-    <input id="screenerAiPrompt" type="hidden" value="">
-    <div id="screenerAiLibrary" class="ai-command-library">
-      <button data-ai-prompt="Patlamaya hazır hisseleri bul">📈 Breakout Adayları</button>
-      <button data-ai-prompt="Hacim patlaması yapan hisseleri bul">🔥 Hacim Patlaması</button>
-      <button data-ai-prompt="Güçlü para girişi olan hisseleri bul">💰 Para Girişi</button>
-      <button data-ai-prompt="Bugün en güçlü trend hisselerini göster">🚀 Güçlü Trend</button>
-      <button data-ai-prompt="Momentum hisselerini göster">⚡ Momentum</button>
-      <button data-ai-prompt="Banka hisselerinde breakout ara">🏦 Bankalar</button>
-      <button data-ai-prompt="Sanayi hisselerinde güçlü adayları göster">⚙️ Sanayi</button>
-      <button data-ai-prompt="Savunma hisselerinde fırsat ara">🛡️ Savunma</button>
-      <button data-ai-prompt="Enerji hisselerinde güçlü adayları bul">🌱 Enerji</button>
-    </div>
-
-    <div
-      id="screenerAiInterpretation"
-      class="ai-interpretation hidden">
-    </div>
-  </section>
-
-
-  <section class="panel insight">
-    <div class="panel-title">
-      <h3>Tarama dağılımı</h3>
-    </div>
-
-    <div id="distribution" class="distribution"></div>
-
-    <div class="note">
+<section class="panel tableWrap compact candidates-panel">
+<div class="panel-title">
+<div>
+<h3>En Güçlü Tarama Adayları</h3>
+<span>Skora göre ilk hisseler</span>
+</div>
+<button class="link-btn" data-goto="scanner">Tümünü aç</button>
+</div>
+<table>
+<thead>
+<tr>
+<th>Hisse</th>
+<th>Değişim</th>
+<th>Hacim</th>
+<th>Skor</th>
+<th>Durum</th>
+<th></th>
+</tr>
+</thead>
+<tbody id="topRows"></tbody>
+</table>
+</section>
+<!-- SCREENER AI -->
+<section class="panel insight">
+<div class="panel-title">
+<h3>Tarama dağılımı</h3>
+</div>
+<div class="distribution" id="distribution"></div>
+<div class="note">
       Skor; trend, momentum, hacim, volatilite, breakout ve uyumsuzluk koşullarından hesaplanır.
     </div>
-  </section>
-
+</section>
 </div>
-    </section>
-
-    <section id="scannerView" class="view">
-      <section class="panel controls">
-        <label>Endeks<select id="universe"><option value="all">BIST Tüm</option><option value="30">BIST 30</option><option value="50">BIST 50</option><option value="100">BIST 100</option></select></label>
-        <label>Minimum skor<input id="minScore" type="number" min="0" max="100" value="55"></label>
-        <label>Minimum hacim<input id="minVol" type="number" min="0" step="0.1" value="1.0"></label>
-        <label>Kurulum<select id="setup"><option value="all">Tümü</option><option>Breakout</option><option>Güçlü Trend</option><option>Pozitif Uyumsuzluk</option><option>İzleme</option><option>Zayıf</option></select></label>
-        <label>Arama<input id="search" type="search" placeholder="THYAO"></label>
-        <button id="scan">Taramayı Başlat</button><button id="save" class="secondary">Ayarları Kaydet</button>
-      </section>
-      <section class="panel technical-filters">
-        <div class="panel-title"><h3>Teknik filtreler</h3><span>Kapalı / Puan / Zorunlu</span></div>
-        <div class="profile-row">
-          <label>Hazır profil<select id="profile"><option value="custom">Özel</option><option value="loose">Gevşek</option><option value="normal">Normal</option><option value="strict">Sıkı</option></select></label>
-          <button id="saveProfile" class="secondary">Profili Kaydet</button>
-          <label>Kayıtlı profiller<select id="savedProfiles"><option value="">Seçiniz</option></select></label>
-          <button id="deleteProfile" class="danger">Profili Sil</button>
-        </div>
-        <div class="filter-grid tri-grid">
-          <label>Donchian breakout<select id="fBreakout"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>Hacim patlaması<select id="fVolume"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>Bollinger sıkışması<select id="fBollinger"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>EMA trendi<select id="fEma"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>RSI ≥ 50<select id="fRsi"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>MACD pozitif<select id="fMacd"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>ATR genişlemesi<select id="fAtr"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>SuperTrend AL<select id="fSupertrend"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>Pozitif uyumsuzluk<select id="fDivergence"><option value="off">Kapalı</option><option value="score" selected>Puan</option><option value="required">Zorunlu</option></select></label>
-          <label>Para akışı pozitif
+</section>
+<section class="view" id="scannerView">
+<section class="panel controls">
+<label>Endeks<select id="universe"><option value="all">BIST Tüm</option><option value="30">BIST 30</option><option value="50">BIST 50</option><option value="100">BIST 100</option></select></label>
+<label>Minimum skor<input id="minScore" max="100" min="0" type="number" value="55"/></label>
+<label>Minimum hacim<input id="minVol" min="0" step="0.1" type="number" value="1.0"/></label>
+<label>Kurulum<select id="setup"><option value="all">Tümü</option><option>Breakout</option><option>Güçlü Trend</option><option>Pozitif Uyumsuzluk</option><option>İzleme</option><option>Zayıf</option></select></label>
+<label>Arama<input id="search" placeholder="THYAO" type="search"/></label>
+<button id="scan">Taramayı Başlat</button><button class="secondary" id="save">Ayarları Kaydet</button>
+</section>
+<section class="panel technical-filters">
+<div class="panel-title"><h3>Teknik filtreler</h3><span>Kapalı / Puan / Zorunlu</span></div>
+<div class="profile-row">
+<label>Hazır profil<select id="profile"><option value="custom">Özel</option><option value="loose">Gevşek</option><option value="normal">Normal</option><option value="strict">Sıkı</option></select></label>
+<button class="secondary" id="saveProfile">Profili Kaydet</button>
+<label>Kayıtlı profiller<select id="savedProfiles"><option value="">Seçiniz</option></select></label>
+<button class="danger" id="deleteProfile">Profili Sil</button>
+</div>
+<div class="filter-grid tri-grid">
+<label>Donchian breakout<select id="fBreakout"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>Hacim patlaması<select id="fVolume"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>Bollinger sıkışması<select id="fBollinger"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>EMA trendi<select id="fEma"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>RSI ≥ 50<select id="fRsi"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>MACD pozitif<select id="fMacd"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>ATR genişlemesi<select id="fAtr"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>SuperTrend AL<select id="fSupertrend"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>Pozitif uyumsuzluk<select id="fDivergence"><option value="off">Kapalı</option><option selected="" value="score">Puan</option><option value="required">Zorunlu</option></select></label>
+<label>Para akışı pozitif
   <select id="fMoneyFlow">
-    <option value="off">Kapalı</option>
-    <option value="score" selected>Puan</option>
-    <option value="required">Zorunlu</option>
-  </select>
+<option value="off">Kapalı</option>
+<option selected="" value="score">Puan</option>
+<option value="required">Zorunlu</option>
+</select>
 </label>
-        </div>
-        <div class="parameter-grid">
-          <label>Donchian periyodu<input id="donchianLength" type="number" min="5" max="100" value="20"></label>
-          <label>Hacim katsayısı<input id="volumeSpikeValue" type="number" min="1" step="0.1" value="1.5"></label>
-          <label>Minimum TR/ATR<input id="atrRatio" type="number" min="0.5" step="0.1" value="1.0"></label>
-          <label>Sıkışma katsayısı<input id="squeezeFactor" type="number" min="0.3" max="1" step="0.05" value="0.70"></label>
-        </div>
-      </section>
-      <div id="warning" class="warning hidden"></div>
-      <section id="progressPanel" class="panel progress-panel hidden">
-        <div class="progress-head"><div><b id="progressMessage">Tarama hazırlanıyor…</b><span id="progressCounts">0 / 0</span></div><strong id="progressPercent">0%</strong></div>
-        <div class="progress-track"><i id="progressBar"></i></div>
-        <div class="progress-meta"><span>Veri Alınan: <b id="progressFound">0</b></span><span>Başarısız: <b id="progressFailed">0</b></span><span>Kalan: <b id="progressRemaining">0</b></span></div>
-      </section>
-      <section class="panel tableWrap"><div class="panel-title"><h3>Tarama sonuçları</h3><div class="result-actions"><span id="resultLabel">0 hisse</span><button id="columnButton" class="secondary small">Sütunlar</button><button id="failedButton" class="secondary small">Başarısızlar</button><button id="exportCsv" class="secondary small">CSV</button><button id="exportExcel" class="secondary small">Excel</button></div></div><div id="columnPanel" class="column-panel hidden"></div><table id="resultTable"><thead><tr><th data-col="star">★</th><th data-col="symbol">Hisse</th><th data-col="close">Fiyat</th><th data-col="changePct">Değişim %</th><th data-col="volumeRatio">Hacim</th><th data-col="rsi">RSI</th><th data-col="trAtr">TR/ATR</th><th data-col="breakoutPct">Kırılım %</th><th data-col="breakoutScore">Breakout</th><th data-col="squeezeScore">Sıkışma</th><th data-col="moneyFlowScore">Para Akışı</th><th data-col="rsScore">RS</th><th data-col="sector">Sektör</th><th data-col="aiBreakoutProbability">AI Olasılık</th><th data-col="aiRiskScore">Risk</th><th data-col="compositeScore">Composite</th><th data-col="support1">Destek</th><th data-col="resistance1">Direnç</th><th data-col="score">Skor</th><th data-col="setup">Durum</th></tr></thead><tbody id="rows"></tbody></table></section>
-    </section>
-
-    <section id="watchlistView" class="view"><section class="panel tableWrap watchlist-panel"><div class="panel-title"><h3>Watchlist</h3><span>Yıldızladığın hisseler</span></div><table id="watchTable"><thead><tr><th data-sort-type="none">★</th><th data-sort-type="text">Hisse</th><th data-sort-type="number">Fiyat</th><th data-sort-type="number">Değişim %</th><th data-sort-type="number">Hacim</th><th data-sort-type="number">Skor</th><th data-sort-type="text">Durum</th></tr></thead><tbody id="watchRows"></tbody></table><div id="watchEmpty" class="empty hidden">Henüz watchlist'e hisse eklenmedi.</div></section></section>
-
-    <section id="breakoutView" class="view"><section class="panel module"><h2>Breakout Motoru</h2><p>Donchian kırılımı, hacim artışı, güçlü kapanış ve ATR genişlemesi birlikte değerlendirilir.</p><div class="module-grid"><div><b>20 Bar Kırılım</b><span>Aktif</span></div><div><b>Hacim Doğrulama</b><span>Aktif</span></div><div><b>ATR Genişleme</b><span>Aktif</span></div><div><b>Güçlü Kapanış</b><span>Aktif</span></div></div><button data-goto="scanner" data-setup="Breakout">Breakout sonuçlarını aç</button></section></section>
-<section id="minerviniView" class="view">
-  <section class="panel">
-    <div class="panel-title">
-      <div>
-        <h2>Minervini Trend Template</h2>
-        <span>Trend Template kriterlerine göre hisseleri değerlendirir.</span>
-      </div>
-    </div>
-
-    <div class="module-grid">
-      <div><b>Fiyat &gt; SMA50</b><span>Aktif</span></div>
-      <div><b>Fiyat &gt; SMA150</b><span>Aktif</span></div>
-      <div><b>Fiyat &gt; SMA200</b><span>Aktif</span></div>
-      <div><b>SMA50 &gt; SMA150 &gt; SMA200</b><span>Aktif</span></div>
-      <div><b>SMA200 yükseliyor</b><span>Aktif</span></div>
-      <div><b>52H dipten +%30</b><span>Aktif</span></div>
-      <div><b>52H zirveye ≤ %25</b><span>Aktif</span></div>
-      <div><b>Relative Strength</b><span>Aktif</span></div>
-    </div>
-
-    <div class="detail-note">
+</div>
+<div class="parameter-grid">
+<label>Donchian periyodu<input id="donchianLength" max="100" min="5" type="number" value="20"/></label>
+<label>Hacim katsayısı<input id="volumeSpikeValue" min="1" step="0.1" type="number" value="1.5"/></label>
+<label>Minimum TR/ATR<input id="atrRatio" min="0.5" step="0.1" type="number" value="1.0"/></label>
+<label>Sıkışma katsayısı<input id="squeezeFactor" max="1" min="0.3" step="0.05" type="number" value="0.70"/></label>
+</div>
+</section>
+<div class="warning hidden" id="warning"></div>
+<section class="panel progress-panel hidden" id="progressPanel">
+<div class="progress-head"><div><b id="progressMessage">Tarama hazırlanıyor…</b><span id="progressCounts">0 / 0</span></div><strong id="progressPercent">0%</strong></div>
+<div class="progress-track"><i id="progressBar"></i></div>
+<div class="progress-meta"><span>Veri Alınan: <b id="progressFound">0</b></span><span>Başarısız: <b id="progressFailed">0</b></span><span>Kalan: <b id="progressRemaining">0</b></span></div>
+</section>
+<section class="panel tableWrap"><div class="panel-title"><h3>Tarama sonuçları</h3><div class="result-actions"><span id="resultLabel">0 hisse</span><button class="secondary small" id="columnButton">Sütunlar</button><button class="secondary small" id="failedButton">Başarısızlar</button><button class="secondary small" id="exportCsv">CSV</button><button class="secondary small" id="exportExcel">Excel</button></div></div><div class="column-panel hidden" id="columnPanel"></div><table id="resultTable"><thead><tr><th data-col="star">★</th><th data-col="symbol">Hisse</th><th data-col="close">Fiyat</th><th data-col="changePct">Değişim %</th><th data-col="volumeRatio">Hacim</th><th data-col="rsi">RSI</th><th data-col="trAtr">TR/ATR</th><th data-col="breakoutPct">Kırılım %</th><th data-col="breakoutScore">Breakout</th><th data-col="squeezeScore">Sıkışma</th><th data-col="moneyFlowScore">Para Akışı</th><th data-col="rsScore">RS</th><th data-col="sector">Sektör</th><th data-col="aiBreakoutProbability">AI Olasılık</th><th data-col="aiRiskScore">Risk</th><th data-col="compositeScore">Composite</th><th data-col="support1">Destek</th><th data-col="resistance1">Direnç</th><th data-col="score">Skor</th><th data-col="setup">Durum</th></tr></thead><tbody id="rows"></tbody></table></section>
+</section>
+<section class="view" id="watchlistView"><section class="panel tableWrap watchlist-panel"><div class="panel-title"><h3>Watchlist</h3><span>Yıldızladığın hisseler</span></div><table id="watchTable"><thead><tr><th data-sort-type="none">★</th><th data-sort-type="text">Hisse</th><th data-sort-type="number">Fiyat</th><th data-sort-type="number">Değişim %</th><th data-sort-type="number">Hacim</th><th data-sort-type="number">Skor</th><th data-sort-type="text">Durum</th></tr></thead><tbody id="watchRows"></tbody></table><div class="empty hidden" id="watchEmpty">Henüz watchlist'e hisse eklenmedi.</div></section></section><section class="view" id="trackerView"><section class="panel tableWrap"><div class="panel-title"><div><h3>Takip Merkezi</h3><span>Tarama sinyallerinin ileriye dönük performansı</span></div><div class="result-actions"><span id="trackerCount">0 sinyal</span><button class="secondary small" id="clearTracker">Takibi Temizle</button></div></div><table id="trackerTable"><thead><tr><th>Hisse</th><th>Strateji</th><th>Periyot</th><th>Sinyal Tarihi</th><th>Sinyal Fiyatı</th><th>Güncel</th><th>Getiri %</th><th>Maks +%</th><th>Maks -%</th><th>Geçen Bar</th><th>Durum</th></tr></thead><tbody id="trackerRows"></tbody></table><div class="empty" id="trackerEmpty">Henüz takip edilen sinyal yok.</div></section></section>
+<section class="view legacy-disabled" hidden="hidden" id="breakoutView"><section class="panel module"><h2>Breakout Motoru</h2><p>Donchian kırılımı, hacim artışı, güçlü kapanış ve ATR genişlemesi birlikte değerlendirilir.</p><div class="module-grid"><div><b>20 Bar Kırılım</b><span>Aktif</span></div><div><b>Hacim Doğrulama</b><span>Aktif</span></div><div><b>ATR Genişleme</b><span>Aktif</span></div><div><b>Güçlü Kapanış</b><span>Aktif</span></div></div><button data-goto="scanner" data-setup="Breakout">Breakout sonuçlarını aç</button></section></section>
+<section class="view" id="minerviniView">
+<section class="panel">
+<div class="panel-title">
+<div>
+<h2>Minervini Trend Template</h2>
+<span>Trend Template kriterlerine göre hisseleri değerlendirir.</span>
+</div>
+</div>
+<div class="module-grid">
+<div><b>Fiyat &gt; SMA50</b><span>Aktif</span></div>
+<div><b>Fiyat &gt; SMA150</b><span>Aktif</span></div>
+<div><b>Fiyat &gt; SMA200</b><span>Aktif</span></div>
+<div><b>SMA50 &gt; SMA150 &gt; SMA200</b><span>Aktif</span></div>
+<div><b>SMA200 yükseliyor</b><span>Aktif</span></div>
+<div><b>52H dipten +%30</b><span>Aktif</span></div>
+<div><b>52H zirveye ≤ %25</b><span>Aktif</span></div>
+<div><b>Relative Strength</b><span>Aktif</span></div>
+</div>
+<div class="detail-note">
       Minervini kriterlerini karşılayan hisseler mevcut tarama verilerinden filtrelenecek.
     </div>
-
-    <button class="primary" id="openMinerviniResults">
+<button class="primary" id="openMinerviniResults">
       Minervini sonuçlarını aç
     </button>
-    <div id="minerviniResultArea" class="hidden" style="margin-top:20px;">
-  <div class="panel-title">
-    <div>
-      <h3>Minervini Sonuçları</h3>
-      <span id="minerviniResultLabel">Sonuç bekleniyor</span>
-    </div>
-  </div>
-
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Hisse</th>
-          <th>Fiyat</th>
-          <th>RS</th>
-          <th>Kriter</th>
-          <th>SMA50</th>
-          <th>SMA150</th>
-          <th>SMA200</th>
-          <th>52H Dip</th>
-          <th>52H Zirve</th>
-        </tr>
-      </thead>
-      <tbody id="minerviniRows"></tbody>
-    </table>
-  </div>
+<div class="hidden" id="minerviniResultArea" style="margin-top:20px;">
+<div class="panel-title">
+<div>
+<h3>Minervini Sonuçları</h3>
+<span id="minerviniResultLabel">Sonuç bekleniyor</span>
 </div>
-  </section>
+</div>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Hisse</th>
+<th>Fiyat</th>
+<th>RS</th>
+<th>Kriter</th>
+<th>SMA50</th>
+<th>SMA150</th>
+<th>SMA200</th>
+<th>52H Dip</th>
+<th>52H Zirve</th>
+</tr>
+</thead>
+<tbody id="minerviniRows"></tbody>
+</table>
+</div>
+</div>
 </section>
-    <section id="relativeView" class="view">
-      <section class="panel"><div class="panel-title"><div><h2>Relative Strength ve Sektör Sıralaması</h2><span>XU100'e göre 20, 60, 120 ve 252 günlük yüzdelik güç puanı</span></div></div>
-      <div class="rs-layout"><div><h3>En Güçlü Hisseler</h3><div id="rsLeaders" class="ranking-list"></div></div><div><h3>Sektör Sıralaması</h3><div id="sectorRanking" class="ranking-list"></div></div></div></section>
-    </section>
+</section>
+<section class="view" id="relativeView">
+<section class="panel"><div class="panel-title"><div><h2>Relative Strength ve Sektör Sıralaması</h2><span>XU100'e göre 20, 60, 120 ve 252 günlük yüzdelik güç puanı</span></div></div>
+<div class="rs-layout"><div><h3>En Güçlü Hisseler</h3><div class="ranking-list" id="rsLeaders"></div></div><div><h3>Sektör Sıralaması</h3><div class="ranking-list" id="sectorRanking"></div></div></div></section>
+</section>
 
-    <section id="aiView" class="view">
-      <section class="panel module"><div class="panel-title"><div><h2>AI Breakout Engine</h2><span>Benzer tarihsel teknik durumlara dayalı açıklanabilir k-NN beta modeli</span></div></div>
-      <div class="module-grid"><div><b>Hedef</b><span>10 günde +%5</span></div><div><b>Stop</b><span>Hedeften önce -%3</span></div><div><b>Model</b><span>En yakın 50 tarihsel örnek</span></div><div><b>Veri</b><span>Yaklaşık 2 yıllık günlük seri</span></div></div>
-      <div class="detail-note">Olasılık kesin bir tahmin değildir. Aynı hissedeki benzer teknik koşulların geçmiş sonuçlarından üretilir; düşük örnek ve güven değerlerinde temkinli kullanılmalıdır.</div></section>
-      <section class="panel tableWrap"><div class="panel-title"><h3>En Yüksek AI Olasılığı</h3><span>Tarama sonrası güncellenir</span></div><table><thead><tr><th>Hisse</th><th>AI Olasılık</th><th>Risk</th><th>Beklenen 10G</th><th>Güven</th><th>Örnek</th></tr></thead><tbody id="aiLeaders"></tbody></table></section>
-    </section>
-
-    <section id="backtestView" class="view">
-      <section class="panel module"><div class="panel-title"><div><h2>Strategy Builder + Backtest</h2><span>Koşulları seç, eşikleri ayarla ve stratejiyi geçmiş günlük veride test et.</span></div></div>
-        <div class="strategy-builder">
-          <label class="strategy-chip"><input id="btUseBreakout" type="checkbox" checked><span>Breakout</span></label>
-          <label class="strategy-chip"><input id="btUseRsi" type="checkbox" checked><span>RSI</span></label>
-          <label class="strategy-chip"><input id="btUseVolume" type="checkbox" checked><span>Hacim</span></label>
-          <label class="strategy-chip"><input id="btUseEma" type="checkbox"><span>EMA Trend</span></label>
-          <label class="strategy-chip"><input id="btUseSupertrend" type="checkbox"><span>SuperTrend</span></label>
-          <label class="strategy-chip"><input id="btUseMoneyFlow" type="checkbox"><span>Para Akışı</span></label>
-          <label class="strategy-chip"><input id="btUseSqueeze" type="checkbox"><span>Sıkışma</span></label>
-          <label class="strategy-chip"><input id="btUseRs" type="checkbox"><span>Relative Strength</span></label>
-        </div>
-        <div class="parameter-grid backtest-controls">
-          <label>Endeks<select id="btUniverse"><option value="30">BIST 30</option><option value="50">BIST 50</option><option value="100" selected>BIST 100</option><option value="all">BIST Tüm</option></select></label>
-          <label>Geçmiş<select id="btPeriod"><option value="2y">2 yıl</option><option value="5y">5 yıl</option><option value="10y" selected>10 yıl</option></select></label>
-          <label>Donchian<input id="btDonchian" type="number" value="20" min="5" max="100"></label>
-          <label>Minimum RSI<input id="btRsi" type="number" value="55" min="1" max="99"></label>
-          <label>Minimum hacim<input id="btVolume" type="number" value="1.5" min="1" step="0.1"></label>
-          <label>Min. Para Akışı<input id="btMoneyFlow" type="number" value="55" min="0" max="100"></label>
-          <label>Min. Sıkışma<input id="btSqueeze" type="number" value="60" min="0" max="100"></label>
-          <label>Min. RS farkı %<input id="btRs" type="number" value="0" min="-50" max="100" step="0.5"></label>
-          <label>Hedef %<input id="btTarget" type="number" value="5" min="0.5" step="0.5"></label>
-          <label>Stop %<input id="btStop" type="number" value="3" min="0.5" step="0.5"></label>
-          <label>Bekleme günü<input id="btHold" type="number" value="10" min="1" max="60"></label>
-          <label>Maks. hisse<input id="btMaxSymbols" type="number" value="100" min="1" max="700"></label>
-        </div>
-        <button id="runBacktest">Backtest Başlat</button>
-        <div id="btProgress" class="progress-panel hidden"><div class="progress-head"><b id="btMessage">Hazırlanıyor…</b><strong id="btPercent">0%</strong></div><div class="progress-track"><i id="btBar"></i></div></div>
-      </section>
-      <section class="stats six backtest-stats">
-        <div><span id="btSignals">0</span><small>Toplam sinyal</small></div><div><span id="btWins">0</span><small>Kazanan</small></div><div><span id="btLosses">0</span><small>Kaybeden</small></div><div><span id="btWinRate">0%</span><small>Başarı</small></div><div><span id="btAvgReturn">0%</span><small>Ort. getiri</small></div><div><span id="btMaxDd">0%</span><small>Maks. düşüş</small></div>
-      </section>
-      <section class="panel tableWrap"><div class="panel-title"><div><h3>Hisse Bazlı Backtest</h3><span id="btUpdated">Henüz çalıştırılmadı</span></div></div><table><thead><tr><th>Hisse</th><th>Sinyal</th><th>Kazanan</th><th>Kaybeden</th><th>Başarı</th><th>Ort. Getiri</th><th>Maks. Düşüş</th><th>Ort. MFE</th></tr></thead><tbody id="btRows"></tbody></table></section>
-    </section>
-
-    <section id="builderView" class="view">
-      <section class="panel module ai-builder-panel">
-        <div class="panel-title"><div><h2>AI Strategy Builder</h2><span>Doğal dil komutunu tarama veya backtest ayarlarına dönüştürür.</span></div></div>
-        <label class="builder-prompt-label">Stratejini Türkçe yaz
-          <textarea id="builderPrompt" rows="5" placeholder="Örnek: RSI 55 üzeri, hacim 2 kat, EMA trendi pozitif ve son 20 günün zirvesini kıran hisseleri bul."></textarea>
-        </label>
-        <div class="builder-examples">
-          <button type="button" class="secondary builder-example"
-onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+<section class="view legacy-disabled" hidden="hidden" id="backtestView">
+<section class="panel module"><div class="panel-title"><div><h2>Strategy Builder + Backtest</h2><span>Koşulları seç, eşikleri ayarla ve stratejiyi geçmiş günlük veride test et.</span></div></div>
+<div class="strategy-builder">
+<label class="strategy-chip"><input checked="" id="btUseBreakout" type="checkbox"/><span>Breakout</span></label>
+<label class="strategy-chip"><input checked="" id="btUseRsi" type="checkbox"/><span>RSI</span></label>
+<label class="strategy-chip"><input checked="" id="btUseVolume" type="checkbox"/><span>Hacim</span></label>
+<label class="strategy-chip"><input id="btUseEma" type="checkbox"/><span>EMA Trend</span></label>
+<label class="strategy-chip"><input id="btUseSupertrend" type="checkbox"/><span>SuperTrend</span></label>
+<label class="strategy-chip"><input id="btUseMoneyFlow" type="checkbox"/><span>Para Akışı</span></label>
+<label class="strategy-chip"><input id="btUseSqueeze" type="checkbox"/><span>Sıkışma</span></label>
+<label class="strategy-chip"><input id="btUseRs" type="checkbox"/><span>Relative Strength</span></label>
+</div>
+<div class="parameter-grid backtest-controls">
+<label>Endeks<select id="btUniverse"><option value="30">BIST 30</option><option value="50">BIST 50</option><option selected="" value="100">BIST 100</option><option value="all">BIST Tüm</option></select></label>
+<label>Geçmiş<select id="btPeriod"><option value="2y">2 yıl</option><option value="5y">5 yıl</option><option selected="" value="10y">10 yıl</option></select></label>
+<label>Donchian<input id="btDonchian" max="100" min="5" type="number" value="20"/></label>
+<label>Minimum RSI<input id="btRsi" max="99" min="1" type="number" value="55"/></label>
+<label>Minimum hacim<input id="btVolume" min="1" step="0.1" type="number" value="1.5"/></label>
+<label>Min. Para Akışı<input id="btMoneyFlow" max="100" min="0" type="number" value="55"/></label>
+<label>Min. Sıkışma<input id="btSqueeze" max="100" min="0" type="number" value="60"/></label>
+<label>Min. RS farkı %<input id="btRs" max="100" min="-50" step="0.5" type="number" value="0"/></label>
+<label>Hedef %<input id="btTarget" min="0.5" step="0.5" type="number" value="5"/></label>
+<label>Stop %<input id="btStop" min="0.5" step="0.5" type="number" value="3"/></label>
+<label>Bekleme günü<input id="btHold" max="60" min="1" type="number" value="10"/></label>
+<label>Maks. hisse<input id="btMaxSymbols" max="700" min="1" type="number" value="100"/></label>
+</div>
+<button id="runBacktest">Backtest Başlat</button>
+<div class="progress-panel hidden" id="btProgress"><div class="progress-head"><b id="btMessage">Hazırlanıyor…</b><strong id="btPercent">0%</strong></div><div class="progress-track"><i id="btBar"></i></div></div>
+</section>
+<section class="stats six backtest-stats">
+<div><span id="btSignals">0</span><small>Toplam sinyal</small></div><div><span id="btWins">0</span><small>Kazanan</small></div><div><span id="btLosses">0</span><small>Kaybeden</small></div><div><span id="btWinRate">0%</span><small>Başarı</small></div><div><span id="btAvgReturn">0%</span><small>Ort. getiri</small></div><div><span id="btMaxDd">0%</span><small>Maks. düşüş</small></div>
+</section>
+<section class="panel tableWrap"><div class="panel-title"><div><h3>Hisse Bazlı Backtest</h3><span id="btUpdated">Henüz çalıştırılmadı</span></div></div><table><thead><tr><th>Hisse</th><th>Sinyal</th><th>Kazanan</th><th>Kaybeden</th><th>Başarı</th><th>Ort. Getiri</th><th>Maks. Düşüş</th><th>Ort. MFE</th></tr></thead><tbody id="btRows"></tbody></table></section>
+</section>
+<section class="view legacy-disabled" hidden="hidden" id="builderView">
+<section class="panel module ai-builder-panel">
+<div class="panel-title"><div><h2>AI Strategy Builder</h2><span>Doğal dil komutunu tarama veya backtest ayarlarına dönüştürür.</span></div></div>
+<label class="builder-prompt-label">Stratejini Türkçe yaz
+          <textarea id="builderPrompt" placeholder="Örnek: RSI 55 üzeri, hacim 2 kat, EMA trendi pozitif ve son 20 günün zirvesini kıran hisseleri bul." rows="5"></textarea>
+</label>
+<div class="builder-examples">
+<button class="secondary builder-example" onclick="document.getElementById('builderPrompt').value=this.textContent.trim()" type="button">
 RSI 55 üzeri, hacim 2 kat ve EMA trendi pozitif hisseleri bul
 </button>
-
-<button type="button" class="secondary builder-example"
-onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+<button class="secondary builder-example" onclick="document.getElementById('builderPrompt').value=this.textContent.trim()" type="button">
 Son 20 günün zirvesini kıran, SuperTrend AL ve para akışı 60 üzeri hisseleri bul
 </button>
-
-<button type="button" class="secondary builder-example"
-onclick="document.getElementById('builderPrompt').value=this.textContent.trim()">
+<button class="secondary builder-example" onclick="document.getElementById('builderPrompt').value=this.textContent.trim()" type="button">
 Sıkışma skoru 70 üzeri ve XU100'e göre RS güçlü hisseleri backtest et
 </button>
-        </div>
-        <div class="settings-actions">
-  <button type="button" id="parseBuilder" onclick="parseBuilder()">Komutu Çözümle</button>
-  <button type="button" id="applyBuilderScan" class="secondary" onclick="applyBuilderToScan()" disabled>Taramaya Uygula</button>
-  <button type="button" id="applyBuilderBacktest" class="secondary" onclick="applyBuilderToBacktest()" disabled>Backtest'e Uygula</button>
 </div>
-        <div id="builderStatus" class="warning hidden"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-title"><div><h3>Çözümlenen Strateji</h3><span>Uygulanacak koşullar ve eşikler</span></div></div>
-        <div id="builderSummary" class="builder-summary"><div class="empty">Henüz bir komut çözümlenmedi.</div></div>
-        <div class="detail-note">Bu sürüm harici yapay zekâ servisi kullanmaz. Türkçe komutları kurallı ve açıklanabilir biçimde teknik ayarlara çevirir; belirsiz ifadeleri sonuç bölümünde bildirir.</div>
-      </section>
-    </section>
-
-
-    <section id="alarmsView" class="view">
-      <section class="panel module">
-        <div class="panel-title"><div><h2>Alarm Merkezi</h2><span>Tarama sonuçlarında koşul gerçekleştiğinde uygulama içi ve isteğe bağlı masaüstü bildirimi üretir.</span></div></div>
-        <div class="alarm-builder-grid">
-          <label>Alarm adı<input id="alarmName" placeholder="Örn. THYAO EMA trend alarmı"></label>
-          <label>Hisse<input id="alarmSymbol" placeholder="THYAO veya TÜM" value="TÜM"></label>
-          <label>Koşul<select id="alarmCondition"><option value="setupBreakout">Breakout oluştu</option><option value="priceAbove">Fiyat seviyenin üzerine çıktı</option><option value="priceBelow">Fiyat seviyenin altına indi</option><option value="changeAbove">Günlük değişim yüzde üzerinde</option><option value="volumeAbove">Hacim oranı üzerinde</option><option value="rsiAbove">RSI üzerinde</option><option value="rsiBelow">RSI altında</option><option value="emaTrend">EMA20 &gt; EMA50 &gt; EMA200</option><option value="supertrendBuy">SuperTrend AL</option><option value="breakoutScoreAbove">Breakout skoru üzerinde</option><option value="squeezeScoreAbove">Sıkışma skoru üzerinde</option><option value="moneyFlowAbove">Para akışı skoru üzerinde</option><option value="rsAbove">RS skoru üzerinde</option><option value="compositeAbove">Composite skoru üzerinde</option><option value="aiAbove">AI breakout olasılığı üzerinde</option></select></label>
-          <label id="alarmValueLabel">Eşik<input id="alarmValue" type="number" value="70" step="0.1"></label>
-          <label>Bildirim<select id="alarmChannel"><option value="app">Uygulama içi</option><option value="browser">Uygulama + masaüstü</option></select></label>
-          <label class="alarm-active"><input id="alarmEnabled" type="checkbox" checked> Alarm aktif</label>
-        </div>
-        <div class="settings-actions"><button id="saveAlarm">Alarmı Kaydet</button><button id="requestNotify" class="secondary">Masaüstü Bildirim İzni</button><button id="testAlarms" class="secondary">Alarmları Şimdi Kontrol Et</button></div>
-        <div class="detail-note">Alarmlar tarama tamamlandığında değerlendirilir. Aynı alarm, aynı hisse ve aynı veri tarihi için yalnızca bir kez tetiklenir. Program kapalıyken kontrol yapılmaz; arka plan/Telegram entegrasyonu sonraki sunucu aşamasında eklenecektir.</div>
-      </section>
-      <section class="alarm-layout">
-        <section class="panel"><div class="panel-title"><div><h3>Kayıtlı Alarmlar</h3><span id="alarmCountText">0 alarm</span></div></div><div id="alarmList" class="alarm-list"></div></section>
-        <section class="panel"><div class="panel-title"><div><h3>Tetiklenenler</h3><span id="triggerCountText">0 bildirim</span></div><button id="clearTriggers" class="secondary small">Temizle</button></div><div id="triggerList" class="trigger-list"></div></section>
-      </section>
-    </section>
-
-    <section id="portfolioView" class="view">
-      <section class="panel module">
-        <div class="panel-title"><div><h2>Portföy Yönetimi</h2><span>Lot, maliyet, stop ve hedef seviyelerini kaydet; son tarama fiyatlarıyla kâr/zararı izle.</span></div></div>
-        <div class="portfolio-builder-grid">
-          <label>Hisse<input id="pfSymbol" placeholder="Örn. THYAO" maxlength="8"></label>
-          <label>Lot<input id="pfLots" type="number" min="0.0001" step="1" value="100"></label>
-          <label>Maliyet (₺)<input id="pfCost" type="number" min="0.01" step="0.01"></label>
-          <label>Stop (₺)<input id="pfStop" type="number" min="0" step="0.01"></label>
-          <label>Hedef (₺)<input id="pfTarget" type="number" min="0" step="0.01"></label>
-          <label>Not<input id="pfNote" placeholder="İsteğe bağlı"></label>
-        </div>
-        <div class="settings-actions"><button id="pfAdd">Pozisyon Ekle</button><button id="pfRefresh" class="secondary">Tarama Fiyatlarıyla Güncelle</button><button id="pfClear" class="secondary">Portföyü Temizle</button></div>
-        <div class="detail-note">Güncel fiyat, uygulamadaki son tamamlanan taramadan alınır. Bu modül emir göndermez; yalnızca yerel takip ve risk hesaplaması yapar.</div>
-      </section>
-      <section class="stats six portfolio-stats">
-        <div><span id="pfPositionCount">0</span><small>Pozisyon</small></div>
-        <div><span id="pfTotalCost">₺0</span><small>Toplam maliyet</small></div>
-        <div><span id="pfCurrentValue">₺0</span><small>Güncel değer</small></div>
-        <div><span id="pfPnl">₺0</span><small>Kâr / zarar</small></div>
-        <div><span id="pfPnlPct">0%</span><small>Getiri</small></div>
-        <div><span id="pfRisk">₺0</span><small>Stop riski</small></div>
-      </section>
-      <section class="panel tableWrap">
-        <div class="panel-title"><div><h3>Pozisyonlar</h3><span id="pfUpdated">Yerel portföy</span></div></div>
-        <table><thead><tr><th>Hisse</th><th>Lot</th><th>Maliyet</th><th>Güncel</th><th>Değer</th><th>K/Z</th><th>K/Z %</th><th>Stop</th><th>Stop Riski</th><th>Hedef</th><th>Hedef Kârı</th><th>Not</th><th></th></tr></thead><tbody id="pfRows"></tbody></table>
-        <div id="pfEmpty" class="empty">Henüz pozisyon eklenmedi.</div>
-      </section>
-    </section>
-
-
-    <section id="kapView" class="view">
-      <section class="panel kap-toolbar">
-        <div><h2>KAP AI</h2><p>Güncel KAP bildirimlerini şirket, konu ve tahmini etki açısından sınıflandırır.</p></div>
-        <div class="kap-actions"><input id="kapSearch" type="search" placeholder="Hisse veya bildirim ara"><select id="kapSentiment"><option value="all">Tüm etkiler</option><option value="Olumlu">Olumlu</option><option value="Nötr">Nötr</option><option value="Olumsuz">Olumsuz</option></select><button id="refreshKap">KAP Bildirimlerini Yenile</button></div>
-      </section>
-      <section class="stats four"><div><span id="kapCount">0</span><small>Bildirim</small></div><div><span id="kapPositive">0</span><small>Olumlu</small></div><div><span id="kapNeutral">0</span><small>Nötr</small></div><div><span id="kapNegative">0</span><small>Olumsuz</small></div></section>
-      <section class="panel"><div class="panel-title"><div><h3>Son KAP Bildirimleri</h3><span id="kapUpdated">Henüz yüklenmedi</span></div></div><div id="kapList" class="kap-list"><div class="empty">KAP verileri yükleniyor…</div></div><p class="detail-note">KAP AI skoru açıklanabilir anahtar kelime sınıflandırmasıdır; kesin fiyat etkisi veya yatırım tavsiyesi değildir.</p></section>
-    </section>
-
-
-    <section id="screeneraiView" class="view">
-      <section class="panel screener-ai-page">
-        <div class="panel-title"><div><h2>Screener AI Sonuçları</h2><span id="screenerAiResultLabel">Henüz sorgu çalıştırılmadı</span></div><button id="rerunScreenerAi" class="secondary">Sorguyu Yenile</button></div>
-        <div id="screenerAiCriteria" class="ai-criteria"></div>
-        <div id="screenerAiResults" class="ai-results"><div class="empty">Dashboard üzerindeki AI komut kutusunu kullan.</div></div>
-      </section>
-    </section>
-
-
-    <section id="decisionView" class="view">
-      <section class="panel decision-hero">
-        <div><span class="eyebrow">AI DECISION CENTER</span><h2>Günün En İyi Fırsatları</h2><p>Composite, AI breakout, RS, para akışı, risk ve beklenen getiriyi tek kararda birleştirir.</p></div>
-        <div class="decision-actions"><select id="decisionLimit"><option value="10">İlk 10</option><option value="20">İlk 20</option><option value="30">İlk 30</option></select><button id="refreshDecision">Karar Merkezini Yenile</button></div>
-      </section>
-      <section class="stats five decision-stats">
-        <div><span id="decisionOpportunityCount">0</span><small>Fırsat</small></div>
-        <div><span id="decisionAvgConfidence">0%</span><small>Ort. güven</small></div>
-        <div><span id="decisionAvgReturn">0%</span><small>Beklenen getiri</small></div>
-        <div><span id="decisionLowRisk">0</span><small>Düşük risk</small></div>
-        <div><span id="decisionFavoriteCount">0</span><small>Favori aday</small></div>
-      </section>
-      <section class="decision-grid">
-        <div class="panel"><div class="panel-title"><div><h3>Günün Fırsatları</h3><span>En yüksek karar puanına göre</span></div></div><div id="decisionOpportunities" class="decision-list"><div class="empty">Önce tarama çalıştır.</div></div></div>
-        <div class="panel"><div class="panel-title"><div><h3>Favori Adaylar</h3><span>Karar merkezinde işaretlediklerin</span></div></div><div id="decisionFavorites" class="decision-favorites"><div class="empty">Henüz favori aday yok.</div></div></div>
-      </section>
-      <section class="panel"><div class="panel-title"><div><h3>Risk ve Getiri Matrisi</h3><span>Düşük risk / yüksek beklenen getiri önceliklidir</span></div></div><div id="decisionMatrix" class="decision-matrix"><div class="empty">Tarama verisi bekleniyor.</div></div><p class="detail-note">Beklenen getiri ve risk değerleri geçmiş benzer örnekler ile teknik göstergelerden türetilen tahminlerdir; kesin sonuç değildir.</p></section>
-    </section>
-
-    <section id="settingsView" class="view">
-      <section class="panel module">
-        <h2>Piyasa Kartları</h2>
-        <p>Dashboard üzerinde görmek istediğin endeks, döviz, emtia ve kripto kartlarını seç. Seçim otomatik kaydedilir.</p>
-        <div id="marketCardSettings" class="card-settings-grid"></div>
-        <div class="settings-actions"><button id="selectAllCards" class="secondary">Tümünü seç</button><button id="defaultCards" class="secondary">Varsayılana dön</button></div>
-      </section>
-      <section class="panel module"><h2>Uygulama Ayarları</h2><p>Tarama ayarları ve kart seçimleri tarayıcıda yerel olarak saklanır.</p><button id="clearSettings" class="danger">Kayıtlı ayarları temizle</button></section>
-    </section>
-  </main>
+<div class="settings-actions">
+<button id="parseBuilder" onclick="parseBuilder()" type="button">Komutu Çözümle</button>
+<button class="secondary" disabled="" id="applyBuilderScan" onclick="applyBuilderToScan()" type="button">Taramaya Uygula</button>
+<button class="secondary" disabled="" id="applyBuilderBacktest" onclick="applyBuilderToBacktest()" type="button">Backtest'e Uygula</button>
 </div>
-<div id="detailModal" class="modal hidden"><div class="modal-card"><button id="closeDetail" class="modal-close">×</button><div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div><div id="detailGrid" class="detail-grid"></div><div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır.</div></div></div>
-<script src="cloud-adapter.js?v=4.0.2"></script>
-<script src="app.js?v=4.0.3"></script>
-<script src="repair.js?v=4.0.2"></script>
-<div id="failedModal" class="modal hidden"><div class="modal-card"><button id="closeFailed" class="modal-close">×</button><h2>Başarısız semboller</h2><p id="failedSummary" class="muted"></p><div id="failedList" class="failed-list"></div></div></div><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));}</script>
+<div class="warning hidden" id="builderStatus"></div>
+</section>
+<section class="panel">
+<div class="panel-title"><div><h3>Çözümlenen Strateji</h3><span>Uygulanacak koşullar ve eşikler</span></div></div>
+<div class="builder-summary" id="builderSummary"><div class="empty">Henüz bir komut çözümlenmedi.</div></div>
+<div class="detail-note">Bu sürüm harici yapay zekâ servisi kullanmaz. Türkçe komutları kurallı ve açıklanabilir biçimde teknik ayarlara çevirir; belirsiz ifadeleri sonuç bölümünde bildirir.</div>
+</section>
+</section>
+<section class="view" id="alarmsView">
+<section class="panel module">
+<div class="panel-title"><div><h2>Alarm Merkezi</h2><span>Tarama sonuçlarında koşul gerçekleştiğinde uygulama içi ve isteğe bağlı masaüstü bildirimi üretir.</span></div></div>
+<div class="alarm-builder-grid">
+<label>Alarm adı<input id="alarmName" placeholder="Örn. THYAO EMA trend alarmı"/></label>
+<label>Hisse<input id="alarmSymbol" placeholder="THYAO veya TÜM" value="TÜM"/></label>
+<label>Koşul<select id="alarmCondition"><option value="setupBreakout">Breakout oluştu</option><option value="priceAbove">Fiyat seviyenin üzerine çıktı</option><option value="priceBelow">Fiyat seviyenin altına indi</option><option value="changeAbove">Günlük değişim yüzde üzerinde</option><option value="volumeAbove">Hacim oranı üzerinde</option><option value="rsiAbove">RSI üzerinde</option><option value="rsiBelow">RSI altında</option><option value="emaTrend">EMA20 &gt; EMA50 &gt; EMA200</option><option value="supertrendBuy">SuperTrend AL</option><option value="breakoutScoreAbove">Breakout skoru üzerinde</option><option value="squeezeScoreAbove">Sıkışma skoru üzerinde</option><option value="moneyFlowAbove">Para akışı skoru üzerinde</option><option value="rsAbove">RS skoru üzerinde</option><option value="compositeAbove">Composite skoru üzerinde</option><option value="aiAbove">AI breakout olasılığı üzerinde</option></select></label>
+<label id="alarmValueLabel">Eşik<input id="alarmValue" step="0.1" type="number" value="70"/></label>
+<label>Bildirim<select id="alarmChannel"><option value="app">Uygulama içi</option><option value="browser">Uygulama + masaüstü</option></select></label>
+<label class="alarm-active"><input checked="" id="alarmEnabled" type="checkbox"/> Alarm aktif</label>
+</div>
+<div class="settings-actions"><button id="saveAlarm">Alarmı Kaydet</button><button class="secondary" id="requestNotify">Masaüstü Bildirim İzni</button><button class="secondary" id="testAlarms">Alarmları Şimdi Kontrol Et</button></div>
+<div class="detail-note">Alarmlar tarama tamamlandığında değerlendirilir. Aynı alarm, aynı hisse ve aynı veri tarihi için yalnızca bir kez tetiklenir. Program kapalıyken kontrol yapılmaz; arka plan/Telegram entegrasyonu sonraki sunucu aşamasında eklenecektir.</div>
+</section>
+<section class="alarm-layout">
+<section class="panel"><div class="panel-title"><div><h3>Kayıtlı Alarmlar</h3><span id="alarmCountText">0 alarm</span></div></div><div class="alarm-list" id="alarmList"></div></section>
+<section class="panel"><div class="panel-title"><div><h3>Tetiklenenler</h3><span id="triggerCountText">0 bildirim</span></div><button class="secondary small" id="clearTriggers">Temizle</button></div><div class="trigger-list" id="triggerList"></div></section>
+</section>
+</section>
+<section class="view" id="portfolioView">
+<section class="panel module">
+<div class="panel-title"><div><h2>Portföy Yönetimi</h2><span>Lot, maliyet, stop ve hedef seviyelerini kaydet; son tarama fiyatlarıyla kâr/zararı izle.</span></div></div>
+<div class="portfolio-builder-grid">
+<label>Hisse<input id="pfSymbol" maxlength="8" placeholder="Örn. THYAO"/></label>
+<label>Lot<input id="pfLots" min="0.0001" step="1" type="number" value="100"/></label>
+<label>Maliyet (₺)<input id="pfCost" min="0.01" step="0.01" type="number"/></label>
+<label>Stop (₺)<input id="pfStop" min="0" step="0.01" type="number"/></label>
+<label>Hedef (₺)<input id="pfTarget" min="0" step="0.01" type="number"/></label>
+<label>Not<input id="pfNote" placeholder="İsteğe bağlı"/></label>
+</div>
+<div class="settings-actions"><button id="pfAdd">Pozisyon Ekle</button><button class="secondary" id="pfRefresh">Tarama Fiyatlarıyla Güncelle</button><button class="secondary" id="pfClear">Portföyü Temizle</button></div>
+<div class="detail-note">Güncel fiyat, uygulamadaki son tamamlanan taramadan alınır. Bu modül emir göndermez; yalnızca yerel takip ve risk hesaplaması yapar.</div>
+</section>
+<section class="stats six portfolio-stats">
+<div><span id="pfPositionCount">0</span><small>Pozisyon</small></div>
+<div><span id="pfTotalCost">₺0</span><small>Toplam maliyet</small></div>
+<div><span id="pfCurrentValue">₺0</span><small>Güncel değer</small></div>
+<div><span id="pfPnl">₺0</span><small>Kâr / zarar</small></div>
+<div><span id="pfPnlPct">0%</span><small>Getiri</small></div>
+<div><span id="pfRisk">₺0</span><small>Stop riski</small></div>
+</section>
+<section class="panel tableWrap">
+<div class="panel-title"><div><h3>Pozisyonlar</h3><span id="pfUpdated">Yerel portföy</span></div></div>
+<table><thead><tr><th>Hisse</th><th>Lot</th><th>Maliyet</th><th>Güncel</th><th>Değer</th><th>K/Z</th><th>K/Z %</th><th>Stop</th><th>Stop Riski</th><th>Hedef</th><th>Hedef Kârı</th><th>Not</th><th></th></tr></thead><tbody id="pfRows"></tbody></table>
+<div class="empty" id="pfEmpty">Henüz pozisyon eklenmedi.</div>
+</section>
+</section>
+<section class="view" id="kapView">
+<section class="panel kap-toolbar">
+<div><h2>KAP AI</h2><p>Güncel KAP bildirimlerini şirket, konu ve tahmini etki açısından sınıflandırır.</p></div>
+<div class="kap-actions"><input id="kapSearch" placeholder="Hisse veya bildirim ara" type="search"/><select id="kapSentiment"><option value="all">Tüm etkiler</option><option value="Olumlu">Olumlu</option><option value="Nötr">Nötr</option><option value="Olumsuz">Olumsuz</option></select><button id="refreshKap">KAP Bildirimlerini Yenile</button></div>
+</section>
+<section class="stats four"><div><span id="kapCount">0</span><small>Bildirim</small></div><div><span id="kapPositive">0</span><small>Olumlu</small></div><div><span id="kapNeutral">0</span><small>Nötr</small></div><div><span id="kapNegative">0</span><small>Olumsuz</small></div></section>
+<section class="panel"><div class="panel-title"><div><h3>Son KAP Bildirimleri</h3><span id="kapUpdated">Henüz yüklenmedi</span></div></div><div class="kap-list" id="kapList"><div class="empty">KAP verileri yükleniyor…</div></div><p class="detail-note">KAP AI skoru açıklanabilir anahtar kelime sınıflandırmasıdır; kesin fiyat etkisi veya yatırım tavsiyesi değildir.</p></section>
+</section>
+<section class="view legacy-disabled" hidden="hidden" id="screeneraiView">
+<section class="panel screener-ai-page">
+<div class="panel-title"><div><h2>Screener AI Sonuçları</h2><span id="screenerAiResultLabel">Henüz sorgu çalıştırılmadı</span></div><button class="secondary" id="rerunScreenerAi">Sorguyu Yenile</button></div>
+<div class="ai-criteria" id="screenerAiCriteria"></div>
+<div class="ai-results" id="screenerAiResults"><div class="empty">Dashboard üzerindeki AI komut kutusunu kullan.</div></div>
+</section>
+</section>
+
+<section class="view" id="decisionView">
+<section class="panel decision-hero">
+<div><span class="eyebrow">AI DECISION CENTER</span><h2>Günün En İyi Fırsatları</h2><p>Composite, AI breakout, RS, para akışı, risk ve beklenen getiriyi tek kararda birleştirir.</p></div>
+<div class="decision-actions"><select id="decisionLimit"><option value="10">İlk 10</option><option value="20">İlk 20</option><option value="30">İlk 30</option></select><button id="refreshDecision">Karar Merkezini Yenile</button></div>
+</section>
+<section class="stats five decision-stats">
+<div><span id="decisionOpportunityCount">0</span><small>Fırsat</small></div><div><span id="decisionAvgConfidence">0%</span><small>Ort. güven</small></div><div><span id="decisionAvgReturn">0%</span><small>Beklenen getiri</small></div><div><span id="decisionLowRisk">0</span><small>Düşük risk</small></div><div><span id="decisionFavoriteCount">0</span><small>Favori aday</small></div>
+</section>
+<section class="decision-grid">
+<div class="panel"><div class="panel-title"><div><h3>Günün Fırsatları</h3><span>En yüksek karar puanına göre</span></div></div><div id="decisionOpportunities" class="decision-list"><div class="empty">AI Decision Center açıldığında son tarama verisi yüklenir.</div></div></div>
+<div class="panel"><div class="panel-title"><div><h3>Favori Adaylar</h3><span>Karar merkezinde işaretlediklerin</span></div></div><div id="decisionFavorites" class="decision-favorites"><div class="empty">Henüz favori aday yok.</div></div></div>
+</section>
+<section class="panel"><div class="panel-title"><div><h3>Risk ve Getiri Matrisi</h3><span>Düşük risk / yüksek beklenen getiri önceliklidir</span></div></div><div id="decisionMatrix" class="decision-matrix"><div class="empty">Tarama verisi bekleniyor.</div></div><p class="detail-note">Beklenen getiri ve risk değerleri teknik göstergeler ve mevcut model alanlarından türetilen tahminlerdir; kesin sonuç değildir.</p></section>
+</section>
+<section class="view" id="settingsView">
+<section class="panel module">
+<h2>Piyasa Kartları</h2>
+<p>Dashboard üzerinde görmek istediğin endeks, döviz, emtia ve kripto kartlarını seç. Seçim otomatik kaydedilir.</p>
+<div class="card-settings-grid" id="marketCardSettings"></div>
+<div class="settings-actions"><button class="secondary" id="selectAllCards">Tümünü seç</button><button class="secondary" id="defaultCards">Varsayılana dön</button></div>
+</section>
+<section class="panel module"><h2>Uygulama Ayarları</h2><p>Tarama ayarları ve kart seçimleri tarayıcıda yerel olarak saklanır.</p><button class="danger" id="clearSettings">Kayıtlı ayarları temizle</button></section>
+</section>
+</main>
+</div>
+<div class="modal hidden" id="detailModal"><div class="modal-card"><button class="modal-close" id="closeDetail">×</button><div class="detail-title"><div><span id="detailSymbol">-</span><small id="detailName">-</small></div><strong id="detailScore">0</strong></div><div class="detail-grid" id="detailGrid"></div><div class="detail-note">Destek/direnç bölgeleri pivot temasları ve ATR toleransı ile otomatik hesaplanır.</div></div></div>
+<script src="cloud-adapter.js?v=4.1.3"></script>
+<script src="app.js?v=4.1.3"></script>
+<div class="modal hidden" id="failedModal"><div class="modal-card"><button class="modal-close" id="closeFailed">×</button><h2>Başarısız semboller</h2><p class="muted" id="failedSummary"></p><div class="failed-list" id="failedList"></div></div></div><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("service-worker.js").catch(()=>{}));}</script>
 </body></html>

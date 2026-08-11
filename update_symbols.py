@@ -41,8 +41,13 @@ def main() -> int:
         cells = row.find_all(["td", "th"], recursive=False)
         if len(cells) < 2:
             continue
+        # Başlık satırlarını ve KAP tablo etiketlerini sembol gibi okumayı engelle.
+        if any(cell.name == "th" for cell in cells[:2]):
+            continue
         company = " ".join(cells[0].get_text(" ", strip=True).split())
         code_text = " ".join(cells[1].get_text(" ", strip=True).split())
+        if company.casefold() in {"şirket", "sirket"} or code_text.casefold() in {"borsa kodu", "kod", "kodu"}:
+            continue
         # Bazı şirketlerde birden fazla pay sınıfı olabilir.
         for raw_code in re.findall(r"(?<![A-Z0-9])([A-Z0-9]{4,5})(?![A-Z0-9])", code_text.upper()):
             code = normalize_code(raw_code)
