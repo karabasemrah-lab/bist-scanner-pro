@@ -139,27 +139,35 @@ def _series(df, name: str):
 
 def _download_batch(batch: list[str], period: str, interval: str):
     import yfinance as yf
-    raw = yf.download(tickers=batch, period=period, interval=interval, group_by="ticker", auto_adjust=False, actions=False, progress=False, threads=min(8, len(batch)), timeout=35)
+    raw = yf.download(tickers=batch, period=period, interval=interval, group_by="ticker", auto_adjust=False, actions=False, progress=False, threads=(2 if os.environ.get("RENDER") else min(6, len(batch))), timeout=35)
     return {ticker: frame for ticker in batch if not (frame := _ticker_frame(raw, ticker)).empty}
 
-def _internet_available(timeout: float = 3.0) -> bool:
-    """Yahoo veri indirmesi için dış ağ erişimini hafifçe kontrol eder."""
-    try:
-        with socket.create_connection(("query1.finance.yahoo.com", 443), timeout=timeout):
-            return True
-    except OSError:
-        return False
+def _internet_available(timeout: float = 2.0) -> bool:
+    """Tek bir Yahoo hostuna bağımlı kalmadan dış ağ erişimini kontrol eder."""
+    for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com", "1.1.1.1"):
+        try:
+            with socket.create_connection((host, 443), timeout=timeout):
+                return True
+        except OSError:
+            continue
+    return False
 
-def _wait_for_internet(job_id: str | None = None, poll_seconds: int = 5) -> None:
-    """Bağlantı yokken sembolleri başarısız saymak yerine bağlantının geri gelmesini bekler."""
+def _wait_for_internet(job_id: str | None = None, poll_seconds: int = 5, max_wait: int | None = None) -> bool:
+    """Yerelde bağlantıyı bekler; Render'da sonsuz bekleme yerine kontrollü çıkar."""
+    if max_wait is None:
+        max_wait = 60 if os.environ.get("RENDER") else 900
     announced = False
+    started = time.time()
     while not _internet_available():
         if job_id:
             _set_job(job_id, phase="waiting_network", message="İnternet bağlantısı bekleniyor… Tarama kaldığı yerden devam edecek.")
         announced = True
+        if time.time() - started >= max_wait:
+            return False
         time.sleep(poll_seconds)
     if announced and job_id:
         _set_job(job_id, phase="download", message="İnternet geri geldi. Veri indirme devam ediyor…")
+    return True
 
 def _download_batch_resilient(batch: list[str], period: str, interval: str, job_id: str | None = None, attempts: int = 3):
     """Geçici internet kesintilerinde bekler; çevrimiçi hatalarda kontrollü retry yapar."""
@@ -169,7 +177,12 @@ def _download_batch_resilient(batch: list[str], period: str, interval: str, job_
     online_failures = 0
 
     while remaining:
-        _wait_for_internet(job_id)
+        if not _wait_for_internet(job_id):
+            online_failures += 1
+            errors.append("Ağ erişimi zaman aşımına uğradı")
+            if online_failures >= attempts:
+                break
+            continue
         try:
             part = _download_batch(remaining, period, interval)
             downloaded.update(part)
@@ -934,62 +947,144 @@ def _set_job(job_id: str, **updates):
         JOBS[job_id].update(updates)
 
 def run_scan_job(job_id: str, universe: str, config: dict | None = None):
+    """BIST taramasını düşük bellekle çalıştırır.
+
+    Render üzerinde ham 2 yıllık fiyat verileri bütün evren için RAM'de tutulmaz.
+    Her parti indirilir, hemen analiz edilir ve serbest bırakılır. Bu yaklaşım
+    512 MB instance sınırında tepe bellek kullanımını ciddi biçimde düşürür.
+    """
     global LAST_ROWS
     try:
+        import gc
         import pandas as pd  # noqa
         import yfinance as yf  # noqa
     except Exception:
         _set_job(job_id, state="error", message="Canlı veri bileşenleri kurulu değil. CANLI_VERI_KUR.bat dosyasını çalıştırın.")
         return
+
     symbols, universe_note = symbols_for_universe(universe)
     if not symbols:
         _set_job(job_id, state="error", message=universe_note or "Sembol bulunamadı.")
         return
+
     symbols = [canonical_symbol(s) for s in symbols]
-    tickers = [yahoo_ticker(s) for s in symbols]
-    batches = [tickers[i:i+35] for i in range(0,len(tickers),35)]
+    ticker_pairs = [(symbol, yahoo_ticker(symbol)) for symbol in symbols]
+
+    # Render Free 512 MB için küçük partiler; yerelde biraz daha büyük olabilir.
+    batch_size = 18 if os.environ.get("RENDER") else 35
+    pair_batches = [ticker_pairs[i:i + batch_size] for i in range(0, len(ticker_pairs), batch_size)]
+
     benchmark_close = None
     try:
         import yfinance as yf
-        bench = yf.download("XU100.IS", period="2y", interval="1d", auto_adjust=False, actions=False, progress=False, threads=False, timeout=35)
+        bench = yf.download(
+            "XU100.IS", period="2y", interval="1d", auto_adjust=False,
+            actions=False, progress=False, threads=False, timeout=35
+        )
         if bench is not None and not bench.empty:
-            benchmark_close = _series(bench, "Close")
+            benchmark_close = _series(bench, "Close").copy()
+        del bench
+        gc.collect()
     except Exception:
         benchmark_close = None
-    _set_job(job_id, total=len(symbols), phase="download", message="Yahoo Finance verileri indiriliyor…")
-    raw_by_ticker = {}; download_errors=[]; completed_batches=0
-    with ThreadPoolExecutor(max_workers=min(6,len(batches))) as pool:
-        futures = {pool.submit(_download_batch_resilient,b,"2y","1d",job_id,3): b for b in batches}
-        for future in as_completed(futures):
-            try:
-                downloaded, retry_errors = future.result()
-                raw_by_ticker.update(downloaded)
-                download_errors.extend(retry_errors)
-            except Exception as exc:
-                download_errors.append(str(exc))
-            completed_batches += 1
-            estimated = min(len(symbols), round(completed_batches/len(batches)*len(symbols)*0.45))
-            _set_job(job_id, phase="download", processed=estimated, percent=round(estimated/len(symbols)*100), message=f"Veri partileri indiriliyor: {completed_batches}/{len(batches)}")
-    rows=[]; failed=[]
-    _set_job(job_id, phase="analyze", message="Teknik göstergeler hesaplanıyor…")
-    for index,(symbol,ticker) in enumerate(zip(symbols,tickers),start=1):
+
+    rows = []
+    failed = []
+    download_errors = []
+    total = len(symbols)
+    _set_job(job_id, total=total, phase="download", message="Yahoo Finance verileri düşük bellek modunda indiriliyor…")
+
+    # Render'da TEK parti aynı anda. Böylece birkaç büyük DataFrame aynı anda
+    # oluşmaz ve ham veri bütün tarama boyunca bellekte tutulmaz.
+    for batch_no, pair_batch in enumerate(pair_batches, start=1):
+        batch_tickers = [ticker for _, ticker in pair_batch]
+        batch_map = {}
+        retry_errors = []
         try:
-            row=_analyze(symbol,ticker,raw_by_ticker.get(ticker), config, benchmark_close)
-            if row: rows.append(row)
-            else: failed.append(symbol)
-        except Exception: failed.append(symbol)
-        processed=max(round(len(symbols)*.45), round(len(symbols)*.45 + index/len(symbols)*len(symbols)*.55))
-        if index % 5 == 0 or index == len(symbols):
-            _set_job(job_id, processed=min(processed,len(symbols)), percent=min(100,round(processed/len(symbols)*100)), found=len(rows), failed=len(failed), message=f"Analiz ediliyor: {index}/{len(symbols)}")
+            batch_map, retry_errors = _download_batch_resilient(
+                batch_tickers, "2y", "1d", job_id, 3
+            )
+            download_errors.extend(retry_errors)
+        except Exception as exc:
+            download_errors.append(str(exc))
+
+        _set_job(
+            job_id,
+            phase="analyze",
+            message=f"Parti analiz ediliyor: {batch_no}/{len(pair_batches)}",
+        )
+
+        for symbol, ticker in pair_batch:
+            frame = batch_map.pop(ticker, None)
+            try:
+                row = _analyze(symbol, ticker, frame, config, benchmark_close)
+                if row:
+                    rows.append(row)
+                else:
+                    failed.append(symbol)
+            except Exception:
+                failed.append(symbol)
+            finally:
+                # Her hissenin ham DataFrame referansını mümkün olan en erken
+                # anda bırak.
+                frame = None
+
+        # Parti tamamen işlendi; ham fiyat verisini RAM'den bırak.
+        batch_map.clear()
+        del batch_map
+        gc.collect()
+
+        processed = min(total, batch_no * batch_size)
+        _set_job(
+            job_id,
+            phase="download" if batch_no < len(pair_batches) else "analyze",
+            processed=processed,
+            percent=round(processed / total * 92),
+            found=len(rows),
+            failed=len(failed),
+            message=f"Parti tamamlandı: {batch_no}/{len(pair_batches)}",
+        )
+
+    _set_job(job_id, phase="enrich", processed=total, percent=94, message="RS ve sektör puanları hazırlanıyor…")
     enrichment = enrich_relative_sector_composite(rows)
-    warnings=[]
-    if universe_note: warnings.append(universe_note)
-    if download_errors: warnings.append(f"{len(download_errors)} veri partisi indirilemedi.")
-    if failed: warnings.append(f"{len(failed)} sembol için geçerli veri alınamadı: {', '.join(failed[:8])}" + ("…" if len(failed)>8 else ""))
-    payload={"rows":rows,"sectorRanking":enrichment.get("sectorRanking",[]),"radar":enrichment.get("radar",[]),"failedSymbols":failed,"updatedAt":time.strftime("%Y-%m-%d %H:%M:%S"),"universe":universe,"requested":len(symbols),"warning":" ".join(warnings) or None}
-    LAST_ROWS=rows
-    LAST_SCAN_PATH.write_text(json.dumps(_json_safe(payload),ensure_ascii=False,indent=2,allow_nan=False),encoding="utf-8")
-    _set_job(job_id,state="done",processed=len(symbols),percent=100,found=len(rows),failed=len(failed),message="Tarama tamamlandı.",result=payload)
+
+    warnings = []
+    if universe_note:
+        warnings.append(universe_note)
+    if download_errors:
+        warnings.append(f"{len(download_errors)} veri indirme uyarısı oluştu.")
+    if failed:
+        warnings.append(
+            f"{len(failed)} sembol için geçerli veri alınamadı: {', '.join(failed[:8])}"
+            + ("…" if len(failed) > 8 else "")
+        )
+
+    payload = {
+        "rows": rows,
+        "sectorRanking": enrichment.get("sectorRanking", []),
+        "radar": enrichment.get("radar", []),
+        "failedSymbols": failed,
+        "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "universe": universe,
+        "requested": total,
+        "warning": " ".join(warnings) or None,
+    }
+    LAST_ROWS = rows
+    LAST_SCAN_PATH.write_text(
+        json.dumps(_json_safe(payload), ensure_ascii=False, indent=2, allow_nan=False),
+        encoding="utf-8",
+    )
+    gc.collect()
+    _set_job(
+        job_id,
+        state="done",
+        processed=total,
+        percent=100,
+        found=len(rows),
+        failed=len(failed),
+        message="Tarama tamamlandı.",
+        result=payload,
+    )
 
 
 
@@ -1608,165 +1703,139 @@ MARKET_MOVERS_CACHE = {
 }
 
 MARKET_MOVERS_LOCK = threading.Lock()
+MARKET_MOVERS_REFRESHING = False
 
 
-def load_market_movers(force=False):
-    global MARKET_MOVERS_CACHE
+def _scan_is_running():
+    with JOBS_LOCK:
+        return any(j.get("state") in {"queued", "running"} for j in JOBS.values())
 
-    now = time.time()
+def _refresh_market_movers_sync():
+    """Canlı yükselen/düşen/hacimlileri düşük RAM ile yeniler."""
+    global MARKET_MOVERS_CACHE, MARKET_MOVERS_REFRESHING
+    try:
+        import gc
+        import yfinance as yf
 
-    if (
-        not force
-        and MARKET_MOVERS_CACHE.get("advancers")
-        and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 120
-    ):
-        return {
-            "ok": True,
-            **MARKET_MOVERS_CACHE,
-        }
+        symbols, _ = symbols_for_universe("all")
+        symbols = [canonical_symbol(s) for s in symbols]
+        tickers = [yahoo_ticker(s) for s in symbols]
+        rows = []
 
-    with MARKET_MOVERS_LOCK:
-        now = time.time()
+        # Render'da tek parti aynı anda ve küçük batch. Piyasa listeleri için
+        # 5 günlük veri yeterli; ham batch işlenir işlenmez serbest bırakılır.
+        batch_size = 25 if os.environ.get("RENDER") else 40
+        batches = [tickers[i:i + batch_size] for i in range(0, len(tickers), batch_size)]
 
-        if (
-            not force
-            and MARKET_MOVERS_CACHE.get("advancers")
-            and now - MARKET_MOVERS_CACHE.get("timestamp", 0) < 120
-        ):
-            return {
-                "ok": True,
-                **MARKET_MOVERS_CACHE,
-            }
-
-        try:
-            import yfinance as yf
-
-            symbols, _ = symbols_for_universe("all")
-            symbols = [canonical_symbol(s) for s in symbols]
-            tickers = [yahoo_ticker(s) for s in symbols]
-
-            rows = []
-
-            batches = [
-                tickers[i:i + 60]
-                for i in range(0, len(tickers), 60)
-            ]
-
-            def _fetch_mover_batch(batch):
-                return batch, yf.download(
+        for batch in batches:
+            try:
+                data = yf.download(
                     batch,
                     period="5d",
                     interval="1d",
                     auto_adjust=False,
                     actions=False,
                     progress=False,
-                    threads=True,
+                    threads=False if os.environ.get("RENDER") else 2,
                     group_by="ticker",
-                    timeout=25,
+                    timeout=22,
                 )
+            except Exception:
+                continue
 
-            batch_results = []
-            with ThreadPoolExecutor(max_workers=min(4, len(batches))) as pool:
-                futures = [pool.submit(_fetch_mover_batch, batch) for batch in batches]
-                for future in as_completed(futures):
-                    try:
-                        batch_results.append(future.result())
-                    except Exception:
+            for ticker in batch:
+                try:
+                    symbol = ticker.replace(".IS", "")
+                    frame = data if len(batch) == 1 else _ticker_frame(data, ticker)
+                    if frame is None or frame.empty:
                         continue
 
-            for batch, data in batch_results:
-                for ticker in batch:
-                    try:
-                        symbol = ticker.replace(".IS", "")
-
-                        if len(batch) == 1:
-                            frame = data
-                        else:
-                            if ticker not in data.columns.get_level_values(0):
-                                continue
-                            frame = data[ticker]
-
-                        if frame is None or frame.empty:
-                            continue
-
-                        close = frame["Close"].dropna()
-                        change_close = frame["Adj Close"].dropna() if "Adj Close" in frame.columns else close
-                        volume = frame["Volume"].dropna()
-
-                        if len(close) < 2:
-                            continue
-
-                        last_close = float(close.iloc[-1])
-                        prev_close = float(close.iloc[-2])
-
-                        if last_close <= 0 or prev_close <= 0:
-                            continue
-
-                        if len(change_close) >= 2 and float(change_close.iloc[-2]) > 0:
-                            change_pct = (float(change_close.iloc[-1]) / float(change_close.iloc[-2]) - 1) * 100
-                        else:
-                            change_pct = ((last_close / prev_close) - 1) * 100
-
-                            # BIST hisselerinde olağandışı günlük değişimleri ele.
-                            # Bölünme / bedelsiz / Yahoo veri düzeltmesi gibi durumların
-                            # Yükselenler-Düşenler ve sıcaklık haritasını bozmasını engeller.
-                        if abs(change_pct) > 11.0:
-                                continue
-
-                        last_volume = (
-                            float(volume.iloc[-1])
-                            if len(volume)
-                            else 0
-                        )
-
-                        rows.append({
-                            "symbol": symbol,
-                            "sector": symbol_sector(symbol),
-                            "close": round(last_close, 2),
-                            "changePct": round(change_pct, 2),
-                            "volume": int(max(0, last_volume)),
-                        })
-
-                    except Exception:
+                    close = _series(frame, "Close").dropna()
+                    change_close = _series(frame, "Adj Close").dropna() if "Adj Close" in frame.columns else close
+                    volume = _series(frame, "Volume").dropna()
+                    if len(close) < 2:
                         continue
 
-            advancers = sorted(
-                [r for r in rows if r["changePct"] > 0],
-                key=lambda r: r["changePct"],
-                reverse=True,
-            )[:20]
+                    last_close = float(close.iloc[-1])
+                    prev_close = float(close.iloc[-2])
+                    if last_close <= 0 or prev_close <= 0:
+                        continue
 
-            decliners = sorted(
-                [r for r in rows if r["changePct"] < 0],
-                key=lambda r: r["changePct"],
-            )[:20]
+                    if len(change_close) >= 2 and float(change_close.iloc[-2]) > 0:
+                        change_pct = (float(change_close.iloc[-1]) / float(change_close.iloc[-2]) - 1) * 100
+                    else:
+                        change_pct = ((last_close / prev_close) - 1) * 100
+                    if abs(change_pct) > 11.0:
+                        continue
 
-            volume_leaders = sorted(
-                rows,
-                key=lambda r: r["volume"],
-                reverse=True,
-            )[:20]
+                    last_volume = float(volume.iloc[-1]) if len(volume) else 0
+                    rows.append({
+                        "symbol": symbol,
+                        "sector": symbol_sector(symbol),
+                        "close": round(last_close, 2),
+                        "changePct": round(change_pct, 2),
+                        "volume": int(max(0, last_volume)),
+                    })
+                except Exception:
+                    continue
 
+            # Bu batch'in MultiIndex DataFrame'ini bir sonraki indirmeden önce bırak.
+            data = None
+            gc.collect()
 
+        if rows:
             MARKET_MOVERS_CACHE = {
-                "timestamp": now,
+                "timestamp": time.time(),
                 "updatedAt": time.strftime("%Y-%m-%d %H:%M:%S"),
-                "advancers": advancers,
-                "decliners": decliners,
-                "volumeLeaders": volume_leaders,
+                "advancers": sorted([r for r in rows if r["changePct"] > 0], key=lambda r: r["changePct"], reverse=True)[:20],
+                "decliners": sorted([r for r in rows if r["changePct"] < 0], key=lambda r: r["changePct"])[:20],
+                "volumeLeaders": sorted(rows, key=lambda r: r["volume"], reverse=True)[:20],
             }
+    finally:
+        MARKET_MOVERS_REFRESHING = False
 
-            return {
-                "ok": True,
-                **MARKET_MOVERS_CACHE,
-            }
 
-        except Exception as exc:
-            return {
-                "ok": False,
-                "error": str(exc),
-                **MARKET_MOVERS_CACHE,
-            }
+def _start_market_movers_refresh():
+    global MARKET_MOVERS_REFRESHING
+    with MARKET_MOVERS_LOCK:
+        if MARKET_MOVERS_REFRESHING or _scan_is_running():
+            return False
+        MARKET_MOVERS_REFRESHING = True
+        threading.Thread(target=_refresh_market_movers_sync, daemon=True, name="market-movers-refresh").start()
+        return True
+
+
+def load_market_movers(force=False):
+    """İsteği bloklamadan son listeyi döndürür; yenilemeyi arka planda yapar."""
+    now = time.time()
+    has_cache = bool(MARKET_MOVERS_CACHE.get("advancers") or MARKET_MOVERS_CACHE.get("decliners") or MARKET_MOVERS_CACHE.get("volumeLeaders"))
+    stale = now - float(MARKET_MOVERS_CACHE.get("timestamp", 0) or 0) >= 120
+
+    if force or stale or not has_cache:
+        _start_market_movers_refresh()
+
+    # İlk açılışta canlı cache henüz yoksa son tarama listesini geçici başlangıç
+    # verisi olarak kullan; arka plan yenilemesi tamamlanınca istemci tekrar okur.
+    if not has_cache:
+        scan = load_scan_dashboard()
+        lists = scan.get("marketLists") or {}
+        return {
+            "ok": True,
+            "timestamp": 0,
+            "updatedAt": scan.get("updatedAt"),
+            "advancers": lists.get("advancers", []),
+            "decliners": lists.get("decliners", []),
+            "volumeLeaders": lists.get("volumeLeaders", []),
+            "refreshing": True,
+            "fromScanFallback": True,
+        }
+
+    return {
+        "ok": True,
+        **MARKET_MOVERS_CACHE,
+        "refreshing": MARKET_MOVERS_REFRESHING,
+        "fromScanFallback": False,
+    }
 
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self,*args,**kwargs): super().__init__(*args,directory=str(WEB),**kwargs)

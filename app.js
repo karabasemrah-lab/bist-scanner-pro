@@ -482,24 +482,35 @@ async function loadMarketCards(force=false){
   }
 }
 
+let marketMoversRetryTimer=null;
 async function loadMarketMovers(force=false){
   try{
     const data=await fetchJson(`/api/market-movers?force=${force?1:0}&_=${Date.now()}`,{cache:'no-store'});
     if(!data||data.ok===false)throw new Error(data?.error||'Piyasa verileri alınamadı.');
     renderMarketLists(data);
+    // Render canlı yenilemeyi arka planda yapar. Hazırlanıyorsa kısa süre sonra
+    // tekrar okuyup ekrandaki listeyi otomatik tazeleriz.
+    if(data.refreshing){
+      clearTimeout(marketMoversRetryTimer);
+      marketMoversRetryTimer=setTimeout(()=>loadMarketMovers(false),7000);
+    }
   }catch(e){
     console.error('Market movers:',e);
-    renderMarketLists({advancers:[],decliners:[],volumeLeaders:[]});
+    // Geçici 502/timeout sırasında ekrandaki son geçerli listeyi silme.
+    clearTimeout(marketMoversRetryTimer);
+    marketMoversRetryTimer=setTimeout(()=>loadMarketMovers(false),10000);
   }
 }
 async function loadScanDashboard(){
   try{
     const data=await fetchJson(`/api/dashboard-scan?_=${Date.now()}`,{cache:'no-store'});
-    renderBreadth(data.breadth||{});renderMarketLists(data.marketLists||{});
+    // Burada Yükselen/Düşen/Hacimliler listesini çizme. Bu listeler canlı
+    // /api/market-movers kaynağından gelir; son tarama verisi onları ezmemeli.
+    renderBreadth(data.breadth||{});
     $('healthDate').textContent=data.updatedAt||'-';
     if(!allRows.length)renderHealth(data.health||{});
   }catch(e){
-    renderBreadth({});renderMarketLists({});
+    renderBreadth({});
   }
 }
 async function loadDashboard(force=false){
@@ -521,6 +532,12 @@ async function loadDashboard(force=false){
       })}`;
   }
 }
+
+// Piyasa açıkken Yükselen/Düşen/Hacimliler listesini otomatik tazele.
+// Sekme görünür değilken gereksiz istek atılmaz.
+setInterval(()=>{
+  if(document.visibilityState==='visible') loadMarketMovers(false);
+},120000);
 
 function download(path){window.location.href=path}
 document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',async()=>{const view=b.dataset.view;showView(view);if(view==='dashboard')await loadDashboard(false);if(view==='tracker')renderTracker();if(view==='backtest')await loadLastBacktest();if(view==='kap'&&!kapRows.length)await loadKap(false);}));
