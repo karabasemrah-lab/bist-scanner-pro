@@ -1,6 +1,2 @@
-yfinance
-pandas
-openpyxl
-requests
-beautifulsoup4
-lxml
+Flask>=3.0,<4
+requests>=2.31,<3
