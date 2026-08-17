@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from flask import Flask, Response, jsonify, request, send_from_directory
 import requests
+import os
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 
@@ -66,8 +67,13 @@ def yahoo_proxy():
 
 if __name__ == "__main__":
     print()
-    print("BIST Scanner HTML v0.2")
-    print("Tarayici adresi: http://127.0.0.1:8765")
-    print("Kapatmak icin CTRL+C")
+    print("BIST Scanner HTML v0.3")
+    print("Sunucu baslatiliyor...")
     print()
-    app.run(host="127.0.0.1", port=8765, debug=False, threaded=True)
+
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8765)),
+        debug=False,
+        threaded=True
+    )
