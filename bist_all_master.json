@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "source": "https://kap.org.tr/tr/tumKalemler/kpy41_acc5_fiili_dolasimdaki_pay",
-  "updatedAt": "2026-08-14 19:39:41",
-  "count": 621,
+  "updatedAt": "2026-08-17 17:58:18",
+  "count": 622,
   "symbols": [
     "A1CAP",
     "A1YEN",
@@ -144,6 +144,7 @@
     "CEOEM",
     "CGCAM",
     "CIMSA",
+    "CITAS",
     "CLEBI",
     "CMBTN",
     "CMENT",
@@ -767,6 +768,7 @@
     "CEOEM": "CEO EVENT MEDYA A.Ş.",
     "CGCAM": "ÇAĞDAŞ CAM SANAYİ VE TİCARET A.Ş.",
     "CIMSA": "ÇİMSA ÇİMENTO SANAYİ VE TİCARET A.Ş.",
+    "CITAS": "ÇİTLEKÇİ MAĞAZACILIK GIDA A.Ş.",
     "CLEBI": "ÇELEBİ HAVA SERVİSİ A.Ş.",
     "CMBTN": "ÇİMBETON HAZIRBETON VE PREFABRİK YAPI ELEMANLARI SANAYİ VE TİCARET A.Ş.",
     "CMENT": "ÇİMENTAŞ İZMİR ÇİMENTO FABRİKASI T.A.Ş.",

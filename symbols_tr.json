@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-14 19:39:41",
+  "version": "2026-08-17 17:58:18",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2533,6 +2533,10 @@
     "ZRGYO": {
       "name": "ZİRAAT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
       "yahoo": "ZRGYO.IS"
+    },
+    "CITAS": {
+      "name": "ÇİTLEKÇİ MAĞAZACILIK GIDA A.Ş.",
+      "yahoo": "CITAS.IS"
     }
   }
 }
