@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BIST Scanner HTML v0.5</title>
+<title>BIST Scanner HTML v0.5.2</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -172,7 +172,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 <section id="divergence" class="tabpage space-y-4 hidden">
   <div class="card p-5">
     <h2 class="text-2xl font-black">🧭 Uyumsuzluk Tarayıcı</h2>
-    <div class="text-sm muted mt-2">Fiyat pivotları ile indikatör pivotlarını karşılaştırır · Pozitif / Negatif / Karma uyumsuzluk</div>
+    <div class="text-sm muted mt-2">Fiyat pivotları ile her indikatörün kendi lokal pivotlarını eşleştirir · Pozitif / Negatif / Karma uyumsuzluk</div>
 
     <div class="grid grid-cols-5 gap-3 mt-5 grid-settings">
       <label class="chip"><input id="divTf1h" type="checkbox"> 1 Saat</label>
@@ -234,7 +234,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 <footer class="text-xs muted text-center py-5">
-  BIST Scanner HTML v0.5 · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk · Tarayıcı içi JavaScript motoru
+  BIST Scanner HTML v0.5.2 · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk · Tarayıcı içi JavaScript motoru
 </footer>
 </div>
 
@@ -447,8 +447,83 @@ function stochasticSeries(h,l,c,k=14,smooth=3){const raw=Array(c.length).fill(Na
 function cmfSeries(h,l,c,v,n=21){const mfv=c.map((x,i)=>{const spread=h[i]-l[i];return spread!==0?(((x-l[i])-(h[i]-x))/spread)*v[i]:0}),sm=rollingSum(mfv,n),sv=rollingSum(v,n);return c.map((_,i)=>finite(sm[i])&&finite(sv[i])&&sv[i]!==0?sm[i]/sv[i]:NaN)}
 function mfiSeries(h,l,c,v,n=14){const tp=c.map((x,i)=>(h[i]+l[i]+x)/3),pos=Array(c.length).fill(0),neg=Array(c.length).fill(0),o=Array(c.length).fill(NaN);for(let i=1;i<c.length;i++){const flow=tp[i]*v[i];if(tp[i]>tp[i-1])pos[i]=flow;else if(tp[i]<tp[i-1])neg[i]=flow}const ps=rollingSum(pos,n),ns=rollingSum(neg,n);for(let i=0;i<c.length;i++)if(finite(ps[i])&&finite(ns[i]))o[i]=ns[i]===0?100:100-(100/(1+ps[i]/ns[i]));return o}
 function calcDivIndicator(df,name){const c=df.c,h=df.h,l=df.l,v=df.v;if(name==="RSI")return rsiSeries(c,14);if(name==="MACD")return macdSeries(c).macd;if(name==="MACD Histogram")return macdSeries(c).hist;if(name==="Momentum")return momentumSeries(c,10);if(name==="CCI")return cciSeries(h,l,c,20);if(name==="OBV")return obvSeries(c,v);if(name==="Stochastic")return stochasticSeries(h,l,c,14,3);if(name==="VWMACD"){const f=vwma(c,v,12),s=vwma(c,v,26);return c.map((_,i)=>finite(f[i])&&finite(s[i])?f[i]-s[i]:NaN)}if(name==="CMF")return cmfSeries(h,l,c,v,21);if(name==="MFI")return mfiSeries(h,l,c,v,14);throw new Error("Bilinmeyen indikatör")}
-function pivotIndices(a,w,mode){const idx=[];for(let i=w;i<a.length-w;i++){const x=a[i];if(!finite(x))continue;const b=a.slice(i-w,i+w+1).filter(finite);if(!b.length)continue;if(mode==="low"&&x===Math.min(...b))idx.push(i);else if(mode==="high"&&x===Math.max(...b))idx.push(i)}return idx}
-function detectDivergence(df,indicators,lookback,pivotWindow){const minimum=Math.max(40,lookback+pivotWindow*2+5);if(!df||df.c.length<minimum)return {type:"Yetersiz",count:0,indicators:""};const start=Math.max(0,df.c.length-Math.max(minimum,lookback+20)),work={t:df.t.slice(start),o:df.o.slice(start),h:df.h.slice(start),l:df.l.slice(start),c:df.c.slice(start),v:df.v.slice(start)},calculated={};for(const name of indicators){try{const s=calcDivIndicator(work,name);if(s.some(finite))calculated[name]=s}catch(_){}}const lows=pivotIndices(work.l,pivotWindow,"low"),highs=pivotIndices(work.h,pivotWindow,"high"),positive=[],negative=[];if(lows.length>=2){const a=lows.at(-2),b=lows.at(-1);if(b-a<=lookback&&work.l[b]<work.l[a])for(const [name,s] of Object.entries(calculated))if(finite(s[a])&&finite(s[b])&&s[b]>s[a])positive.push(name)}if(highs.length>=2){const a=highs.at(-2),b=highs.at(-1);if(b-a<=lookback&&work.h[b]>work.h[a])for(const [name,s] of Object.entries(calculated))if(finite(s[a])&&finite(s[b])&&s[b]<s[a])negative.push(name)}if(positive.length&&negative.length)return {type:"Karma",count:new Set([...positive,...negative]).size,indicators:`Pozitif: ${positive.join(", ")} | Negatif: ${negative.join(", ")}`};if(positive.length)return {type:"Pozitif",count:positive.length,indicators:positive.join(", ")};if(negative.length)return {type:"Negatif",count:negative.length,indicators:negative.join(", ")};return {type:"Yok",count:0,indicators:""}}
+function pivotIndices(a,w,mode){
+  const idx=[];
+  for(let i=w;i<a.length-w;i++){
+    const x=a[i];
+    if(!finite(x)) continue;
+    const block=a.slice(i-w,i+w+1);
+    if(block.some(v=>!finite(v))) continue;
+    const target=mode==="low"?Math.min(...block):Math.max(...block);
+    if(x!==target) continue;
+    if(block.filter(v=>v===target).length!==1) continue;
+    idx.push(i);
+  }
+  return idx;
+}
+function nearestIndicatorPivot(series,pricePivotIndex,window,mode){
+  const from=Math.max(window,pricePivotIndex-window);
+  const to=Math.min(series.length-window-1,pricePivotIndex+window);
+  if(from>to) return null;
+  let best=null;
+  for(let i=from;i<=to;i++){
+    if(!finite(series[i])) continue;
+    const block=series.slice(i-window,i+window+1);
+    if(block.length!==window*2+1||block.some(v=>!finite(v))) continue;
+    const target=mode==="low"?Math.min(...block):Math.max(...block);
+    if(series[i]!==target) continue;
+    if(block.filter(v=>v===target).length!==1) continue;
+    const distance=Math.abs(i-pricePivotIndex);
+    if(best===null||distance<best.distance) best={index:i,value:series[i],distance};
+  }
+  return best;
+}
+function detectDivergence(df,indicators,lookback,pivotWindow){
+  const minimum=Math.max(50,lookback+pivotWindow*4+10);
+  if(!df||df.c.length<minimum)return {type:"Yetersiz",count:0,indicators:""};
+  const tailSize=Math.max(minimum,lookback+40);
+  const start=Math.max(0,df.c.length-tailSize);
+  const work={t:df.t.slice(start),o:df.o.slice(start),h:df.h.slice(start),l:df.l.slice(start),c:df.c.slice(start),v:df.v.slice(start)};
+  const calculated={};
+  for(const name of indicators){
+    try{
+      const s=calcDivIndicator(work,name);
+      if(Array.isArray(s)&&s.filter(finite).length>=Math.max(20,pivotWindow*4+5)) calculated[name]=s;
+    }catch(_){}
+  }
+  if(!Object.keys(calculated).length)return {type:"Yetersiz",count:0,indicators:""};
+
+  const lows=pivotIndices(work.l,pivotWindow,"low");
+  const highs=pivotIndices(work.h,pivotWindow,"high");
+  const positive=[],negative=[];
+
+  if(lows.length>=2){
+    const p1=lows.at(-2),p2=lows.at(-1),sep=p2-p1;
+    if(sep>=pivotWindow*2&&sep<=lookback&&work.l[p2]<work.l[p1]){
+      for(const [name,s] of Object.entries(calculated)){
+        const i1=nearestIndicatorPivot(s,p1,pivotWindow,"low");
+        const i2=nearestIndicatorPivot(s,p2,pivotWindow,"low");
+        if(i1&&i2&&i2.index>i1.index&&i2.value>i1.value) positive.push(name);
+      }
+    }
+  }
+
+  if(highs.length>=2){
+    const p1=highs.at(-2),p2=highs.at(-1),sep=p2-p1;
+    if(sep>=pivotWindow*2&&sep<=lookback&&work.h[p2]>work.h[p1]){
+      for(const [name,s] of Object.entries(calculated)){
+        const i1=nearestIndicatorPivot(s,p1,pivotWindow,"high");
+        const i2=nearestIndicatorPivot(s,p2,pivotWindow,"high");
+        if(i1&&i2&&i2.index>i1.index&&i2.value<i1.value) negative.push(name);
+      }
+    }
+  }
+
+  if(positive.length&&negative.length)return {type:"Karma",count:new Set([...positive,...negative]).size,indicators:`Pozitif: ${positive.join(", ")} | Negatif: ${negative.join(", ")}`};
+  if(positive.length)return {type:"Pozitif",count:positive.length,indicators:positive.join(", ")};
+  if(negative.length)return {type:"Negatif",count:negative.length,indicators:negative.join(", ")};
+  return {type:"Yok",count:0,indicators:""};
+}
 function istParts(ts){const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date(ts*1000)),o={};for(const p of parts)o[p.type]=p.value;return {date:`${o.year}-${o.month}-${o.day}`,hour:Number(o.hour)}}
 function resample4h(df){const groups=new Map();for(let i=0;i<df.t.length;i++){const p=istParts(df.t[i]);if(p.hour<10||p.hour>17)continue;const block=p.hour<14?"A":"B",key=p.date+"|"+block;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(i)}const out={t:[],o:[],h:[],l:[],c:[],v:[]};for(const [key,idx] of groups){idx.sort((a,b)=>df.t[a]-df.t[b]);const [date,block]=key.split("|"),hh=block==="A"?14:18,mm=block==="A"?0:15,closeTs=Math.floor(new Date(`${date}T${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:00+03:00`).getTime()/1000);if(closeTs>Math.floor(Date.now()/1000))continue;out.t.push(closeTs);out.o.push(df.o[idx[0]]);out.h.push(Math.max(...idx.map(i=>df.h[i])));out.l.push(Math.min(...idx.map(i=>df.l[i])));out.c.push(df.c[idx.at(-1)]);out.v.push(idx.reduce((s,i)=>s+(df.v[i]||0),0))}return out}
 const divDataCache=new Map();
@@ -694,6 +769,21 @@ async function exportXLSX(kind){
   } else if(kind==="early") {
     const rows=earlyShown.map(r=>[r.symbol,r.model,r.status,r.score,r.close,r.ma,r.ma_distance,r.recent_return,r.latest_rank,r.best_rank,r.recent_top_days,r.baseline_top_days,r.avg_rel_volume,r.obv_rising?"EVET":"HAYIR",r.cmf]);
     addDataSheet("Erken Hacim",["Hisse","Model","Durum","Puan","Fiyat","MA","MA Uzaklık %","Son Getiri %","Son Hacim Sırası","En İyi Sıra","Son Dönem İlk N","Önceki Dönem İlk N","Ort. Göreceli Hacim","OBV Yükseliyor","CMF"],rows,[13,11,20,9,12,12,14,14,17,13,16,18,18,16,11],[4,5,6,7,8,9,10,11,12,13,15]);
+  } else if(kind==="div") {
+    const rows=divShown.map(r=>[
+      r.symbol,
+      r.timeframe,
+      r.type,
+      r.count,
+      r.indicators
+    ]);
+    addDataSheet(
+      "Uyumsuzluk Sonuçları",
+      ["Hisse","Periyot","Tür","Uyumsuzluk Sayısı","İndikatörler"],
+      rows,
+      [13,15,15,18,60],
+      [4]
+    );
   }
 
   if(failures.length){
@@ -726,7 +816,7 @@ async function exportXLSX(kind){
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(
     new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
-    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.5.xlsx" : "bist_uyumsuzluk_html_v0.5.xlsx"
+    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.5.xlsx" : "bist_uyumsuzluk_html_v0.5.2.xlsx"
   );
 }
 
