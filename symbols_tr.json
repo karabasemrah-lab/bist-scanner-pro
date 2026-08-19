@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-18 17:57:13",
+  "version": "2026-08-19 17:50:56",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2537,6 +2537,14 @@
     "CITAS": {
       "name": "ÇİTLEKÇİ MAĞAZACILIK GIDA A.Ş.",
       "yahoo": "CITAS.IS"
+    },
+    "TKNKA": {
+      "name": "TEKNİKA PLAST TEKNİK KALIP PLASTİK SANAYİ VE TİCARET A.Ş.",
+      "yahoo": "TKNKA.IS"
+    },
+    "VEYAS": {
+      "name": "TÜRKER VANGÖLÜ ENERJİ YATIRIM A.Ş.",
+      "yahoo": "VEYAS.IS"
     }
   }
 }
