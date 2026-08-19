@@ -96,6 +96,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#22d3ee" data-tab="marketintel">🧬 Market Intelligence</button>
   <button class="tab" style="--ac:#89b4fa" data-tab="duk">🔷 DÜK</button>
   <button class="tab" style="--ac:#10b981" data-tab="adscan">📊 Accumulation / Distribution</button>
+  <button class="tab" style="--ac:#eab308" data-tab="leadbreak">🏆 Liderlik + Sıkışma</button>
 </div>
 
 <section id="fusion" class="tabpage space-y-4">
@@ -423,6 +424,64 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+
+<section id="leadbreak" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🏆 BIST Liderlik + Sıkışma Kırılım Tarayıcısı</h2>
+    <div class="text-sm muted mt-2">Endeksten güçlü hisse → EMA trendi → Bollinger sıkışması → kırılıma yakınlık → hacimli tetik. Sonuçlar <b>HAZIRLIK</b> ve <b>TETİKLENDİ</b> olarak ayrılır.</div>
+
+    <div class="mt-4">
+      <div class="text-xs muted mb-2">Zaman Dilimleri · çoklu seçilebilir</div>
+      <div class="grid grid-cols-4 gap-3 grid-settings">
+        <label class="chip"><input id="leadTf1h" type="checkbox"> 1 Saat</label>
+        <label class="chip"><input id="leadTf4h" type="checkbox"> 4 Saat</label>
+        <label class="chip"><input id="leadTf1d" type="checkbox" checked> Günlük</label>
+        <label class="chip"><input id="leadTf1w" type="checkbox"> Haftalık</label>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Kırılım Bakışı (mum)</label><input id="leadBreakLookback" class="input mt-1" type="number" value="20" min="5" max="100"></div>
+      <div><label class="text-xs muted">Kırılıma Maks. Uzaklık %</label><input id="leadMaxDistance" class="input mt-1" type="number" value="3" step="0.25" min="0.25" max="15"></div>
+      <div><label class="text-xs muted">Min. Hacim Oranı</label><input id="leadMinVol" class="input mt-1" type="number" value="1.50" step="0.05" min="0.5" max="10"></div>
+      <div><label class="text-xs muted">Sıkışma Yüzdelik Eşiği</label><input id="leadSqueezePct" class="input mt-1" type="number" value="30" step="5" min="5" max="80"></div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">RSI Minimum</label><input id="leadRsiMin" class="input mt-1" type="number" value="52" min="0" max="100"></div>
+      <div><label class="text-xs muted">RSI Maksimum</label><input id="leadRsiMax" class="input mt-1" type="number" value="72" min="0" max="100"></div>
+      <div><label class="text-xs muted">Maks. ATR %</label><input id="leadMaxAtr" class="input mt-1" type="number" value="6" step="0.25" min="0.5" max="30"></div>
+      <div><label class="text-xs muted">Min. RS Farkı %</label><input id="leadMinRs" class="input mt-1" type="number" value="0" step="0.25" min="-20" max="50"></div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">Trend Yaşı Min.</label><input id="leadAgeMin" class="input mt-1" type="number" value="3" min="0" max="100"></div>
+      <div><label class="text-xs muted">Trend Yaşı Maks.</label><input id="leadAgeMax" class="input mt-1" type="number" value="25" min="1" max="250"></div>
+      <div class="flex items-end"><label class="chip"><input id="leadMarketFilter" type="checkbox" checked> XU100 &gt; EMA50 piyasa filtresi</label></div>
+      <div class="flex items-end"><label class="chip"><input id="leadClosedOnly" type="checkbox" checked> Yalnız kapanmış mumlar</label></div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      <label class="chip"><input id="leadShowPrep" type="checkbox" checked> 🟡 HAZIRLIK göster</label>
+      <label class="chip"><input id="leadShowTrigger" type="checkbox" checked> 🟢 TETİKLENDİ göster</label>
+      <span class="chip">Trend: Fiyat &gt; EMA20 &gt; EMA50 &gt; EMA200</span>
+      <span class="chip">RS: 20 + 60 mum XU100 karşılaştırması</span>
+    </div>
+
+    <button id="leadBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#ca8a04,#eab308);color:#111827">🏆 Liderlik + Sıkışma Taramasını Başlat</button>
+    <div id="leadCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="leadProg"></div></div>
+    <div id="leadStatus" class="mt-3 rounded-xl p-3 text-sm warn">Liderlik + Sıkışma taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">🏆 Liderlik + Sıkışma Sonuçları · <span id="leadCount">0</span> satır</h3>
+      <button id="leadExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[650px]"><table id="leadTable"></table></div>
+  </div>
+</section>
+
 <section class="card p-4">
   <details>
     <summary class="cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary>
@@ -431,7 +490,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 <footer class="text-xs muted text-center py-5">
-  BIST Scanner HTML v1.1 · 9 Modül · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk + Akıllı Fırsat + MACD 0 Altı 3. AL + Market Intelligence + DÜK + Accumulation / Distribution · Tarayıcı içi JavaScript motoru
+  BIST Scanner HTML v1.2 · 10 Modül · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk + Akıllı Fırsat + MACD 0 Altı 3. AL + Market Intelligence + DÜK + Accumulation / Distribution + Liderlik + Sıkışma · Tarayıcı içi JavaScript motoru
 </footer>
 </div>
 
@@ -447,7 +506,7 @@ const TV_BASE = [
 const REFS = {XU100:"XU100.IS",XU030:"XU030.IS",XBANK:"XBANK.IS",XUTUM:"XUTUM.IS",XBANA:"XBANA.IS"};
 const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 BİRİKİM","🟠 YAŞLANMA / DAĞITIM","🟠 OLGUN TREND"]);
 
-let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], failures=[];
+let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], failures=[];
 let refCache=null;
 
 const $ = id => document.getElementById(id);
@@ -1216,6 +1275,79 @@ async function scanAd(){
   finally{b.disabled=false}
 }
 
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10. MODÜL · BIST LİDERLİK + SIKIŞMA KIRILIM
+// ─────────────────────────────────────────────────────────────────────────────
+const LEAD_TF={
+  "1h":{label:"1 Saat",range:"180d",interval:"1h"},
+  "4h":{label:"4 Saat",range:"729d",interval:"1h"},
+  "1d":{label:"Günlük",range:"3y",interval:"1d"},
+  "1w":{label:"Haftalık",range:"10y",interval:"1wk"}
+};
+const leadDataCache=new Map();
+function selectedLeadTimeframes(){const a=[];if($("leadTf1h").checked)a.push("1h");if($("leadTf4h").checked)a.push("4h");if($("leadTf1d").checked)a.push("1d");if($("leadTf1w").checked)a.push("1w");return a}
+function leadClone(df){return {t:df.t.slice(),o:df.o.slice(),h:df.h.slice(),l:df.l.slice(),c:df.c.slice(),v:df.v.slice()}}
+function leadDropOpenBar(df,tf){
+  if(!$("leadClosedOnly").checked||!df?.t?.length)return df;
+  const out=leadClone(df),nowMs=Date.now(),lastTs=out.t.at(-1),lastMs=lastTs*1000,now=localNowIstanbul(),lp=istParts(lastTs);
+  let drop=false;
+  if(tf==="1h")drop=lastMs+3600e3>nowMs;
+  else if(tf==="4h")drop=lastMs>nowMs;
+  else if(tf==="1d")drop=lp.date===`${now.year}-${String(now.month).padStart(2,"0")}-${String(now.day).padStart(2,"0")}`&&(now.hour<18||(now.hour===18&&now.minute<15));
+  else if(tf==="1w"){const ld=new Date(lastMs),nd=new Date();drop=isoWeekKeyFromDate(ld)===isoWeekKeyFromDate(nd)&&(now.weekday!=="Fri"||(now.hour<18||(now.hour===18&&now.minute<15)))}
+  if(drop&&out.t.length>1)for(const k of ["t","o","h","l","c","v"])out[k].pop();
+  return out;
+}
+async function getLeadDf(symbol,tf,isIndex=false){
+  const key=`${symbol}|${tf}|${isIndex?"I":"S"}`;if(leadDataCache.has(key))return leadDataCache.get(key);
+  const cfg=LEAD_TF[tf],ticker=isIndex?symbol:symbol+".IS";let df;
+  if(tf==="4h")df=resample4h(await yahoo(ticker,cfg.range,"1h"));else df=await yahoo(ticker,cfg.range,cfg.interval);
+  df=leadDropOpenBar(df,tf);leadDataCache.set(key,df);return df;
+}
+function leadReturn(c,n){const i=c.length-1,j=i-n;return j>=0&&finite(c[i])&&finite(c[j])&&c[j]!==0?(c[i]/c[j]-1)*100:NaN}
+function leadTrendAge(e20,e50){const i=e20.length-1;if(!finite(e20[i])||!finite(e50[i])||e20[i]<=e50[i])return 0;let age=0;for(let k=i;k>=0;k--){if(finite(e20[k])&&finite(e50[k])&&e20[k]>e50[k])age++;else break}return age}
+function leadBollingerRank(c,len=20,rankLen=120){
+  const mid=rollingMean(c,len),sd=rollingStd(c,len),bw=c.map((_,i)=>finite(mid[i])&&mid[i]!==0&&finite(sd[i])?4*sd[i]/Math.abs(mid[i])*100:NaN);
+  return {bw,rank:percentRank(bw,rankLen)};
+}
+function analyzeLead(symbol,tf,df,bench){
+  const look=Math.max(5,Math.trunc(val("leadBreakLookback"))),maxDist=val("leadMaxDistance"),minVol=val("leadMinVol"),sqLimit=val("leadSqueezePct"),rsiMin=val("leadRsiMin"),rsiMax=val("leadRsiMax"),maxAtr=val("leadMaxAtr"),minRs=val("leadMinRs"),ageMin=Math.max(0,Math.trunc(val("leadAgeMin"))),ageMax=Math.max(ageMin,Math.trunc(val("leadAgeMax")));
+  const minBars=Math.max(230,look+5,125);if(!df||!bench||df.c.length<minBars||bench.c.length<minBars)return null;
+  const c=df.c,h=df.h,v=df.v,i=c.length-1,e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rsi=rsiSeries(c,14),atr=atrSeries(df,14),vma=rollingMean(v,20),bb=leadBollingerRank(c,20,120);
+  const be50=ema(bench.c,50),bi=bench.c.length-1;
+  const req=[e20[i],e50[i],e200[i],rsi[i],atr[i],vma[i],bb.rank[i],be50[bi]];if(req.some(x=>!finite(x)))return null;
+  const trend=c[i]>e20[i]&&e20[i]>e50[i]&&e50[i]>e200[i],age=leadTrendAge(e20,e50),ageOk=age>=ageMin&&age<=ageMax;
+  const rs20=leadReturn(c,20)-leadReturn(bench.c,20),rs60=leadReturn(c,60)-leadReturn(bench.c,60),rsOk=finite(rs20)&&finite(rs60)&&rs20>=minRs&&rs60>=minRs;
+  const marketOk=!$("leadMarketFilter").checked||(bench.c[bi]>be50[bi]);
+  const recentRanks=bb.rank.slice(Math.max(0,i-4),i+1).filter(finite),squeezeRank=recentRanks.length?Math.min(...recentRanks):NaN,squeeze=finite(squeezeRank)&&squeezeRank<=sqLimit;
+  const priorHigh=Math.max(...h.slice(i-look,i)),prevHigh=Math.max(...h.slice(i-look-1,i-1));if(!finite(priorHigh)||priorHigh<=0)return null;
+  const distance=(priorHigh-c[i])/priorHigh*100,prep=distance>=0&&distance<=maxDist;
+  const volRatio=vma[i]>0?v[i]/vma[i]:NaN,freshBreak=c[i]>priorHigh&&c[i-1]<=prevHigh,trigger=freshBreak&&finite(volRatio)&&volRatio>=minVol;
+  const rsiOk=rsi[i]>=rsiMin&&rsi[i]<=rsiMax,atrPct=c[i]!==0?atr[i]/Math.abs(c[i])*100:NaN,atrOk=finite(atrPct)&&atrPct<=maxAtr;
+  const common=trend&&ageOk&&rsOk&&marketOk&&squeeze&&rsiOk&&atrOk;
+  let status=null;if(common&&trigger)status="🟢 TETİKLENDİ";else if(common&&prep)status="🟡 HAZIRLIK";else return null;
+  let score=0;score+=trend&&ageOk?20:0;score+=rsOk?Math.min(20,12+Math.max(0,Math.min(8,(rs20+rs60)/4))):0;score+=squeeze?15:0;score+=trigger?15:prep?Math.max(4,15*(1-Math.max(0,distance)/Math.max(maxDist,0.01))):0;score+=trigger?15:Math.min(12,finite(volRatio)?Math.max(0,(volRatio-0.8)/Math.max(minVol-0.8,0.1)*12):0);score+=rsiOk?10:0;score+=atrOk?5:0;score=Math.max(0,Math.min(100,Math.round(score)));
+  return {symbol,timeframe:LEAD_TF[tf].label,status,score,close:+c[i].toFixed(2),breakout_level:+priorHigh.toFixed(2),distance_pct:+distance.toFixed(2),volume_ratio:finite(volRatio)?+volRatio.toFixed(2):null,rsi:+rsi[i].toFixed(1),atr_pct:+atrPct.toFixed(2),rs20:+rs20.toFixed(2),rs60:+rs60.toFixed(2),squeeze_rank:+squeezeRank.toFixed(1),trend_age:age,market_ok:marketOk,last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})};
+}
+function renderLead(){
+  leadShown=leadAll.filter(r=>(r.status.includes("TETİKLENDİ")&&$("leadShowTrigger").checked)||(r.status.includes("HAZIRLIK")&&$("leadShowPrep").checked));
+  leadShown.sort((a,b)=>(b.status.includes("TETİKLENDİ")-a.status.includes("TETİKLENDİ"))||b.score-a.score||b.rs20-a.rs20);
+  $("leadCount").textContent=leadShown.length;
+  $("leadTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Durum","Skor","Fiyat","Kırılım Seviyesi","Uzaklık %","Hacim Oranı","RSI","ATR %","RS 20","RS 60","Sıkışma %Dil","Trend Yaşı","XU100 Rejim","Son Mum"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+leadShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${r.status}</td><td>${r.score}</td><td>${fmt(r.close)}</td><td>${fmt(r.breakout_level)}</td><td>${fmt(r.distance_pct)}</td><td>${fmt(r.volume_ratio)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.atr_pct)}</td><td>${fmt(r.rs20)}</td><td>${fmt(r.rs60)}</td><td>${fmt(r.squeeze_rank,1)}</td><td>${r.trend_age}</td><td>${r.market_ok?"✓":"✗"}</td><td>${r.last_bar}</td></tr>`).join("")+"</tbody>";
+}
+async function scanLead(){
+  const tfs=selectedLeadTimeframes();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}if(!$("leadShowPrep").checked&&!$("leadShowTrigger").checked){alert("HAZIRLIK veya TETİKLENDİ durumlarından en az birini seç.");return}
+  const b=$("leadBtn");b.disabled=true;failures=[];leadAll=[];leadDataCache.clear();$("leadProg").style.width="0";setStatus("leadStatus","Evren ve XU100 referansı hazırlanıyor…","warn");
+  try{
+    const u=await getUniverse(),benchBy={};for(const tf of tfs)benchBy[tf]=await getLeadDf("XU100.IS",tf,true);
+    const jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("leadCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;
+    let next=0,done=0;async function run(){while(true){const ix=next++;if(ix>=jobs.length)return;const[s,tf]=jobs[ix];try{const r=analyzeLead(s,tf,await getLeadDf(s,tf,false),benchBy[tf]);if(r)leadAll.push(r)}catch(e){failures.push({symbol:`${s} (${LEAD_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("leadProg").style.width=(100*done/jobs.length)+"%";setStatus("leadStatus",`${s} · ${LEAD_TF[tf].label} · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0)}}
+    await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));renderLead();renderFails();setStatus("leadStatus",`Tarama tamamlandı · ${leadShown.length} sonuç · ${failures.length} hata/işlenemeyen görev`,"good");localStorage.setItem("bist_html_leadbreak",JSON.stringify({at:Date.now(),results:leadAll,failures}));
+  }catch(e){setStatus("leadStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}
+}
+
 function renderFails(){
   $("failCount").textContent=failures.length;
   $("failTable").innerHTML=`<thead><tr><th>Hisse</th><th>Neden</th></tr></thead><tbody>`+
@@ -1385,6 +1517,8 @@ async function exportXLSX(kind){
     addDataSheet("DÜK Sonuçları",["Hisse","Zaman","Aktif Sinyaller","Skor","Fiyat","Değişim %","Son Mum","DÜK1","DÜK2","DÜK3"],dukShown.map(r=>[r.symbol,r.timeframe,r.signals,`${r.score}/3`,r.close,r.change,r.last_bar,r.duk1?"EVET":"HAYIR",r.duk2?"EVET":"HAYIR",r.duk3?"EVET":"HAYIR"]),[13,14,24,10,12,12,22,10,10,10],[4,5,6]);
   } else if(kind==="ad") {
     addDataSheet("A-D Sonuçları",["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","AD > SMA Süresi","AD","SMA57","AD-SMA %","Fiyat","Son Mum"],adShown.map(r=>[r.symbol,r.mode,r.timeframe,r.condition,r.bars,r.ad,r.sma,r.distance,r.close,r.last_bar]),[13,14,14,20,16,16,16,13,14,22],[5,6,7,8,9]);
+  } else if(kind==="lead") {
+    addDataSheet("Liderlik Sıkışma",["Hisse","Periyot","Durum","Skor","Fiyat","Kırılım Seviyesi","Uzaklık %","Hacim Oranı","RSI","ATR %","RS 20","RS 60","Sıkışma %Dil","Trend Yaşı","XU100 Rejim","Son Mum"],leadShown.map(r=>[r.symbol,r.timeframe,r.status,r.score,r.close,r.breakout_level,r.distance_pct,r.volume_ratio,r.rsi,r.atr_pct,r.rs20,r.rs60,r.squeeze_rank,r.trend_age,r.market_ok?"EVET":"HAYIR",r.last_bar]),[13,13,18,10,12,16,12,13,10,10,11,11,14,12,13,22],[4,5,6,7,8,9,10,11,12,13,14]);
   } else if(kind==="div") {
     const rows=divShown.map(r=>[
       r.symbol,
@@ -1432,7 +1566,7 @@ async function exportXLSX(kind){
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(
     new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
-    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.6.xlsx" : kind==="opp" ? "bist_akilli_firsat_html_v0.7.xlsx" : kind==="macd3" ? "bist_macd_0_alti_3_al_html_v0.8.xlsx" : kind==="mi" ? "bist_market_intelligence_html_v0.9.xlsx" : kind==="duk" ? "bist_duk_html_v1.0.xlsx" : kind==="ad" ? "bist_accumulation_distribution_html_v1.1.xlsx" : "bist_uyumsuzluk_html_v0.6.xlsx"
+    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.6.xlsx" : kind==="opp" ? "bist_akilli_firsat_html_v0.7.xlsx" : kind==="macd3" ? "bist_macd_0_alti_3_al_html_v0.8.xlsx" : kind==="mi" ? "bist_market_intelligence_html_v0.9.xlsx" : kind==="duk" ? "bist_duk_html_v1.0.xlsx" : kind==="ad" ? "bist_accumulation_distribution_html_v1.1.xlsx" : kind==="lead" ? "bist_liderlik_sikisma_html_v1.2.xlsx" : "bist_uyumsuzluk_html_v0.6.xlsx"
   );
 }
 
@@ -1442,10 +1576,10 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 });
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
-$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;
-$("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");
-$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;
-renderFusion();renderCont();renderEarly();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderFails();
+$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;
+$("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");
+$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;
+renderFusion();renderCont();renderEarly();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderFails();
 </script>
 </body>
 </html>
