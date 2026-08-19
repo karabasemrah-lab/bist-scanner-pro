@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BIST Scanner HTML v0.6</title>
+<title>BIST Scanner HTML v0.9</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
@@ -91,6 +91,11 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#9b6cff" data-tab="continuation">🟣 Trend Devam</button>
   <button class="tab" style="--ac:#f59e0b" data-tab="earlyvolume">🔥 Erken Hacim</button>
   <button class="tab" style="--ac:#22c55e" data-tab="divergence">🧭 Uyumsuzluk</button>
+  <button class="tab" style="--ac:#38bdf8" data-tab="opportunity">🧠 Akıllı Fırsat</button>
+  <button class="tab" style="--ac:#f97316" data-tab="macd3buy">📈 MACD 0 Altı 3. AL</button>
+  <button class="tab" style="--ac:#22d3ee" data-tab="marketintel">🧬 Market Intelligence</button>
+  <button class="tab" style="--ac:#89b4fa" data-tab="duk">🔷 DÜK</button>
+  <button class="tab" style="--ac:#10b981" data-tab="adscan">📊 Accumulation / Distribution</button>
 </div>
 
 <section id="fusion" class="tabpage space-y-4">
@@ -237,6 +242,187 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+
+<section id="opportunity" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🧠 Akıllı BIST Fırsat Motoru v2.1</h2>
+    <div class="text-sm muted mt-2">Fiyat + momentum + hacim + katılım + volatilite + trend yaşı + çoklu zaman dilimi uyumu.</div>
+    <div class="grid grid-cols-2 gap-4 mt-5 grid-settings">
+      <div>
+        <div class="text-xs muted mb-2">Periyot · birden fazla seçilebilir</div>
+        <div class="flex flex-wrap gap-2">
+          <label class="chip"><input id="oppTf1h" type="checkbox" checked> 1 Saat</label>
+          <label class="chip"><input id="oppTf4h" type="checkbox" checked> 4 Saat</label>
+          <label class="chip"><input id="oppTf1d" type="checkbox" checked> Günlük</label>
+          <label class="chip"><input id="oppTf1w" type="checkbox" checked> Haftalık</label>
+        </div>
+      </div>
+      <div>
+        <div class="text-xs muted mb-2">Veri modu</div>
+        <div class="flex flex-wrap gap-2">
+          <label class="chip"><input id="oppModeTL" type="checkbox" checked> TL</label>
+          <label class="chip"><input id="oppModeUSD" type="checkbox"> USD</label>
+          <label class="chip"><input id="oppOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
+        </div>
+      </div>
+    </div>
+    <div class="text-xs muted mt-3">Orijinal v2.1 eşikleri: Güç ≥ 62 · Kalite ≥ 55 · Güven ≥ 58 · Risk ≤ 72 · Fırsat ≥ 60 · Erkenlik ≥ 45.</div>
+    <button id="oppBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#0369a1,#38bdf8);color:white">🧠 Akıllı Fırsat Taramasını Başlat</button>
+    <div id="oppCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="oppProg"></div></div>
+    <div id="oppStatus" class="mt-3 rounded-xl p-3 text-sm warn">Akıllı Fırsat taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">🧠 Akıllı Fırsat Sonuçları · <span id="oppCount">0</span> satır</h3>
+      <button id="oppExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[650px]"><table id="oppTable"></table></div>
+  </div>
+</section>
+
+
+<section id="macd3buy" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">📈 MACD 0 Altı 3. AL BIST Tarayıcı</h2>
+    <div class="text-sm muted mt-2">MACD, Signal çizgisini 0 bölgesinin altında yukarı kestiğinde AL sayacı ilerler. Seçilen döngüde hedeflenen AL numarasını bulur.</div>
+
+    <div class="grid grid-cols-5 gap-3 mt-5 grid-settings">
+      <label class="chip"><input id="macdTf1h" type="checkbox"> 1 Saat</label>
+      <label class="chip"><input id="macdTf4h" type="checkbox"> 4 Saat</label>
+      <label class="chip"><input id="macdTf1d" type="checkbox" checked> Günlük</label>
+      <label class="chip"><input id="macdTf1w" type="checkbox" checked> Haftalık</label>
+      <label class="chip"><input id="macdTf1m" type="checkbox"> Aylık</label>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Hızlı EMA</label><input id="macdFast" class="input mt-1" type="number" value="12" min="2" max="500"></div>
+      <div><label class="text-xs muted">Yavaş EMA</label><input id="macdSlow" class="input mt-1" type="number" value="26" min="3" max="1000"></div>
+      <div><label class="text-xs muted">Sinyal EMA</label><input id="macdSignalLen" class="input mt-1" type="number" value="9" min="2" max="500"></div>
+      <div><label class="text-xs muted">Aranan AL No</label><input id="macdSignalNo" class="input mt-1" type="number" value="3" min="1" max="20"></div>
+      <div><label class="text-xs muted">Son Kaç Mum</label><input id="macdRecentBars" class="input mt-1" type="number" value="1" min="1" max="100"></div>
+      <div><label class="text-xs muted">Minimum Mum</label><input id="macdMinBars" class="input mt-1" type="number" value="80" min="30" max="5000"></div>
+      <div><label class="text-xs muted">Min Histogram %</label><input id="macdMinHistPct" class="input mt-1" type="number" value="0.005" min="0" max="5" step="0.001"></div>
+      <div>
+        <label class="text-xs muted">Sayaç sıfırlama</label>
+        <select id="macdResetMode" class="input mt-1">
+          <option value="macd">MACD sıfır üstünde</option>
+          <option value="either">MACD veya Signal sıfır üstünde</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      <label class="chip"><input id="macdRequireSignalBelow" type="checkbox" checked> Signal çizgisi de 0 altında olsun</label>
+      <label class="chip"><input id="macdClosedOnly" type="checkbox" checked> Yalnızca kapanmış mumları kullan</label>
+    </div>
+    <div class="text-xs muted mt-3">Orijinal varsayılanlar: MACD 12/26/9 · 3. AL · son 1 mum · min. 80 mum · min. Histogram % 0.005.</div>
+
+    <button id="macdBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#c2410c,#f97316);color:white">📈 MACD 0 Altı 3. AL Taramasını Başlat</button>
+    <div id="macdCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="macdProg"></div></div>
+    <div id="macdStatus" class="mt-3 rounded-xl p-3 text-sm warn">MACD 0 Altı 3. AL taramasını başlat.</div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">📈 MACD 0 Altı 3. AL Sonuçları · <span id="macdCount">0</span> satır</h3>
+      <button id="macdExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[650px]"><table id="macdTable"></table></div>
+  </div>
+</section>
+
+<section id="marketintel" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🧬 Market Intelligence Ranking Engine</h2>
+    <div class="text-sm muted mt-2">Hacim · Fiyat · Momentum · Volatilite · Kalite · Katılım · Rejim motorlarını birleştirerek teknik adayları sıralar.</div>
+    <div class="mt-4">
+      <div class="text-xs muted mb-2">Zaman dilimleri · birden fazla seçilebilir</div>
+      <div class="grid grid-cols-4 gap-3 grid-settings">
+        <label class="chip"><input id="miTf1h" type="checkbox"> 1 Saat</label>
+        <label class="chip"><input id="miTf4h" type="checkbox"> 4 Saat</label>
+        <label class="chip"><input id="miTf1d" type="checkbox" checked> Günlük</label>
+        <label class="chip"><input id="miTf1w" type="checkbox"> Haftalık</label>
+      </div>
+    </div>
+    <div class="grid grid-cols-3 gap-4 mt-5 grid-settings">
+      <div class="flex items-end"><label class="chip"><input id="miOnlyCandidates" type="checkbox" checked> Yalnız adayları göster</label></div>
+      <div><label class="text-xs muted">Gösterilecek ilk N</label><input id="miTopN" class="input mt-1" type="number" value="100" min="10" max="621"></div>
+      <div class="flex items-end"><span class="chip">Aday: Güç ≥62 · Kalite ≥55 · Güven ≥58 · Risk ≤72</span></div>
+    </div>
+    <button id="miBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#0891b2,#22d3ee);color:#06121a">🧬 Market Intelligence Taramasını Başlat</button>
+    <div id="miCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="miProg"></div></div>
+    <div id="miStatus" class="mt-3 rounded-xl p-3 text-sm warn">Market Intelligence taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">🧬 Market Intelligence Sonuçları · <span id="miCount">0</span> satır</h3>
+      <button id="miExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[650px]"><table id="miTable"></table></div>
+  </div>
+</section>
+
+<section id="duk" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🔷 DÜK Sinyal Tarayıcı</h2>
+    <div class="text-sm muted mt-2">Orijinal DÜK v2.2 mantığı · DÜK1 + DÜK2 + DÜK3 koşullarını bağımsız veya birlikte tarar.</div>
+    <div class="grid grid-cols-3 gap-3 mt-5 grid-settings"><label class="chip"><input id="dukTf4h" type="checkbox" checked> 4 Saat</label><label class="chip"><input id="dukTf1d" type="checkbox"> Günlük</label><label class="chip"><input id="dukTf1w" type="checkbox"> Haftalık</label></div>
+    <div class="grid grid-cols-3 gap-4 mt-5 grid-settings"><div><label class="text-xs muted">Sinyal Tipi</label><select id="dukSignal" class="input mt-1"><option value="all">Tümü</option><option value="duk1">DÜK1</option><option value="duk2">DÜK2</option><option value="duk3">DÜK3</option></select></div><div class="flex items-end"><label class="chip"><input id="dukClosedOnly" type="checkbox" checked> Yalnız kapanmış mumları kullan</label></div><div class="flex items-end"><span class="chip">Skor = aktif sinyal / 3</span></div></div>
+    <button id="dukBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#3b82f6,#89b4fa);color:#07111f">🔷 DÜK Taramasını Başlat</button><div id="dukCounts" class="text-xs muted mt-3"></div><div class="progress mt-4"><div id="dukProg"></div></div><div id="dukStatus" class="mt-3 rounded-xl p-3 text-sm warn">DÜK taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden"><div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800"><h3 class="font-black text-xl">🔷 DÜK Sonuçları · <span id="dukCount">0</span> satır</h3><button id="dukExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button></div><div class="overflow-auto max-h-[650px]"><table id="dukTable"></table></div></div>
+</section>
+
+
+<section id="adscan" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">📊 Accumulation / Distribution Tarayıcı</h2>
+    <div class="text-sm muted mt-2">Orijinal AD motoru · AD = kümülatif Money Flow Volume · AD'nin 57 periyot SMA üzerindeki durumunu ve yeni yukarı kesişimleri tarar.</div>
+
+    <div class="mt-4">
+      <div class="text-xs muted mb-2">Zaman Dilimleri · çoklu seçilebilir</div>
+      <div class="grid grid-cols-4 gap-3 grid-settings">
+        <label class="chip"><input id="adTf1h" type="checkbox"> 1 Saat</label>
+        <label class="chip"><input id="adTf4h" type="checkbox"> 4 Saat</label>
+        <label class="chip"><input id="adTf1d" type="checkbox" checked> Günlük</label>
+        <label class="chip"><input id="adTf1w" type="checkbox"> Haftalık</label>
+      </div>
+    </div>
+
+    <div class="mt-4">
+      <div class="text-xs muted mb-2">Veri Modları · çoklu seçilebilir</div>
+      <div class="grid grid-cols-4 gap-3 grid-settings">
+        <label class="chip"><input id="adModeTL" type="checkbox" checked> TL</label>
+        <label class="chip"><input id="adModeUSD" type="checkbox"> USD</label>
+        <label class="chip"><input id="adModeEUR" type="checkbox"> EUR</label>
+        <label class="chip"><input id="adModeXAU" type="checkbox"> ALTIN (XAU)</label>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">AD SMA Periyodu</label><input id="adSmaLen" class="input mt-1" type="number" value="57" min="2" max="500"></div>
+      <div><label class="text-xs muted">AD &gt; SMA En Az Mum</label><input id="adMinBars" class="input mt-1" type="number" value="1" min="1" max="500"></div>
+      <div><label class="text-xs muted">AD &gt; SMA En Çok Mum</label><input id="adMaxBars" class="input mt-1" type="number" value="10" min="1" max="500"></div>
+      <div class="flex items-end gap-2 flex-wrap"><label class="chip"><input id="adOnlyCross" type="checkbox"> Sadece yeni yukarı kesişim</label><label class="chip"><input id="adClosedOnly" type="checkbox" checked> Yalnız kapanmış mumlar</label></div>
+    </div>
+
+    <button id="adBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📊 A/D Taramasını Başlat</button>
+    <div id="adCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="adProg"></div></div>
+    <div id="adStatus" class="mt-3 rounded-xl p-3 text-sm warn">Accumulation / Distribution taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">📊 A/D Sonuçları · <span id="adCount">0</span> satır</h3>
+      <button id="adExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[650px]"><table id="adTable"></table></div>
+  </div>
+</section>
+
 <section class="card p-4">
   <details>
     <summary class="cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary>
@@ -245,7 +431,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 <footer class="text-xs muted text-center py-5">
-  BIST Scanner HTML v0.6 · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk · Tarayıcı içi JavaScript motoru
+  BIST Scanner HTML v1.1 · 9 Modül · Fusion + Trend Devam + Erken Hacim + Uyumsuzluk + Akıllı Fırsat + MACD 0 Altı 3. AL + Market Intelligence + DÜK + Accumulation / Distribution · Tarayıcı içi JavaScript motoru
 </footer>
 </div>
 
@@ -261,7 +447,7 @@ const TV_BASE = [
 const REFS = {XU100:"XU100.IS",XU030:"XU030.IS",XBANK:"XBANK.IS",XUTUM:"XUTUM.IS",XBANA:"XBANA.IS"};
 const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 BİRİKİM","🟠 YAŞLANMA / DAĞITIM","🟠 OLGUN TREND"]);
 
-let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], divAll=[], divShown=[], failures=[];
+let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], failures=[];
 let refCache=null;
 
 const $ = id => document.getElementById(id);
@@ -544,6 +730,225 @@ function selectedDivIndicators(){return [...document.querySelectorAll(".divIndic
 function renderDiv(){divShown=divAll.slice().sort((a,b)=>b.count-a.count||a.symbol.localeCompare(b.symbol)||a.timeframe.localeCompare(b.timeframe));$("divCount").textContent=divShown.length;$("divTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Tür","Uyumsuzluk Sayısı","İndikatörler"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+divShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${r.type==="Pozitif"?"🟢 POZİTİF":r.type==="Negatif"?"🔴 NEGATİF":"🟡 KARMA"}</td><td>${r.count}</td><td>${r.indicators}</td></tr>`).join("")+"</tbody>"}
 async function scanDiv(){const tfs=selectedDivTimeframes(),inds=selectedDivIndicators(),minCount=Math.max(1,Math.trunc(val("divMinCount"))),lookback=Math.max(10,Math.trunc(val("divLookback"))),pivot=Math.max(1,Math.trunc(val("divPivotWindow")));if(!tfs.length){alert("En az bir periyot seç.");return}if(!inds.length){alert("En az bir indikatör seç.");return}if(!$("divPositive").checked&&!$("divNegative").checked){alert("Pozitif veya Negatif uyumsuzluktan en az birini seç.");return}const b=$("divBtn");b.disabled=true;failures=[];divAll=[];divDataCache.clear();$("divProg").style.width="0";setStatus("divStatus","Evren hazırlanıyor…","warn");try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("divCounts").textContent=`BIST ham evren: ${u.raw} · Taranacak: ${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;let next=0,done=0;const workers=Math.min(5,jobs.length||1);async function run(){while(true){const i=next++;if(i>=jobs.length)return;const [s,tf]=jobs[i];try{const df=await getDivDf(s,tf),r=detectDivergence(df,inds,lookback,pivot),allowed=(r.type==="Pozitif"&&$("divPositive").checked)||(r.type==="Negatif"&&$("divNegative").checked)||(r.type==="Karma"&&($("divPositive").checked||$("divNegative").checked));if(allowed&&r.count>=minCount)divAll.push({symbol:s,timeframe:DIV_TF[tf].label,...r})}catch(e){failures.push({symbol:`${s} (${DIV_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("divProg").style.width=(100*done/jobs.length)+"%";setStatus("divStatus",`${s} · ${DIV_TF[tf].label} analiz edildi · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0)}}await Promise.all(Array.from({length:workers},run));renderDiv();renderFails();setStatus("divStatus",`Tarama tamamlandı · ${divShown.length} sonuç · ${failures.length} hata/işlenemeyen görev`,"good");localStorage.setItem("bist_html_div",JSON.stringify({at:Date.now(),results:divAll,failures}))}catch(e){setStatus("divStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Akıllı BIST Fırsat Motoru v2.1 · Python orijinal mantığının JS uyarlaması
+// ─────────────────────────────────────────────────────────────────────────────
+const OPP_TF={
+  "1h":{label:"1 Saat",range:"120d",interval:"1h",weight:.16},
+  "4h":{label:"4 Saat",range:"120d",interval:"1h",weight:.20},
+  "1d":{label:"Günlük",range:"2y",interval:"1d",weight:.25},
+  "1w":{label:"Haftalık",range:"5y",interval:"1wk",weight:.17}
+};
+const OPP_ORDER=["1h","4h","1d","1w"];
+const OPP_STAGES=new Set(["HAZIRLIK / SIKIŞMA","YENİ TREND","ERKEN TREND","GÜÇLÜ DEVAM","TEYİTLİ TREND","OLGUN TREND"]);
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const tanhScore=(x,scale=1)=>scale?Math.tanh(x/scale):0;
+function rma(a,n){const o=Array(a.length).fill(NaN);let seed=[];let prev=NaN;for(let i=0;i<a.length;i++){const x=a[i];if(!finite(x))continue;if(!finite(prev)){seed.push(x);if(seed.length===n){prev=mean(seed);o[i]=prev}}else{prev=(prev*(n-1)+x)/n;o[i]=prev}}return o}
+function atrSeries(df,n=14){const tr=df.c.map((_,i)=>i===0?df.h[i]-df.l[i]:Math.max(df.h[i]-df.l[i],Math.abs(df.h[i]-df.c[i-1]),Math.abs(df.l[i]-df.c[i-1])));return rma(tr,n)}
+function adxSeries(df,n=14){const plus=Array(df.c.length).fill(0),minus=Array(df.c.length).fill(0);for(let i=1;i<df.c.length;i++){const up=df.h[i]-df.h[i-1],dn=df.l[i-1]-df.l[i];plus[i]=(up>dn&&up>0)?up:0;minus[i]=(dn>up&&dn>0)?dn:0}const atr=atrSeries(df,n),rp=rma(plus,n),rm=rma(minus,n),p=atr.map((x,i)=>finite(x)&&x?100*rp[i]/x:NaN),m=atr.map((x,i)=>finite(x)&&x?100*rm[i]/x:NaN),dx=p.map((x,i)=>finite(x)&&finite(m[i])&&(x+m[i])?100*Math.abs(x-m[i])/(x+m[i]):NaN);return rma(dx,n)}
+function efficiencySeries(c,n=20){return c.map((x,i)=>{if(i<n)return NaN;let path=0;for(let j=i-n+1;j<=i;j++)path+=Math.abs(c[j]-c[j-1]);return path?(x-c[i-n])/path:0})}
+function pctRankLast(a,look=120){const v=a.slice(-look).filter(finite);if(v.length<10)return 50;const x=v.at(-1);return 100*v.filter(z=>z<=x).length/v.length}
+function consecutiveBool(a){let n=0;for(let i=a.length-1;i>=0&&a[i];i--)n++;return n}
+function oppResample4h(df){return resampleEarlyHours(df,4)}
+function selectedOppTF(){const a=[];if($("oppTf1h").checked)a.push("1h");if($("oppTf4h").checked)a.push("4h");if($("oppTf1d").checked)a.push("1d");if($("oppTf1w").checked)a.push("1w");return a}
+function selectedOppModes(){const a=[];if($("oppModeTL").checked)a.push("TL");if($("oppModeUSD").checked)a.push("USD");return a}
+function alignRefConvert(stock,ref){if(!ref?.c?.length)return null;let j=0,last=0;const out={t:[],o:[],h:[],l:[],c:[],v:[]};for(let i=0;i<stock.t.length;i++){while(j<ref.t.length&&ref.t[j]<=stock.t[i]){last=j;j++}const ro=ref.o[last],rh=ref.h[last],rl=ref.l[last],rc=ref.c[last];if(![ro,rh,rl,rc].every(finite)||Math.min(ro,rh,rl,rc)<=0)continue;out.t.push(stock.t[i]);out.o.push(stock.o[i]/ro);out.h.push(stock.h[i]/rl);out.l.push(stock.l[i]/rh);out.c.push(stock.c[i]/rc);out.v.push(stock.v[i])}return out}
+const oppDataCache=new Map(),oppUsdCache=new Map();
+async function getOppRaw(symbol,tf){const key=symbol+"|"+tf;if(oppDataCache.has(key))return oppDataCache.get(key);const cfg=OPP_TF[tf];let d=await yahoo(symbol+".IS",cfg.range,cfg.interval);if(tf==="4h")d=oppResample4h(d);oppDataCache.set(key,d);return d}
+async function getOppUsd(tf){if(oppUsdCache.has(tf))return oppUsdCache.get(tf);const cfg=OPP_TF[tf];let d=await yahoo("USDTRY=X",cfg.range,cfg.interval);if(tf==="4h")d=oppResample4h(d);oppUsdCache.set(tf,d);return d}
+async function getOppDf(symbol,tf,mode){const raw=await getOppRaw(symbol,tf);if(mode==="TL")return raw;return alignRefConvert(raw,await getOppUsd(tf))}
+function analyzeOpportunityDf(df){
+  if(!df||df.c.length<160)return null;const c=df.c,h=df.h,l=df.l,o=df.o,v=df.v,n=c.length;
+  const atr=atrSeries(df,14),atrNow=Math.max(finite(atr.at(-1))?atr.at(-1):c.at(-1)*.01,1e-9),atrPct=atr.map((x,i)=>finite(x)&&c[i]?x/c[i]*100:NaN),atrPctNow=finite(atrPct.at(-1))?atrPct.at(-1):0;
+  const e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rsi=rsiSeries(c,14),roc=c.map((x,i)=>i>=10&&c[i-10]?100*(x/c[i-10]-1):NaN),mac=macdSeries(c),hist=mac.hist,adx=adxSeries(df,14),er=efficiencySeries(c,20),cmf=cmfSeries(h,l,c,v,20),obv=obvSeries(c,v),volAvg=rollingMean(v,20),relVol=v.map((x,i)=>finite(volAvg[i])&&volAvg[i]?x/volAvg[i]:NaN),rv=finite(relVol.at(-1))?relVol.at(-1):1;
+  const value=c.map((x,i)=>x*v[i]),valueAvg=rollingMean(value,20),relValue=value.map((x,i)=>finite(valueAvg[i])&&valueAvg[i]?x/valueAvg[i]:NaN),pressure=c.map((x,i)=>h[i]!==l[i]?(2*x-h[i]-l[i])/(h[i]-l[i]):0);
+  const volumeRaw=.45*tanhScore(rv-1,.75)*pressure.at(-1)+.30*tanhScore((relVol.at(-1)||1)-(relVol[n-4]||1),.75)*Math.sign(c.at(-1)-c[n-4])+.25*tanhScore(cmf.at(-1)||0,.20),volumeScore=clamp(50+volumeRaw*50,0,100);
+  const retAtr=(c.at(-1)-c[n-6])/atrNow,emaDistSigned=(c.at(-1)-e20.at(-1))/atrNow,emaSlope=(e20.at(-1)-e20[n-6])/atrNow,prevHi=Math.max(...h.slice(n-21,n-1)),prevLo=Math.min(...l.slice(n-21,n-1)),structure=c.at(-1)>=prevHi?1:c.at(-1)<=prevLo?-1:0,stack=c.at(-1)>e20.at(-1)&&e20.at(-1)>e50.at(-1)&&e50.at(-1)>e200.at(-1)?1:c.at(-1)<e20.at(-1)&&e20.at(-1)<e50.at(-1)&&e50.at(-1)<e200.at(-1)?-1:0;
+  const priceRaw=.35*tanhScore(retAtr,2)+.25*tanhScore(emaDistSigned,2)+.20*tanhScore(emaSlope,1)+.10*structure+.10*stack,priceScore=clamp(50+priceRaw*50,0,100);
+  const volFloor=Math.max(atrPctNow,.25),rocNorm=(roc.at(-1)||0)/volFloor,rsiNow=finite(rsi.at(-1))?rsi.at(-1):50,rsiCenter=(rsiNow-50)/25,rsiAccel=(rsiNow-(rsi[n-4]||50))/10,hv=hist.slice(-60).filter(finite),hm=mean(hv),hs=Math.sqrt(mean(hv.map(x=>(x-hm)**2)))||c.at(-1)*.0001,histNorm=(hist.at(-1)||0)/hs,histAccel=((hist.at(-1)||0)-(hist[n-3]||0))/hs;
+  const momentumRaw=.35*tanhScore(rocNorm,2)+.20*tanhScore(rsiCenter)+.15*tanhScore(rsiAccel)+.15*tanhScore(histNorm,2)+.15*tanhScore(histAccel,1.5),momentumScore=clamp(50+momentumRaw*50,0,100);
+  const bbMid=rollingMean(c,20),bbStd=rollingStd(c,20),bbw=c.map((_,i)=>finite(bbMid[i])&&bbMid[i]?4*bbStd[i]/bbMid[i]*100:NaN),atrRank=pctRankLast(atrPct),bbwRank=pctRankLast(bbw),volConf=clamp(100-Math.abs(atrRank-55)*1.35,25,100),risk=clamp(.60*atrRank+.40*bbwRank,0,100);
+  const erNow=finite(er.at(-1))?er.at(-1):0,adxNow=finite(adx.at(-1))?adx.at(-1):0,body=Math.abs(c.at(-1)-o.at(-1)),upper=h.at(-1)-Math.max(c.at(-1),o.at(-1)),lower=Math.min(c.at(-1),o.at(-1))-l.at(-1),wickPenalty=clamp(Math.max(upper,lower)/Math.max(body,atrNow*.05),0,5)/5,quality=clamp((.45*Math.abs(erNow)+.35*clamp(adxNow/50,0,1)+.20*(1-wickPenalty))*100,0,100);
+  const obvSlope=obv.at(-1)-obv[n-6],od=obv.slice(-60).map((x,i,a)=>i?Math.abs(x-a[i-1]):0),obvScale=Math.max(mean(od)*5,1),partRaw=.35*tanhScore(obvSlope/obvScale)+.35*tanhScore(cmf.at(-1)||0,.20)+.30*tanhScore((relValue.at(-1)||1)-1,.75)*Math.sign(c.at(-1)-c[n-3]),participation=clamp(50+partRaw*50,0,100);
+  const squeeze=bbwRank<=25,explosion=bbwRank>=70&&atrRank>=65;let regime,regimeScore;if(squeeze){regime="SIKIŞMA";regimeScore=55}else if(explosion){regime="VOLATİL PATLAMA";regimeScore=60}else if(adxNow>=25&&Math.abs(erNow)>=.25){regime=erNow>0?"YÜKSELİŞ TRENDİ":"DÜŞÜŞ TRENDİ";regimeScore=80}else{regime="YATAY / GEÇİŞ";regimeScore=45}
+  const directional=.30*((priceScore-50)/50)+.20*((momentumScore-50)/50)+.15*((volumeScore-50)/50)+.10*((participation-50)/50),mult=.55+.20*quality/100+.15*volConf/100+.10*regimeScore/100,signed=clamp(directional*mult,-1,1),longStrength=clamp(50+signed*50,0,100),shortStrength=100-longStrength,direction=longStrength>=50?"AL":"SAT",strength=direction==="AL"?longStrength:shortStrength;
+  const signs=[priceScore-50,momentumScore-50,volumeScore-50,participation-50].map(Math.sign),agreement=Math.max(signs.filter(x=>x>0).length,signs.filter(x=>x<0).length)/4*100,confidence=clamp(.45*agreement+.30*quality+.15*volConf+.10*clamp(Math.abs(erNow)*100+adxNow,0,100),0,100);
+  const bull=c.map((x,i)=>x>e20[i]&&e20[i]>e50[i]),bear=c.map((x,i)=>x<e20[i]&&e20[i]<e50[i]),trendAge=consecutiveBool(direction==="AL"?bull:bear),emaDistance=Math.abs(c.at(-1)-e20.at(-1))/atrNow;
+  const prevMomentum=clamp(50+(.35*tanhScore((roc[n-2]||0)/volFloor,2)+.20*tanhScore(((rsi[n-2]||50)-50)/25))*50,0,100),momentumChange=momentumScore-prevMomentum;let ageScore,ageLabel;if(trendAge<=5){ageScore=94;ageLabel="YENİ"}else if(trendAge<=12){ageScore=82;ageLabel="ERKEN"}else if(trendAge<=30){ageScore=52;ageLabel="OLGUN"}else{ageScore=28;ageLabel="YAŞLI"}
+  const proximity=clamp(100-emaDistance*28,0,100),accel=clamp(50+momentumChange*2.5,0,100),stretch=direction==="AL"?Math.max(rsiNow-68,0)/22:Math.max(32-rsiNow,0)/22,earlyness=clamp(.50*ageScore+.30*proximity+.20*accel-stretch*22,0,100),warning=(direction==="AL"&&strength>=65&&momentumScore<50&&participation<50)||(direction==="SAT"&&strength>=65&&momentumScore>50&&participation>50)||(trendAge>=12&&strength>=68&&momentumChange<-5&&participation<48),over=emaDistance>=2.5||stretch>=.55||(trendAge>=30&&emaDistance>=1.8);
+  let stage;if(warning&&trendAge>=10)stage="TREND YORULUYOR";else if(over)stage="UZAMIŞ / GEÇ";else if(squeeze&&strength>=55&&trendAge<=3)stage="HAZIRLIK / SIKIŞMA";else if(strength>=62&&trendAge<=5&&momentumChange>-2)stage="YENİ TREND";else if(strength>=64&&trendAge<=12&&momentumChange>-4)stage="ERKEN TREND";else if(strength>=70&&trendAge<=22&&quality>=58)stage="GÜÇLÜ DEVAM";else if(strength>=62&&trendAge<=30)stage="TEYİTLİ TREND";else if(strength>=60&&trendAge>30)stage="OLGUN TREND";else stage="NÖTR / BEKLE";
+  const entryScore=clamp(.35*strength+.30*earlyness+.20*confidence+.15*quality-Math.max(risk-65,0)*.25,0,100),opportunity=clamp(.35*strength+.30*earlyness+.20*confidence+.15*quality-Math.max(risk-60,0)*.20-(stage==="UZAMIŞ / GEÇ"?18:0)-(stage==="TREND YORULUYOR"?15:0)-(stage==="OLGUN TREND"?8:0),0,100),action=(stage==="YENİ TREND"||stage==="ERKEN TREND")&&opportunity>=65?"ALIM ADAYI":(stage==="GÜÇLÜ DEVAM"||stage==="TEYİTLİ TREND")?"GERİ ÇEKİLME BEKLE":stage==="HAZIRLIK / SIKIŞMA"?"TAKİP ET":["OLGUN TREND","UZAMIŞ / GEÇ","TREND YORULUYOR"].includes(stage)?"YENİ ALIM YAPMA":"BEKLE",candidate=strength>=62&&quality>=55&&confidence>=58&&risk<=72&&opportunity>=60&&earlyness>=45&&OPP_STAGES.has(stage);
+  return {direction,strength:+strength.toFixed(2),entry_score:+entryScore.toFixed(2),opportunity_score:+opportunity.toFixed(2),earlyness_score:+earlyness.toFixed(2),trend_age:trendAge,trend_age_label:ageLabel,entry_action:action,ema_distance_atr:+emaDistance.toFixed(2),momentum_change:+momentumChange.toFixed(2),confidence:+confidence.toFixed(2),quality:+quality.toFixed(2),risk:+risk.toFixed(2),volume_score:+volumeScore.toFixed(2),price_score:+priceScore.toFixed(2),momentum_score:+momentumScore.toFixed(2),participation_score:+participation.toFixed(2),relative_volume:+rv.toFixed(2),regime,stage,candidate,early_warning:warning,close:+c.at(-1).toFixed(4)};
+}
+function summarizeOpportunity(detail){const grouped=new Map();for(const x of detail){const k=x.symbol+"|"+x.data_mode;if(!grouped.has(k))grouped.set(k,[]);grouped.get(k).push(x)}const rows=[];for(const group of grouped.values()){const symbol=group[0].symbol,mode=group[0].data_mode,by=Object.fromEntries(group.map(x=>[x.timeframe,x])),avail=OPP_ORDER.filter(tf=>by[tf]);if(!avail.length)continue;const tw=avail.reduce((s,tf)=>s+OPP_TF[tf].weight,0),w=Object.fromEntries(avail.map(tf=>[tf,OPP_TF[tf].weight/tw])),weighted=f=>avail.reduce((s,tf)=>s+by[tf][f]*w[tf],0),al=avail.filter(tf=>by[tf].direction==="AL").length,dominant=al>=avail.length-al?"AL":"SAT",alignment=100*(dominant==="AL"?al:avail.length-al)/avail.length,lower=avail.filter(tf=>["1h"].includes(tf)),upper=avail.filter(tf=>["4h","1d","1w"].includes(tf)),lowerDir=lower.length?(lower.filter(tf=>by[tf].direction==="AL").length>=lower.length/2?"AL":"SAT"):dominant,upperDir=upper.length?by[upper.at(-1)].direction:null,upperAligned=!upperDir||lowerDir===upperDir,oms=avail.map(tf=>by[tf].momentum_score),md=oms.length>=2?mean(oms.slice(0,2))-mean(oms.slice(-2)):0;let chain="DENGELİ",bonus=0;if(dominant==="AL"){if(md>=8){chain="ALT TF HIZLANIYOR";bonus=8}else if(md<=-10){chain="ALT TF ZAYIFLIYOR";bonus=-8}}else{if(md<=-8){chain="ALT TF SAT HIZLANIYOR";bonus=8}else if(md>=10){chain="ALT TF SAT ZAYIFLIYOR";bonus=-8}}const opportunity=weighted("opportunity_score"),earlyness=weighted("earlyness_score"),confidence=weighted("confidence"),quality=weighted("quality"),risk=weighted("risk"),cand=avail.filter(tf=>by[tf].candidate).length,early=avail.filter(tf=>["HAZIRLIK / SIKIŞMA","YENİ TREND","ERKEN TREND"].includes(by[tf].stage)).length,warnings=avail.filter(tf=>by[tf].early_warning).length,mtf=clamp(.45*alignment+.35*opportunity+.20*confidence+bonus+(upperAligned?5:-12),0,100),continuity=clamp(cand/avail.length*70+early/avail.length*30,0,100),smart=clamp(.30*opportunity+.20*earlyness+.18*mtf+.12*confidence+.10*quality+.10*continuity-Math.max(risk-65,0)*.25-warnings*2,0,100);let decision,grade;if(smart>=82&&alignment>=70&&earlyness>=62){decision=dominant==="AL"?"GÜÇLÜ AL":"GÜÇLÜ SAT";grade="A+"}else if(smart>=74&&alignment>=60){decision=dominant;grade="A"}else if(smart>=65){decision="TAKİP";grade="B+"}else if(smart>=55){decision="BEKLE";grade="B"}else{decision="UZAK DUR";grade="C"}if(risk>=78||warnings>=Math.max(2,Math.floor(avail.length/2))){decision="RİSKLİ / BEKLE";grade="C"}const best=group.slice().sort((a,b)=>b.opportunity_score-a.opportunity_score||b.earlyness_score-a.earlyness_score||b.confidence-a.confidence)[0];rows.push({symbol,data_mode:mode,decision,grade,smart_score:+smart.toFixed(2),dominant_direction:dominant,mtf_score:+mtf.toFixed(2),mtf_alignment:+alignment.toFixed(2),opportunity:+opportunity.toFixed(2),earlyness:+earlyness.toFixed(2),confidence:+confidence.toFixed(2),quality:+quality.toFixed(2),risk:+risk.toFixed(2),continuity:+continuity.toFixed(2),candidate_periods:cand,scanned_periods:avail.length,momentum_chain:chain,best_timeframe:best.timeframe_label,best_stage:best.stage,best_action:best.entry_action,best_trend_age:best.trend_age,warning_count:warnings})}return rows.sort((a,b)=>b.smart_score-a.smart_score||b.mtf_score-a.mtf_score||b.earlyness-a.earlyness)}
+function renderOpp(){oppShown=oppAll.slice();if($("oppOnlyCandidates")?.checked)oppShown=oppShown.filter(r=>r.candidate_periods>0||["GÜÇLÜ AL","AL","TAKİP"].includes(r.decision));$("oppCount").textContent=oppShown.length;$("oppTable").innerHTML=`<thead><tr>${["Hisse","Mod","Karar","Not","Akıllı","Yön","MTF","Uyum %","Fırsat","Erkenlik","Güven","Kalite","Risk","Süreklilik","Aday TF","En İyi TF","Aşama","Eylem","Momentum Zinciri"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+oppShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.data_mode}</td><td>${r.decision}</td><td>${r.grade}</td><td>${fmt(r.smart_score)}</td><td>${r.dominant_direction}</td><td>${fmt(r.mtf_score)}</td><td>${fmt(r.mtf_alignment)}</td><td>${fmt(r.opportunity)}</td><td>${fmt(r.earlyness)}</td><td>${fmt(r.confidence)}</td><td>${fmt(r.quality)}</td><td>${fmt(r.risk)}</td><td>${fmt(r.continuity)}</td><td>${r.candidate_periods}/${r.scanned_periods}</td><td>${r.best_timeframe}</td><td>${r.best_stage}</td><td>${r.best_action}</td><td>${r.momentum_chain}</td></tr>`).join("")+"</tbody>"}
+async function scanOpp(){const tfs=selectedOppTF(),modes=selectedOppModes();if(!tfs.length){alert("En az bir periyot seç.");return}if(!modes.length){alert("TL veya USD modundan en az birini seç.");return}const b=$("oppBtn");b.disabled=true;failures=[];oppAll=[];oppDataCache.clear();oppUsdCache.clear();$("oppProg").style.width="0";setStatus("oppStatus","Evren hazırlanıyor…","warn");try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const mode of modes)for(const tf of tfs)jobs.push([s,mode,tf]);$("oppCounts").textContent=`${u.symbols.length} hisse × ${modes.length} mod × ${tfs.length} periyot = ${jobs.length} görev`;let next=0,done=0;const detail=[];async function run(){while(true){const i=next++;if(i>=jobs.length)return;const [s,mode,tf]=jobs[i];try{const df=await getOppDf(s,tf,mode),r=analyzeOpportunityDf(df);if(r)detail.push({symbol:s,data_mode:mode,timeframe:tf,timeframe_label:OPP_TF[tf].label,...r});else failures.push({symbol:`${s} (${mode} · ${OPP_TF[tf].label})`,reason:"Yetersiz geçmiş veri / analiz üretilemedi"})}catch(e){failures.push({symbol:`${s} (${mode} · ${OPP_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("oppProg").style.width=(100*done/jobs.length)+"%";setStatus("oppStatus",`${s} · ${mode} · ${OPP_TF[tf].label} · ${done}/${jobs.length}`,"warn");if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));oppAll=summarizeOpportunity(detail);renderOpp();renderFails();setStatus("oppStatus",`Tarama tamamlandı · ${oppAll.length} özet · ${detail.filter(x=>x.candidate).length} aday periyot · ${failures.length} hata/işlenemeyen görev`,"good");localStorage.setItem("bist_html_opp",JSON.stringify({at:Date.now(),results:oppAll,failures}))}catch(e){setStatus("oppStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MONEY TRADER · MARKET INTELLIGENCE RANKING · Python orijinal mantığının JS uyarlaması
+// ─────────────────────────────────────────────────────────────────────────────
+const MI_TF={
+  "1h":{label:"1 Saat",range:"60d",interval:"1h"},
+  "4h":{label:"4 Saat",range:"120d",interval:"1h"},
+  "1d":{label:"Günlük",range:"2y",interval:"1d"},
+  "1w":{label:"Haftalık",range:"5y",interval:"1wk"}
+};
+const miCache=new Map();
+function selectedMiTF(){const a=[];if($("miTf1h").checked)a.push("1h");if($("miTf4h").checked)a.push("4h");if($("miTf1d").checked)a.push("1d");if($("miTf1w").checked)a.push("1w");return a}
+async function getMiDf(symbol,tf){const key=`${symbol}|${tf}`;if(miCache.has(key))return miCache.get(key);const cfg=MI_TF[tf];let d;if(tf==="4h"){const rk=`${symbol}|raw1h120-mi`;let raw=miCache.get(rk);if(!raw){raw=await yahoo(symbol+".IS",cfg.range,"1h");miCache.set(rk,raw)}d=resample4h(raw)}else d=await yahoo(symbol+".IS",cfg.range,cfg.interval);d=dropIncompleteMacdBar(d,tf,true);miCache.set(key,d);return d}
+function miStdLast(a,n=60){const v=a.slice(-n).filter(finite);if(!v.length)return 0;const m=mean(v);return Math.sqrt(mean(v.map(x=>(x-m)**2)))}
+function analyzeMarketIntel(df){
+  if(!df||df.c.length<220)return null;const c=df.c,h=df.h,l=df.l,o=df.o,v=df.v,n=c.length;
+  const atr=atrSeries(df,14),atrNow=Math.max(finite(atr.at(-1))?atr.at(-1):c.at(-1)*.01,1e-9),atrPctSeries=atr.map((x,i)=>finite(x)&&c[i]?x/c[i]*100:NaN),atrPct=finite(atrPctSeries.at(-1))?atrPctSeries.at(-1):0;
+  const e20=ema(c,20),e50=ema(c,50),e200=ema(c,200),rsi=rsiSeries(c,14),roc=c.map((x,i)=>i>=10&&c[i-10]?100*(x/c[i-10]-1):NaN),mac=macdSeries(c),hist=mac.hist,adx=adxSeries(df,14),er=efficiencySeries(c,20),cmf=cmfSeries(h,l,c,v,20),obv=obvSeries(c,v);
+  const volAvg=rollingMean(v,20),relVol=v.map((x,i)=>finite(volAvg[i])&&volAvg[i]?x/volAvg[i]:NaN),rv=finite(relVol.at(-1))?relVol.at(-1):1,value=c.map((x,i)=>x*v[i]),valueAvg=rollingMean(value,20),relValue=value.map((x,i)=>finite(valueAvg[i])&&valueAvg[i]?x/valueAvg[i]:NaN),relDollar=finite(relValue.at(-1))?relValue.at(-1):1;
+  const pressure=c.map((x,i)=>h[i]!==l[i]?(2*x-h[i]-l[i])/(h[i]-l[i]):0),volumeRaw=.45*tanhScore(rv-1,.75)*pressure.at(-1)+.30*tanhScore((finite(relVol.at(-1))?relVol.at(-1):1)-(finite(relVol[n-4])?relVol[n-4]:1),.75)*Math.sign(c.at(-1)-c[n-4])+.25*tanhScore(finite(cmf.at(-1))?cmf.at(-1):0,.20),volumeScore=clamp(50+volumeRaw*50,0,100);
+  const retAtr=(c.at(-1)-c[n-6])/atrNow,emaDist=(c.at(-1)-e20.at(-1))/atrNow,emaSlope=(e20.at(-1)-e20[n-6])/atrNow,structure=c.at(-1)>=Math.max(...h.slice(n-21,n-1))?1:c.at(-1)<=Math.min(...l.slice(n-21,n-1))?-1:0,stack=c.at(-1)>e20.at(-1)&&e20.at(-1)>e50.at(-1)&&e50.at(-1)>e200.at(-1)?1:c.at(-1)<e20.at(-1)&&e20.at(-1)<e50.at(-1)&&e50.at(-1)<e200.at(-1)?-1:0,priceRaw=.35*tanhScore(retAtr,2)+.25*tanhScore(emaDist,2)+.20*tanhScore(emaSlope,1)+.10*structure+.10*stack,priceScore=clamp(50+priceRaw*50,0,100);
+  const volFloor=Math.max(atrPct,.25),rsiNow=finite(rsi.at(-1))?rsi.at(-1):50,rocNorm=(finite(roc.at(-1))?roc.at(-1):0)/volFloor,rsiCenter=(rsiNow-50)/25,rsiAccel=(rsiNow-(finite(rsi[n-4])?rsi[n-4]:50))/10,macdScale=Math.max(miStdLast(hist,60),c.at(-1)*.0001),macdNorm=(finite(hist.at(-1))?hist.at(-1):0)/macdScale,macdAccel=((finite(hist.at(-1))?hist.at(-1):0)-(finite(hist[n-3])?hist[n-3]:0))/macdScale,momentumRaw=.35*tanhScore(rocNorm,2)+.20*tanhScore(rsiCenter,1)+.15*tanhScore(rsiAccel,1)+.15*tanhScore(macdNorm,2)+.15*tanhScore(macdAccel,1.5),momentumScore=clamp(50+momentumRaw*50,0,100);
+  const bbMid=rollingMean(c,20),bbStd=rollingStd(c,20),bbw=c.map((_,i)=>finite(bbMid[i])&&bbMid[i]?4*bbStd[i]/bbMid[i]*100:NaN),atrRank=pctRankLast(atrPctSeries,120),bbwRank=pctRankLast(bbw,120),volConf=clamp(100-Math.abs(atrRank-55)*1.35,25,100),risk=clamp(.60*atrRank+.40*bbwRank,0,100);
+  const erNow=finite(er.at(-1))?er.at(-1):0,adxNow=finite(adx.at(-1))?adx.at(-1):0,body=Math.abs(c.at(-1)-o.at(-1)),upper=h.at(-1)-Math.max(c.at(-1),o.at(-1)),lower=Math.min(c.at(-1),o.at(-1))-l.at(-1),wickPenalty=clamp(Math.max(upper,lower)/Math.max(body,atrNow*.05),0,5)/5,quality=clamp((.45*Math.abs(erNow)+.35*clamp(adxNow/50,0,1)+.20*(1-wickPenalty))*100,0,100);
+  const obvSlope=obv.at(-1)-obv[n-6],obvDiff=obv.slice(-60).map((x,i,a)=>i?Math.abs(x-a[i-1]):0),obvScale=Math.max(mean(obvDiff)*5,1),partRaw=.35*tanhScore(obvSlope/obvScale,1)+.35*tanhScore(finite(cmf.at(-1))?cmf.at(-1):0,.20)+.30*tanhScore(relDollar-1,.75)*Math.sign(c.at(-1)-c[n-3]),participation=clamp(50+partRaw*50,0,100);
+  const squeeze=bbwRank<=25,explosion=bbwRank>=70&&atrRank>=65,trendStrength=clamp(Math.abs(erNow)*100+adxNow,0,100);let regime,regimeScore;if(squeeze){regime="SIKIŞMA";regimeScore=55}else if(explosion){regime="VOLATİL PATLAMA";regimeScore=60}else if(adxNow>=25&&Math.abs(erNow)>=.25){regime=erNow>0?"YÜKSELİŞ TRENDİ":"DÜŞÜŞ TRENDİ";regimeScore=80}else{regime="YATAY / GEÇİŞ";regimeScore=45}
+  const directional=.30*((priceScore-50)/50)+.20*((momentumScore-50)/50)+.15*((volumeScore-50)/50)+.10*((participation-50)/50),confMult=.55+.20*quality/100+.15*volConf/100+.10*regimeScore/100,signed=clamp(directional*confMult,-1,1),longStrength=clamp(50+signed*50,0,100),shortStrength=100-longStrength,signs=[priceScore-50,momentumScore-50,volumeScore-50,participation-50].map(Math.sign),agreement=Math.max(signs.filter(x=>x>0).length,signs.filter(x=>x<0).length)/4*100,confidence=clamp(.45*agreement+.30*quality+.15*volConf+.10*trendStrength,0,100),direction=longStrength>=50?"AL":"SAT",strength=direction==="AL"?longStrength:shortStrength;
+  const emaDistanceAtr=Math.abs(c.at(-1)-e20.at(-1))/atrNow,prevMomentum=clamp(50+(.35*tanhScore((finite(roc[n-2])?roc[n-2]:0)/volFloor,2)+.20*tanhScore(((finite(rsi[n-2])?rsi[n-2]:50)-50)/25,1))*50,0,100),momentumChange=momentumScore-prevMomentum;let stage,entry;if(strength>=80&&emaDistanceAtr>2.5){stage="UZAMIŞ / GEÇ";entry=strength-18}else if(strength>=65&&momentumChange>0&&emaDistanceAtr<=1.8){stage="ERKEN TREND";entry=strength+8}else if(strength>=62&&quality>=55){stage="TEYİTLİ TREND";entry=strength}else if(squeeze&&Math.abs(priceScore-50)>=8){stage="HAZIRLIK / SIKIŞMA";entry=strength-5}else{stage="NÖTR / BEKLE";entry=strength-15}entry=clamp(entry+(confidence-50)*.20-Math.max(risk-65,0)*.20,0,100);
+  const warning=(longStrength>=65&&momentumScore<50&&participation<50)||(shortStrength>=65&&momentumScore>50&&participation>50),candidate=strength>=62&&quality>=55&&confidence>=58&&risk<=72&&!['UZAMIŞ / GEÇ','NÖTR / BEKLE'].includes(stage);
+  return {close:+c.at(-1).toFixed(2),direction,stage,candidate,entry_score:+entry.toFixed(2),strength:+strength.toFixed(2),long_strength:+longStrength.toFixed(2),short_strength:+shortStrength.toFixed(2),confidence:+confidence.toFixed(2),quality:+quality.toFixed(2),risk:+risk.toFixed(2),volume_score:+volumeScore.toFixed(2),price_score:+priceScore.toFixed(2),momentum_score:+momentumScore.toFixed(2),volatility_confidence:+volConf.toFixed(2),participation_score:+participation.toFixed(2),regime,early_warning:!!warning,relative_volume:+rv.toFixed(2),atr_pct:+atrPct.toFixed(2),adx:+adxNow.toFixed(2),rsi:+rsiNow.toFixed(2),cmf:finite(cmf.at(-1))?+cmf.at(-1).toFixed(3):0,er:+erNow.toFixed(3)};
+}
+function renderMi(){let rows=miAll.slice().sort((a,b)=>(b.candidate-a.candidate)||b.entry_score-a.entry_score||b.confidence-a.confidence||b.quality-a.quality);if($("miOnlyCandidates")?.checked)rows=rows.filter(r=>r.candidate);const top=Math.max(10,Math.trunc(val("miTopN")||100));miShown=rows.slice(0,top);$("miCount").textContent=miShown.length;$("miTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Yön","Aşama","Aday","Giriş","Güç","Güven","Kalite","Risk","Fiyat","Momentum","Hacim","Katılım","Rejim","RSI","ADX","Göreceli Hacim","ATR %","Erken Uyarı"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+miShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${r.direction}</td><td>${r.stage}</td><td>${r.candidate?"✓":"—"}</td><td>${fmt(r.entry_score)}</td><td>${fmt(r.strength)}</td><td>${fmt(r.confidence)}</td><td>${fmt(r.quality)}</td><td>${fmt(r.risk)}</td><td>${fmt(r.close)}</td><td>${fmt(r.momentum_score)}</td><td>${fmt(r.volume_score)}</td><td>${fmt(r.participation_score)}</td><td>${r.regime}</td><td>${fmt(r.rsi)}</td><td>${fmt(r.adx)}</td><td>${fmt(r.relative_volume)}</td><td>${fmt(r.atr_pct)}</td><td>${r.early_warning?"⚠️":"—"}</td></tr>`).join("")+"</tbody>"}
+async function scanMi(){const tfs=selectedMiTF();if(!tfs.length){alert("En az bir periyot seç.");return}const b=$("miBtn");b.disabled=true;failures=[];miAll=[];miCache.clear();$("miProg").style.width="0";setStatus("miStatus","Evren hazırlanıyor…","warn");try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("miCounts").textContent=`${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;let next=0,done=0;async function run(){while(true){const i=next++;if(i>=jobs.length)return;const [s,tf]=jobs[i];try{const d=await getMiDf(s,tf),r=analyzeMarketIntel(d);if(r)miAll.push({symbol:s,timeframe:MI_TF[tf].label,...r});else failures.push({symbol:`${s} (${MI_TF[tf].label})`,reason:"Minimum 220 mum / analiz için yetersiz veri"})}catch(e){failures.push({symbol:`${s} (${MI_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("miProg").style.width=(100*done/jobs.length)+"%";setStatus("miStatus",`${s} · ${MI_TF[tf].label} · ${done}/${jobs.length}`,"warn");if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));renderMi();renderFails();setStatus("miStatus",`Tarama tamamlandı · ${miAll.length} analiz · ${miAll.filter(x=>x.candidate).length} aday · ${failures.length} hata/işlenemeyen görev`,"good");localStorage.setItem("bist_html_marketintel",JSON.stringify({at:Date.now(),results:miAll,failures}))}catch(e){setStatus("miStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MACD 0 Altı 3. AL · Python orijinal mantığının JS uyarlaması
+// ─────────────────────────────────────────────────────────────────────────────
+const MACD3_TF={
+  "1h":{label:"1 Saat",range:"729d",interval:"1h"},
+  "4h":{label:"4 Saat",range:"729d",interval:"1h"},
+  "1d":{label:"Günlük",range:"10y",interval:"1d"},
+  "1w":{label:"Haftalık",range:"max",interval:"1wk"},
+  "1m":{label:"Aylık",range:"max",interval:"1mo"}
+};
+const macd3DataCache=new Map();
+function selectedMacd3Timeframes(){
+  const a=[];
+  if($("macdTf1h").checked)a.push("1h");
+  if($("macdTf4h").checked)a.push("4h");
+  if($("macdTf1d").checked)a.push("1d");
+  if($("macdTf1w").checked)a.push("1w");
+  if($("macdTf1m").checked)a.push("1m");
+  return a;
+}
+function localNowIstanbul(){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date());
+  const o={};for(const x of p)o[x.type]=x.value;
+  return {year:+o.year,month:+o.month,day:+o.day,weekday:o.weekday,hour:+o.hour,minute:+o.minute,second:+o.second};
+}
+function isoWeekKeyFromDate(d){
+  const x=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));
+  const day=x.getUTCDay()||7;x.setUTCDate(x.getUTCDate()+4-day);
+  const y0=new Date(Date.UTC(x.getUTCFullYear(),0,1));
+  const wk=Math.ceil((((x-y0)/86400000)+1)/7);
+  return `${x.getUTCFullYear()}-${wk}`;
+}
+function dropIncompleteMacdBar(df,tf,closedOnly){
+  if(!closedOnly||!df||df.t.length<=1)return df;
+  const out={t:df.t.slice(),o:df.o.slice(),h:df.h.slice(),l:df.l.slice(),c:df.c.slice(),v:df.v.slice()};
+  const nowMs=Date.now(),lastTs=out.t.at(-1),lastMs=lastTs*1000;
+  const now=localNowIstanbul(),last=istParts(lastTs);
+  let drop=false;
+  if(tf==="1h") drop=lastMs+3600e3>nowMs;
+  else if(tf==="4h") drop=lastMs+4*3600e3>nowMs;
+  else if(tf==="1d") drop=last.date===`${now.year}-${String(now.month).padStart(2,"0")}-${String(now.day).padStart(2,"0")}`&&(now.hour<18||(now.hour===18&&now.minute<15));
+  else if(tf==="1w"){
+    const ld=new Date(lastMs),nd=new Date();
+    drop=isoWeekKeyFromDate(ld)===isoWeekKeyFromDate(nd)&&(now.weekday!=="Fri"||(now.hour<18||(now.hour===18&&now.minute<15)));
+  }else if(tf==="1m"){
+    const d=new Date(lastMs);
+    const lp=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit"}).format(d);
+    const np=`${now.year}-${String(now.month).padStart(2,"0")}`;
+    drop=lp===np;
+  }
+  if(drop){for(const k of ["t","o","h","l","c","v"])out[k].pop()}
+  return out;
+}
+async function getMacd3Df(symbol,tf){
+  const key=`${symbol}|${tf}`;
+  if(macd3DataCache.has(key))return macd3DataCache.get(key);
+  const cfg=MACD3_TF[tf];let df;
+  if(tf==="4h"){
+    const rawKey=`${symbol}|raw1h729`;
+    let raw=macd3DataCache.get(rawKey);
+    if(!raw){raw=await yahoo(symbol+".IS",cfg.range,"1h");macd3DataCache.set(rawKey,raw)}
+    df=resample4h(raw);
+  }else df=await yahoo(symbol+".IS",cfg.range,cfg.interval);
+  macd3DataCache.set(key,df);return df;
+}
+function macd3Ema(a,span,minPeriods=span){
+  const alpha=2/(span+1),out=Array(a.length).fill(NaN);let prev=NaN,count=0;
+  for(let i=0;i<a.length;i++){
+    const x=a[i];if(!finite(x))continue;
+    count++;prev=finite(prev)?alpha*x+(1-alpha)*prev:x;
+    if(count>=minPeriods)out[i]=prev;
+  }
+  return out;
+}
+function macd3Series(close,fastLen,slowLen,signalLen){
+  const fast=macd3Ema(close,fastLen,fastLen),slow=macd3Ema(close,slowLen,slowLen);
+  const macd=close.map((_,i)=>finite(fast[i])&&finite(slow[i])?fast[i]-slow[i]:NaN);
+  const signal=macd3Ema(macd,signalLen,signalLen);
+  return {macd,signal,hist:macd.map((x,i)=>finite(x)&&finite(signal[i])?x-signal[i]:NaN)};
+}
+function evaluateMacd3(df,tf){
+  const fast=Math.max(2,Math.trunc(val("macdFast"))),slow=Math.max(3,Math.trunc(val("macdSlow"))),sigLen=Math.max(2,Math.trunc(val("macdSignalLen")));
+  const target=Math.max(1,Math.trunc(val("macdSignalNo"))),recentBars=Math.max(1,Math.trunc(val("macdRecentBars"))),minBars=Math.max(30,Math.trunc(val("macdMinBars"))),minHist=Math.max(0,val("macdMinHistPct"));
+  if(fast>=slow)throw new Error("Hızlı EMA, Yavaş EMA'dan küçük olmalı");
+  const work=dropIncompleteMacdBar(df,tf,$("macdClosedOnly").checked);
+  const M=macd3Series(work.c,fast,slow,sigLen),valid=[];
+  for(let i=0;i<work.c.length;i++)if(finite(M.macd[i])&&finite(M.signal[i])&&finite(M.hist[i]))valid.push(i);
+  if(valid.length<minBars)throw new Error(`Yetersiz veri: ${valid.length} mum`);
+  let counter=0,cycleDates=[],lastHit=null;
+  const records=[];
+  for(let vi=0;vi<valid.length;vi++){
+    const i=valid[vi],prev=vi>0?valid[vi-1]:null,macd=M.macd[i],signal=M.signal[i],hist=M.hist[i],close=work.c[i];
+    const reset=$("macdResetMode").value==="macd"?macd>=0:(macd>=0||signal>=0);
+    if(reset){counter=0;cycleDates=[]}
+    const rawCross=prev!==null&&macd>signal&&M.macd[prev]<=M.signal[prev];
+    const histPct=finite(close)&&close!==0?Math.abs(hist)/Math.abs(close)*100:0;
+    const crossUp=rawCross&&histPct>=minHist;
+    const below=macd<0&&(!$(("macdRequireSignalBelow")).checked||signal<0);
+    const qualified=crossUp&&below;
+    if(qualified){counter++;cycleDates.push(new Date(work.t[i]*1000).toLocaleDateString("tr-TR",{timeZone:"Europe/Istanbul"}))}
+    const targetBuy=qualified&&counter===target;
+    const rec={i,vi,counter,targetBuy,histPct,history:cycleDates.join(" → ")};records.push(rec);
+    if(targetBuy)lastHit=rec;
+  }
+  const latestRec=records.at(-1),latestI=latestRec.i;
+  const recent=records.slice(-recentBars).filter(x=>x.targetBuy);
+  const hit=recent.length?recent.at(-1):null;
+  const result={matched:!!hit,last_close:work.c[latestI],last_macd:M.macd[latestI],last_signal:M.signal[latestI],last_hist:M.hist[latestI],current_count:latestRec.counter,bars_analyzed:valid.length,last_data_date:work.t[latestI]};
+  if(hit){const i=hit.i;Object.assign(result,{signal_date:work.t[i],signal_close:work.c[i],signal_macd:M.macd[i],signal_signal:M.signal[i],signal_hist:M.hist[i],signal_count:hit.counter,cross_history:hit.history,signal_hist_pct:hit.histPct,bars_ago:records.length-1-hit.vi})}
+  return result;
+}
+function renderMacd3(){
+  macdShown=macdAll.slice().sort((a,b)=>a.bars_ago-b.bars_ago||a.symbol.localeCompare(b.symbol)||a.timeframe.localeCompare(b.timeframe));
+  $("macdCount").textContent=macdShown.length;
+  const heads=["Hisse","Periyot","AL No","Sinyal Tarihi","Kaç Mum Önce","Sinyal Fiyatı","MACD","Signal","Histogram","Histogram %","Kesişim Geçmişi","Güncel Sayaç","Son Fiyat"];
+  $("macdTable").innerHTML=`<thead><tr>${heads.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+macdShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${r.signal_count}. AL</td><td>${new Date(r.signal_date*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}</td><td>${r.bars_ago}</td><td>${fmt(r.signal_close)}</td><td>${fmt(r.signal_macd,5)}</td><td>${fmt(r.signal_signal,5)}</td><td>${fmt(r.signal_hist,5)}</td><td>${fmt(r.signal_hist_pct,4)}</td><td>${r.cross_history||"—"}</td><td>${r.current_count}</td><td>${fmt(r.last_close)}</td></tr>`).join("")+"</tbody>";
+}
+async function scanMacd3(){
+  const tfs=selectedMacd3Timeframes();if(!tfs.length){alert("En az bir periyot seç.");return}
+  const b=$("macdBtn");b.disabled=true;failures=[];macdAll=[];macd3DataCache.clear();$("macdProg").style.width="0";setStatus("macdStatus","Evren hazırlanıyor…","warn");
+  try{
+    const u=await getUniverse(),jobs=[];for(const sym of u.symbols)for(const tf of tfs)jobs.push([sym,tf]);
+    $("macdCounts").textContent=`BIST ham evren: ${u.raw} · Taranacak: ${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;
+    let next=0,done=0;const workers=Math.min(5,jobs.length||1);
+    async function run(){while(true){const j=next++;if(j>=jobs.length)return;const [sym,tf]=jobs[j];try{const df=await getMacd3Df(sym,tf),r=evaluateMacd3(df,tf);if(r.matched)macdAll.push({symbol:sym,timeframe:MACD3_TF[tf].label,timeframe_key:tf,...r})}catch(e){failures.push({symbol:`${sym} (${MACD3_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("macdProg").style.width=(100*done/jobs.length)+"%";setStatus("macdStatus",`${sym} · ${MACD3_TF[tf].label} analiz edildi · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0)}}
+    await Promise.all(Array.from({length:workers},run));renderMacd3();renderFails();setStatus("macdStatus",`Tarama tamamlandı · ${macdShown.length} sonuç · ${failures.length} hata/işlenemeyen görev`,"good");localStorage.setItem("bist_html_macd3",JSON.stringify({at:Date.now(),results:macdAll,failures}));
+  }catch(e){setStatus("macdStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}
+}
+
 async function pool(symbols,worker,progress,status){
   const results=[],fails=[];let next=0,done=0;
   const count=Math.min(6,symbols.length||1);
@@ -726,6 +1131,91 @@ async function scanEarly(){
   }finally{b.disabled=false}
 }
 
+
+const DUK_TF={"4h":{label:"4 Saat",range:"6mo",interval:"1h"},"1d":{label:"Günlük",range:"1y",interval:"1d"},"1w":{label:"Haftalık",range:"5y",interval:"1wk"}};
+function selectedDukTimeframes(){const a=[];if($("dukTf4h").checked)a.push("4h");if($("dukTf1d").checked)a.push("1d");if($("dukTf1w").checked)a.push("1w");return a}
+function dukAroon(df,n=14){const up=Array(df.c.length).fill(NaN),down=Array(df.c.length).fill(NaN);for(let i=n-1;i<df.c.length;i++){const hh=df.h.slice(i-n+1,i+1),ll=df.l.slice(i-n+1,i+1);let hi=0,lo=0;for(let j=1;j<n;j++){if(hh[j]>hh[hi])hi=j;if(ll[j]<ll[lo])lo=j}up[i]=100*(hi+1)/n;down[i]=100*(lo+1)/n}return{up,down}}
+function dukIchimoku(df){const n=df.c.length,ten=Array(n).fill(NaN),kij=Array(n).fill(NaN),sa=Array(n).fill(NaN),sb=Array(n).fill(NaN);for(let i=8;i<n;i++)ten[i]=(Math.max(...df.h.slice(i-8,i+1))+Math.min(...df.l.slice(i-8,i+1)))/2;for(let i=25;i<n;i++)kij[i]=(Math.max(...df.h.slice(i-25,i+1))+Math.min(...df.l.slice(i-25,i+1)))/2;for(let i=0;i<n;i++){const s=i-26;if(s>=0&&finite(ten[s])&&finite(kij[s]))sa[i]=(ten[s]+kij[s])/2;if(s>=51)sb[i]=(Math.max(...df.h.slice(s-51,s+1))+Math.min(...df.l.slice(s-51,s+1)))/2}return{sa,sb}}
+function dukDropOpenBar(df,tf){if(!$("dukClosedOnly").checked||!df?.t?.length||tf==="4h")return df;const now=Math.floor(Date.now()/1000),last=df.t.at(-1);let open=tf==="1w"?(now-last<7*86400):(istParts(last).date===istParts(now).date&&istParts(now).hour<18);if(!open)return df;const o={};for(const k of ["t","o","h","l","c","v"])o[k]=df[k].slice(0,-1);return o}
+async function getDukDf(symbol,tf){const cfg=DUK_TF[tf];let df=tf==="4h"?resample4h(await yahoo(symbol+".IS",cfg.range,"1h")):await yahoo(symbol+".IS",cfg.range,cfg.interval);return dukDropOpenBar(df,tf)}
+function checkDuk1(df){if(!df||df.c.length<60)return false;const i=df.c.length-1,e5=ema(df.c,5),e20=ema(df.c,20),e50=ema(df.c,50),r=rsiSeries(df.c,14),cci=cciSeries(df.h,df.l,df.c,20),vs=rollingMean(df.v,20);if([e5[i],e20[i],e50[i],r[i],cci[i],vs[i]].some(x=>!finite(x)))return false;const rv=vs[i]>0?df.v[i]/vs[i]:0,chg=(df.c[i]/df.c[i-1]-1)*100;return cci[i]>-100&&rv>1&&chg<15&&e50[i]>e20[i]&&e20[i]>e5[i]&&df.c[i]>e5[i]&&r[i]>50}
+function checkDuk2(df){if(!df||df.c.length<80)return false;const i=df.c.length-1,e5=ema(df.c,5),e20=ema(df.c,20),e50=ema(df.c,50),vw=vwma(df.c,df.v,20),r=rsiSeries(df.c,14),cci=cciSeries(df.h,df.l,df.c,20),mom=momentumSeries(df.c,10),av=rollingMean(df.v,10),ar=dukAroon(df,14),ich=dukIchimoku(df);const req=[e5[i],e20[i],e50[i],vw[i],r[i],cci[i],mom[i],av[i],ar.up[i],ar.down[i],ich.sa[i],ich.sb[i]];if(req.some(x=>!finite(x)))return false;const rv=av[i]>0?df.v[i]/av[i]:0,chg5=(df.c[i]/df.c[i-5]-1)*100,chg=(df.c[i]/df.c[i-1]-1)*100;return e5[i]<df.c[i]&&df.c[i]>df.o[i]&&e5[i]>e20[i]&&e20[i]>e50[i]&&chg5<15&&chg>=0&&chg<=15&&rv>1.3&&r[i]>=50&&r[i]<=75&&cci[i]>90&&vw[i]<df.c[i]&&ich.sb[i]<ich.sa[i]&&ar.up[i]>ar.down[i]&&ar.up[i]>50&&mom[i]>1&&df.v[i]>av[i]&&chg>-9.5}
+function checkDuk3(df){if(!df||df.c.length<80)return false;const i=df.c.length-1,e5=ema(df.c,5),e20=ema(df.c,20),e50=ema(df.c,50),r=rsiSeries(df.c,14),cci=cciSeries(df.h,df.l,df.c,20),vw=vwma(df.c,df.v,20),av=rollingMean(df.v,10),ar=dukAroon(df,14),ich=dukIchimoku(df);const req=[e5[i],e20[i],e50[i],r[i],cci[i],vw[i],av[i],ar.up[i],ar.down[i],ich.sa[i],ich.sb[i]];if(req.some(x=>!finite(x)))return false;return e5[i]>e20[i]&&e20[i]>e50[i]&&df.c[i]>vw[i]&&vw[i]>e5[i]&&r[i]>50&&r[i]<75&&cci[i]>90&&ich.sa[i]>ich.sb[i]&&ar.up[i]>50&&ar.up[i]>ar.down[i]&&df.v[i]>av[i]*1.3}
+function analyzeDuk(symbol,tf,df){if(!df||df.c.length<80)return null;const i=df.c.length-1,d1=checkDuk1(df),d2=checkDuk2(df),d3=checkDuk3(df),score=Number(d1)+Number(d2)+Number(d3),sig=$("dukSignal").value,match=sig==="all"?score>0:(sig==="duk1"?d1:sig==="duk2"?d2:d3);if(!match)return null;const active=[];if(d1)active.push("DÜK1");if(d2)active.push("DÜK2");if(d3)active.push("DÜK3");const chg=(df.c[i]/df.c[i-1]-1)*100;return{symbol,timeframe:DUK_TF[tf].label,signals:active.join(" + "),score,close:+df.c[i].toFixed(2),change:+chg.toFixed(2),last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"}),duk1:d1,duk2:d2,duk3:d3}}
+function renderDuk(){dukShown=dukAll.slice().sort((a,b)=>b.score-a.score||a.symbol.localeCompare(b.symbol));$("dukCount").textContent=dukShown.length;$("dukTable").innerHTML=`<thead><tr>${["Hisse","Zaman","Aktif Sinyaller","Skor","Fiyat","Değişim %","Son Mum","DÜK1","DÜK2","DÜK3"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+dukShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${r.signals}</td><td>${r.score}/3</td><td>${fmt(r.close)}</td><td>${fmt(r.change)}</td><td>${r.last_bar}</td><td>${r.duk1?"✓":"—"}</td><td>${r.duk2?"✓":"—"}</td><td>${r.duk3?"✓":"—"}</td></tr>`).join("")+"</tbody>"}
+async function scanDuk(){const tfs=selectedDukTimeframes();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}const b=$("dukBtn");b.disabled=true;failures=[];dukAll=[];$("dukProg").style.width="0";setStatus("dukStatus","Evren hazırlanıyor…","warn");try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("dukCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;let next=0,done=0;async function run(){while(true){const ix=next++;if(ix>=jobs.length)return;const[s,tf]=jobs[ix];try{const r=analyzeDuk(s,tf,await getDukDf(s,tf));if(r)dukAll.push(r)}catch(e){failures.push({symbol:`${s} (${DUK_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("dukProg").style.width=(100*done/jobs.length)+"%";setStatus("dukStatus",`${s} · ${DUK_TF[tf].label} · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));renderDuk();renderFails();setStatus("dukStatus",`Tarama tamamlandı · ${dukShown.length} sonuç · ${failures.length} hata`,"good")}catch(e){setStatus("dukStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
+
+
+const AD_TF={
+  "1h":{label:"1 Saat",range:"60d",interval:"1h"},
+  "4h":{label:"4 Saat",range:"180d",interval:"1h"},
+  "1d":{label:"Günlük",range:"1y",interval:"1d"},
+  "1w":{label:"Haftalık",range:"2y",interval:"1wk"}
+};
+const adRefCache=new Map();
+function selectedAdTimeframes(){const a=[];if($("adTf1h").checked)a.push("1h");if($("adTf4h").checked)a.push("4h");if($("adTf1d").checked)a.push("1d");if($("adTf1w").checked)a.push("1w");return a}
+function selectedAdModes(){const a=[];if($("adModeTL").checked)a.push("TL");if($("adModeUSD").checked)a.push("USD");if($("adModeEUR").checked)a.push("EUR");if($("adModeXAU").checked)a.push("XAU");return a}
+function cloneDf(df){return {t:df.t.slice(),o:df.o.slice(),h:df.h.slice(),l:df.l.slice(),c:df.c.slice(),v:df.v.slice()}}
+function adDropOpenBar(df,tf){if(!$("adClosedOnly").checked||!df?.t?.length||tf==="4h")return df;const now=Math.floor(Date.now()/1000),last=df.t.at(-1);let isOpen=false;if(tf==="1h"){isOpen=now-last<3600}else if(tf==="1d"){const lp=istParts(last),np=istParts(now);isOpen=lp.date===np.date&&(np.hour<18||(np.hour===18&&np.minute<15))}else if(tf==="1w"){isOpen=now-last<5*86400}if(!isOpen)return df;const o={};for(const k of ["t","o","h","l","c","v"])o[k]=df[k].slice(0,-1);return o}
+async function getAdBaseDf(symbol,tf){const cfg=AD_TF[tf];let df=tf==="4h"?resample4h(await yahoo(symbol+".IS",cfg.range,"1h")):await yahoo(symbol+".IS",cfg.range,cfg.interval);return adDropOpenBar(df,tf)}
+function alignRefToStock(stock,ref){if(!stock?.t?.length||!ref?.t?.length)return null;let j=0,last=-1;const idx=[];for(const ts of stock.t){while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}if(idx.some(x=>x<0))return null;return idx}
+async function getAdReference(tf,mode){if(mode==="TL")return null;const key=tf+"|"+mode;if(adRefCache.has(key))return adRefCache.get(key);const cfg=AD_TF[tf];async function raw(sym){let d=tf==="4h"?resample4h(await yahoo(sym,cfg.range,"1h")):await yahoo(sym,cfg.range,cfg.interval);return adDropOpenBar(d,tf)}let ref;if(mode==="USD")ref=await raw("USDTRY=X");else if(mode==="EUR")ref=await raw("EURTRY=X");else{const fx=await raw("USDTRY=X"),gold=await raw("GC=F");const gm=new Map(gold.t.map((x,i)=>[x,i])),out={t:[],o:[],h:[],l:[],c:[],v:[]};for(let i=0;i<fx.t.length;i++){const k=gm.get(fx.t[i]);if(k===undefined)continue;out.t.push(fx.t[i]);out.o.push(fx.o[i]*gold.o[k]);out.h.push(fx.h[i]*gold.h[k]);out.l.push(fx.l[i]*gold.l[k]);out.c.push(fx.c[i]*gold.c[k]);out.v.push(0)}ref=out}adRefCache.set(key,ref);return ref}
+function convertAdMode(stock,mode,ref){if(mode==="TL")return cloneDf(stock);const idx=alignRefToStock(stock,ref);if(!idx)return null;const out={t:stock.t.slice(),o:[],h:[],l:[],c:[],v:stock.v.slice()};for(let i=0;i<stock.t.length;i++){const j=idx[i],eps=1e-12,oo=stock.o[i]/Math.max(ref.o[j],eps),hh=stock.h[i]/Math.max(ref.l[j],eps),ll=stock.l[i]/Math.max(ref.h[j],eps),cc=stock.c[i]/Math.max(ref.c[j],eps),vals=[oo,hh,ll,cc];out.o.push(oo);out.h.push(Math.max(...vals));out.l.push(Math.min(...vals));out.c.push(cc)}return out}
+function adSeries(df){let sum=0;return df.c.map((c,i)=>{const den=(df.h[i]-df.l[i])||0.00001,mfm=(2*c-df.l[i]-df.h[i])/den;sum+=mfm*(df.v[i]||0);return sum})}
+function analyzeAd(symbol,tf,mode,df){const len=Math.max(2,Math.trunc(val("adSmaLen"))),minB=Math.max(1,Math.trunc(val("adMinBars"))),maxB=Math.max(minB,Math.trunc(val("adMaxBars")));if(!df||df.c.length<len+2)return null;const ad=adSeries(df),sma=rollingMean(ad,len),i=df.c.length-1;if(!finite(ad[i])||!finite(sma[i])||!finite(ad[i-1])||!finite(sma[i-1]))return null;const above=ad[i]>sma[i],newCross=above&&!(ad[i-1]>sma[i-1]);let streak=0;if(above){for(let k=i;k>=0;k--){if(finite(sma[k])&&ad[k]>sma[k])streak++;else break}}const cond=$("adOnlyCross").checked?newCross:above;if(!cond||streak<minB||streak>maxB)return null;const distance=sma[i]!==0?(ad[i]-sma[i])/Math.abs(sma[i])*100:NaN;return{symbol,timeframe:AD_TF[tf].label,mode:mode==="XAU"?"ALTIN (XAU)":mode,condition:newCross?"YENİ YUKARI KESİŞİM":"AD > SMA",bars:streak,ad:+ad[i].toFixed(2),sma:+sma[i].toFixed(2),distance:finite(distance)?+distance.toFixed(2):null,close:+df.c[i].toFixed(6),last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}}
+function renderAd(){adShown=adAll.slice().sort((a,b)=>a.bars-b.bars||a.symbol.localeCompare(b.symbol)||a.timeframe.localeCompare(b.timeframe));$("adCount").textContent=adShown.length;$("adTable").innerHTML=`<thead><tr>${["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","AD > SMA Süresi","AD","SMA57","AD-SMA %","Fiyat","Son Mum"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+adShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.mode}</td><td>${r.timeframe}</td><td>${r.condition}</td><td>${r.bars} bar</td><td>${fmt(r.ad,2)}</td><td>${fmt(r.sma,2)}</td><td>${fmt(r.distance,2)}</td><td>${fmt(r.close,6)}</td><td>${r.last_bar}</td></tr>`).join("")+"</tbody>"}
+async function scanAd(){
+  const tfs=selectedAdTimeframes(),modes=selectedAdModes();
+  if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
+  if(!modes.length){alert("En az bir veri modu seç.");return}
+  const minB=Math.max(1,Math.trunc(val("adMinBars"))),maxB=Math.max(1,Math.trunc(val("adMaxBars")));
+  if(minB>maxB){alert("En Az mum değeri En Çok değerinden büyük olamaz.");return}
+  const b=$("adBtn");
+  b.disabled=true;failures=[];adAll=[];adRefCache.clear();$("adProg").style.width="0";
+  setStatus("adStatus","Evren ve referanslar hazırlanıyor…","warn");
+  try{
+    const u=await getUniverse(),refsBy={};
+    for(const tf of tfs){
+      refsBy[tf]={};
+      for(const mode of modes){
+        if(mode!=="TL"){
+          try{refsBy[tf][mode]=await getAdReference(tf,mode)}
+          catch(e){failures.push({symbol:`REFERANS ${mode} (${AD_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}
+        }
+      }
+    }
+    const jobs=[];
+    for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);
+    $("adCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse × ${tfs.length} periyot × ${modes.length} mod`;
+    let next=0,done=0;
+    async function run(){
+      while(true){
+        const ix=next++;if(ix>=jobs.length)return;
+        const [s,tf]=jobs[ix];
+        try{
+          const base=await getAdBaseDf(s,tf);
+          for(const mode of modes){
+            try{
+              const df=convertAdMode(base,mode,refsBy[tf][mode]);
+              const r=analyzeAd(s,tf,mode,df);
+              if(r)adAll.push(r);
+            }catch(e){failures.push({symbol:`${s} (${AD_TF[tf].label}/${mode})`,reason:(e?.message||String(e)).slice(0,180)})}
+          }
+        }catch(e){failures.push({symbol:`${s} (${AD_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}
+        done++;
+        $("adProg").style.width=(100*done/jobs.length)+"%";
+        setStatus("adStatus",`${s} · ${AD_TF[tf].label} · ${done}/${jobs.length}`,"warn");
+        if(done%10===0)await sleep(0);
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));
+    renderAd();renderFails();
+    setStatus("adStatus",`Tarama tamamlandı · ${adShown.length} sonuç · ${failures.length} hata/işlenemeyen görev`,"good");
+    localStorage.setItem("bist_html_ad",JSON.stringify({at:Date.now(),results:adAll,failures}));
+  }catch(e){setStatus("adStatus","Hata: "+(e?.message||e),"bad")}
+  finally{b.disabled=false}
+}
+
 function renderFails(){
   $("failCount").textContent=failures.length;
   $("failTable").innerHTML=`<thead><tr><th>Hisse</th><th>Neden</th></tr></thead><tbody>`+
@@ -871,6 +1361,30 @@ async function exportXLSX(kind){
   } else if(kind==="early") {
     const rows=earlyShown.map(r=>[r.symbol,r.timeframe||"Günlük",r.model,r.status,r.score,r.close,r.ma,r.ma_distance,r.recent_return,r.latest_rank,r.best_rank,r.recent_top_days,r.baseline_top_days,r.avg_rel_volume,r.obv_rising?"EVET":"HAYIR",r.cmf]);
     addDataSheet("Erken Hacim",["Hisse","Periyot","Model","Durum","Puan","Fiyat","MA","MA Uzaklık %","Son Getiri %","Son Hacim Sırası","En İyi Sıra","Son Dönem İlk N","Önceki Dönem İlk N","Ort. Göreceli Hacim","OBV Yükseliyor","CMF"],rows,[13,11,20,9,12,12,14,14,17,13,16,18,18,16,11],[4,5,6,7,8,9,10,11,12,13,15]);
+  } else if(kind==="opp") {
+    const rows=oppShown.map(r=>[r.symbol,r.data_mode,r.decision,r.grade,r.smart_score,r.dominant_direction,r.mtf_score,r.mtf_alignment,r.opportunity,r.earlyness,r.confidence,r.quality,r.risk,r.continuity,`${r.candidate_periods}/${r.scanned_periods}`,r.best_timeframe,r.best_stage,r.best_action,r.momentum_chain]);
+    addDataSheet("Akıllı Fırsat",["Hisse","Mod","Karar","Not","Akıllı Skor","Baskın Yön","MTF Skoru","MTF Uyum %","Fırsat","Erkenlik","Güven","Kalite","Risk","Süreklilik","Aday TF","En İyi TF","Aşama","Eylem","Momentum Zinciri"],rows,[13,8,18,7,12,12,12,12,12,12,12,12,12,12,10,12,22,22,24],[5,7,8,9,10,11,12,13,14]);
+  } else if(kind==="mi") {
+    const rows=miShown.map(r=>[r.symbol,r.timeframe,r.direction,r.stage,r.candidate?"EVET":"HAYIR",r.entry_score,r.strength,r.long_strength,r.short_strength,r.confidence,r.quality,r.risk,r.volume_score,r.price_score,r.momentum_score,r.volatility_confidence,r.participation_score,r.regime,r.early_warning?"EVET":"HAYIR",r.relative_volume,r.atr_pct,r.adx,r.rsi,r.cmf,r.er,r.close]);
+    addDataSheet("Market Intelligence",["Hisse","Periyot","Yön","Aşama","Aday","Giriş Skoru","Aktif Güç","Long Güç","Short Güç","Güven","Kalite","Risk","Hacim Motoru","Fiyat Motoru","Momentum Motoru","Volatilite Güveni","Katılım Motoru","Piyasa Rejimi","Erken Uyarı","Göreceli Hacim","ATR %","ADX","RSI","CMF","Efficiency Ratio","Fiyat"],rows,[13,13,9,22,9,12,11,11,11,11,11,11,14,14,16,17,14,20,12,15,10,10,10,10,16,12],[6,7,8,9,10,11,12,13,14,15,16,17,20,21,22,23,24,25,26]);
+  } else if(kind==="macd3") {
+    const rows=macdShown.map(r=>[
+      r.symbol,r.timeframe,`${r.signal_count}. AL`,
+      new Date(r.signal_date*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"}),
+      r.bars_ago,r.signal_close,r.signal_macd,r.signal_signal,r.signal_hist,r.signal_hist_pct,
+      r.cross_history,r.current_count,r.last_close,r.bars_analyzed
+    ]);
+    addDataSheet(
+      "MACD 0 Altı 3 AL",
+      ["Hisse","Periyot","AL No","Sinyal Tarihi","Kaç Mum Önce","Sinyal Fiyatı","MACD","Signal","Histogram","Histogram %","Kesişim Geçmişi","Güncel Sayaç","Son Fiyat","Analiz Mum"],
+      rows,
+      [13,12,10,20,13,13,15,15,15,13,45,13,13,12],
+      [5,6,7,8,9,10,12,13,14]
+    );
+  } else if(kind==="duk") {
+    addDataSheet("DÜK Sonuçları",["Hisse","Zaman","Aktif Sinyaller","Skor","Fiyat","Değişim %","Son Mum","DÜK1","DÜK2","DÜK3"],dukShown.map(r=>[r.symbol,r.timeframe,r.signals,`${r.score}/3`,r.close,r.change,r.last_bar,r.duk1?"EVET":"HAYIR",r.duk2?"EVET":"HAYIR",r.duk3?"EVET":"HAYIR"]),[13,14,24,10,12,12,22,10,10,10],[4,5,6]);
+  } else if(kind==="ad") {
+    addDataSheet("A-D Sonuçları",["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","AD > SMA Süresi","AD","SMA57","AD-SMA %","Fiyat","Son Mum"],adShown.map(r=>[r.symbol,r.mode,r.timeframe,r.condition,r.bars,r.ad,r.sma,r.distance,r.close,r.last_bar]),[13,14,14,20,16,16,16,13,14,22],[5,6,7,8,9]);
   } else if(kind==="div") {
     const rows=divShown.map(r=>[
       r.symbol,
@@ -918,7 +1432,7 @@ async function exportXLSX(kind){
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(
     new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),
-    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.6.xlsx" : "bist_uyumsuzluk_html_v0.6.xlsx"
+    kind==="fusion" ? "bist_fusion_html_v0.5.xlsx" : kind==="cont" ? "bist_trend_devam_html_v0.5.xlsx" : kind==="early" ? "bist_erken_hacim_html_v0.6.xlsx" : kind==="opp" ? "bist_akilli_firsat_html_v0.7.xlsx" : kind==="macd3" ? "bist_macd_0_alti_3_al_html_v0.8.xlsx" : kind==="mi" ? "bist_market_intelligence_html_v0.9.xlsx" : kind==="duk" ? "bist_duk_html_v1.0.xlsx" : kind==="ad" ? "bist_accumulation_distribution_html_v1.1.xlsx" : "bist_uyumsuzluk_html_v0.6.xlsx"
   );
 }
 
@@ -928,9 +1442,10 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 });
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
-$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("divBtn").onclick=scanDiv;
-$("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");
-renderFusion();renderCont();renderEarly();renderDiv();renderFails();
+$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;
+$("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");
+$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;
+renderFusion();renderCont();renderEarly();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderFails();
 </script>
 </body>
 </html>
