@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "source": "https://kap.org.tr/tr/tumKalemler/kpy41_acc5_fiili_dolasimdaki_pay",
-  "updatedAt": "2026-08-19 17:50:56",
-  "count": 624,
+  "updatedAt": "2026-08-20 17:59:36",
+  "count": 625,
   "symbols": [
     "A1CAP",
     "A1YEN",
@@ -356,6 +356,7 @@
     "KOPOL",
     "KORDS",
     "KOTON",
+    "KPEKS",
     "KRDMB",
     "KRGYO",
     "KRONT",
@@ -982,6 +983,7 @@
     "KOPOL": "KOZA POLYESTER SANAYİ VE TİCARET A.Ş.",
     "KORDS": "KORDSA TEKNİK TEKSTİL A.Ş.",
     "KOTON": "KOTON MAĞAZACILIK TEKSTİL SANAYİ VE TİCARET A.Ş.",
+    "KPEKS": "KAPEKS KİMYA SANAYİ A.Ş.",
     "KRDMB": "KARDEMİR KARABÜK DEMİR ÇELİK SANAYİ VE TİCARET A.Ş.",
     "KRGYO": "KÖRFEZ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
     "KRONT": "KRON TEKNOLOJİ A.Ş.",

@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-19 17:50:56",
+  "version": "2026-08-20 17:59:36",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2545,6 +2545,10 @@
     "VEYAS": {
       "name": "TÜRKER VANGÖLÜ ENERJİ YATIRIM A.Ş.",
       "yahoo": "VEYAS.IS"
+    },
+    "KPEKS": {
+      "name": "KAPEKS KİMYA SANAYİ A.Ş.",
+      "yahoo": "KPEKS.IS"
     }
   }
 }
