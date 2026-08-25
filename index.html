@@ -1845,8 +1845,8 @@ function harmBestProjected(pivots,df,tol,nearPct,minScore){
 function analyzeHarmonic(symbol,tf,df){
   const w=Math.max(2,Math.trunc(val("harmPivot"))),minSwing=val("harmMinSwing"),tol=val("harmTol"),near=val("harmPrzNear"),minScore=val("harmMinScore"),recentD=Math.max(1,Math.trunc(val("harmRecentD")));if(!df||df.c.length<Math.max(80,w*8))return null;
   const piv=harmCleanPivots(harmPivotCandidates(df,w),minSwing);if(piv.length<4)return null;const done=harmBestCompleted(piv,df,tol,recentD,minScore);let row=null;
-  if(done){const [X,A,B,C,D]=done.pts;row={symbol,timeframe:HARM_TF[tf].label,pattern:done.pat.name,direction:done.dir,status:"🟢 TAMAMLANDI",score:+done.score.toFixed(1),x:X.p,a:A.p,b:B.p,c:C.p,d:D.p,prz:D.p,distance_pct:Math.abs(df.c.at(-1)-D.p)/Math.max(Math.abs(D.p),1e-9)*100,b_ratio:done.r.b,bc_ratio:done.r.bc,cd_ratio:done.r.cd,ad_ratio:done.r.ad,d_bars_ago:done.barsAgo,close:df.c.at(-1)}}
-  const proj=harmBestProjected(piv,df,tol,near,minScore);if(proj&&(!row||proj.status.includes("PRZ")&&row.score<proj.score)){const [X,A,B,C]=proj.pts;row={symbol,timeframe:HARM_TF[tf].label,pattern:proj.pat.name,direction:proj.dir,status:proj.status,score:+proj.score.toFixed(1),x:X.p,a:A.p,b:B.p,c:C.p,d:null,prz:proj.target,distance_pct:proj.distance,b_ratio:harmRatio(B.p-A.p,A.p-X.p),bc_ratio:harmRatio(C.p-B.p,B.p-A.p),cd_ratio:null,ad_ratio:mean(proj.pat.ad),d_bars_ago:null,close:df.c.at(-1)}}
+  if(done){const [X,A,B,C,D]=done.pts;row={symbol,timeframe:HARM_TF[tf].label,pattern:done.pat.name,direction:done.dir,status:"🟢 TAMAMLANDI",score:+done.score.toFixed(1),x:X.p,a:A.p,b:B.p,c:C.p,d:D.p,xi:X.i,ai:A.i,bi:B.i,ci:C.i,di:D.i,prz:D.p,distance_pct:Math.abs(df.c.at(-1)-D.p)/Math.max(Math.abs(D.p),1e-9)*100,b_ratio:done.r.b,bc_ratio:done.r.bc,cd_ratio:done.r.cd,ad_ratio:done.r.ad,d_bars_ago:done.barsAgo,close:df.c.at(-1)}}
+  const proj=harmBestProjected(piv,df,tol,near,minScore);if(proj&&(!row||proj.status.includes("PRZ")&&row.score<proj.score)){const [X,A,B,C]=proj.pts;row={symbol,timeframe:HARM_TF[tf].label,pattern:proj.pat.name,direction:proj.dir,status:proj.status,score:+proj.score.toFixed(1),x:X.p,a:A.p,b:B.p,c:C.p,d:null,xi:X.i,ai:A.i,bi:B.i,ci:C.i,di:df.c.length-1,prz:proj.target,distance_pct:proj.distance,b_ratio:harmRatio(B.p-A.p,A.p-X.p),bc_ratio:harmRatio(C.p-B.p,B.p-A.p),cd_ratio:null,ad_ratio:mean(proj.pat.ad),d_bars_ago:null,close:df.c.at(-1)}}
   if(!row)return null;if(row.direction==="BULLISH"&&!$("harmBull").checked)return null;if(row.direction==="BEARISH"&&!$("harmBear").checked)return null;return row;
 }
 function harmonicSvg(r,w=180,h=90,large=false){
@@ -1889,6 +1889,12 @@ function harmRatioOk(v,range){
   return Number(v)>=lo-pad&&Number(v)<=hi+pad;
 }
 function harmFindPivotIndices(df,r){
+  const exact=[r.xi,r.ai,r.bi,r.ci,r.di];
+  if(exact.every(v=>Number.isInteger(Number(v))&&Number(v)>=0&&Number(v)<df.c.length)){
+    return exact.map(Number);
+  }
+  // Eski localStorage sonuçları için geri uyumluluk:
+  // fiyat değerlerinden en yakın pivotları sıra bozulmadan bul.
   const prices=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),out=[];
   let start=0;
   for(const price of prices){
@@ -1898,15 +1904,20 @@ function harmFindPivotIndices(df,r){
       if(e<err){err=e;best=i}
     }
     if(best<0)best=Math.min(start,df.c.length-1);
-    out.push(best);start=Math.min(best+1,df.c.length-1);
+    out.push(best);
+    start=Math.min(best+1,df.c.length-1);
   }
   return out;
 }
 function harmonicPriceSvg(r,df){
   if(!df||df.c.length<10)return `<div class="bad rounded-xl p-4">Fiyat verisi alınamadı.</div>`;
   const piv=harmFindPivotIndices(df,r),last=df.c.length-1;
-  const first=Math.max(0,Math.min(piv[0]-18,last-150)),end=Math.min(last,Math.max(piv[4]+18,last));
-  const maxBars=150,start=Math.max(first,end-maxBars+1),idx=[];for(let i=start;i<=end;i++)idx.push(i);
+  const left=Math.max(0,Math.min(...piv)-16);
+  const right=Math.min(last,Math.max(...piv)+16);
+  // Formasyon çok eski/uzunsa X-A-B-C-D'yi kesmemek için pencereyi otomatik genişlet.
+  let start=left,end=Math.max(right,Math.min(last,piv[4]+24));
+  if(end-start<70){const need=70-(end-start);start=Math.max(0,start-Math.ceil(need/2));end=Math.min(last,end+Math.floor(need/2))}
+  const idx=[];for(let i=start;i<=end;i++)idx.push(i);
   const W=1000,H=560,L=58,R=72,T=34,B=58,plotW=W-L-R,plotH=H-T-B;
   const lo=Math.min(...idx.map(i=>df.l[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
   const hi=Math.max(...idx.map(i=>df.h[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
@@ -1917,7 +1928,7 @@ function harmonicPriceSvg(r,df){
   const cw=Math.max(2,Math.min(7,plotW/Math.max(1,idx.length)*.62));
   for(const i of idx){const xx=x(i),up=df.c[i]>=df.o[i],col=up?"#10b981":"#ef4444";candles+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}" stroke-width="1"/><rect x="${xx-cw/2}" y="${Math.min(y(df.o[i]),y(df.c[i]))}" width="${cw}" height="${Math.max(1,Math.abs(y(df.o[i])-y(df.c[i])))}" fill="${col}" rx="1"/>`}
   const pvals=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),labs=["X","A","B","C","D"];
-  const pxy=pvals.map((v,k)=>({x:x(Math.max(start,Math.min(end,piv[k]))),y:y(v),v,lab:labs[k]}));
+  const pxy=pvals.map((v,k)=>({x:x(piv[k]),y:y(v),v,lab:labs[k]}));
   const poly=pxy.map(p=>`${p.x},${p.y}`).join(" ");
   const fill=`<polygon points="${poly}" fill="#7c3aed" opacity=".12"/><polyline points="${poly}" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>`;
   const nodes=pxy.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#8b5cf6"/><rect x="${p.x-11}" y="${p.y-28}" width="22" height="20" rx="5" fill="#6d28d9"/><text x="${p.x}" y="${p.y-14}" text-anchor="middle" fill="white" font-weight="700" font-size="12">${p.lab}</text>`).join("");
