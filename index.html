@@ -765,12 +765,12 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div><div class="overflow-auto max-h-[650px]"><table id="lqTable"></table></div></div>
 </section>
 
-<!-- Harmonik büyük görsel -->
-<div id="harmModal" class="hidden fixed inset-0 z-[9999] bg-black/75 p-4 items-center justify-center" onclick="if(event.target===this)closeHarmonicModal()">
-  <div class="card w-full max-w-4xl p-5 relative">
-    <button class="btn absolute right-3 top-3" onclick="closeHarmonicModal()">✕</button>
-    <h3 id="harmModalTitle" class="font-black text-xl mb-4">Harmonik Formasyon</h3>
-    <div id="harmModalChart" class="w-full overflow-auto"></div>
+<!-- Harmonik Formasyon Detayı · Fiyat Grafiği + Şematik Şekil -->
+<div id="harmModal" class="hidden fixed inset-0 z-[9999] bg-black/80 p-2 md:p-4 items-center justify-center" onclick="if(event.target===this)closeHarmonicModal()">
+  <div class="card w-full max-w-7xl relative overflow-y-auto" style="max-height:96vh;padding:18px">
+    <button class="btn absolute right-3 top-3 z-20" onclick="closeHarmonicModal()">✕</button>
+    <div id="harmModalTitle" class="font-black text-xl md:text-2xl mb-3 pr-12">Harmonik Formasyon Detayı</div>
+    <div id="harmModalChart" class="w-full"></div>
   </div>
 </div>
 
@@ -1865,15 +1865,115 @@ function harmonicSvg(r,w=180,h=90,large=false){
     ${nodes}
   </svg>`;
 }
-function openHarmonicModal(i){
+let harmModalState={row:null,df:null,tab:"price"};
+
+function harmTfKey(label){
+  const e=Object.entries(HARM_TF).find(([,v])=>v.label===label);
+  return e?e[0]:"1d";
+}
+function harmDate(ts,tf){
+  const d=new Date(Number(ts)*1000);
+  const opt=tf==="1d"||tf==="1w"?{day:"2-digit",month:"short"}:{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"};
+  try{return new Intl.DateTimeFormat("tr-TR",opt).format(d)}catch(_){return ""}
+}
+function harmPatternRanges(name){
+  const p=HARM_PATTERNS.find(x=>x.name===name);
+  if(!p)return null;
+  const f=a=>Math.abs(a[1]-a[0])<1e-9?fmt(a[0],3):`${fmt(a[0],3)} – ${fmt(a[1],3)}`;
+  return {b:f(p.b),bc:f(p.bc),cd:f(p.cd),ad:f(p.ad)};
+}
+function harmRatioOk(v,range){
+  if(!finite(Number(v))||!range)return false;
+  const tol=Math.max(0,val("harmTol"))/100;
+  const lo=range[0],hi=range[1],pad=Math.max(.015,(hi-lo)*tol+Math.max(lo,hi)*tol*.35);
+  return Number(v)>=lo-pad&&Number(v)<=hi+pad;
+}
+function harmFindPivotIndices(df,r){
+  const prices=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),out=[];
+  let start=0;
+  for(const price of prices){
+    let best=-1,err=Infinity;
+    for(let i=start;i<df.c.length;i++){
+      const e=Math.min(Math.abs(df.h[i]-price),Math.abs(df.l[i]-price),Math.abs(df.c[i]-price));
+      if(e<err){err=e;best=i}
+    }
+    if(best<0)best=Math.min(start,df.c.length-1);
+    out.push(best);start=Math.min(best+1,df.c.length-1);
+  }
+  return out;
+}
+function harmonicPriceSvg(r,df){
+  if(!df||df.c.length<10)return `<div class="bad rounded-xl p-4">Fiyat verisi alınamadı.</div>`;
+  const piv=harmFindPivotIndices(df,r),last=df.c.length-1;
+  const first=Math.max(0,Math.min(piv[0]-18,last-150)),end=Math.min(last,Math.max(piv[4]+18,last));
+  const maxBars=150,start=Math.max(first,end-maxBars+1),idx=[];for(let i=start;i<=end;i++)idx.push(i);
+  const W=1000,H=560,L=58,R=72,T=34,B=58,plotW=W-L-R,plotH=H-T-B;
+  const lo=Math.min(...idx.map(i=>df.l[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
+  const hi=Math.max(...idx.map(i=>df.h[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
+  const pad=(hi-lo)*.08||1,ymin=lo-pad,ymax=hi+pad;
+  const x=i=>L+(i-start)/Math.max(1,end-start)*plotW,y=v=>T+(ymax-v)/(ymax-ymin)*plotH;
+  let grid="",candles="";
+  for(let g=0;g<=5;g++){const yy=T+g*plotH/5,price=ymax-g*(ymax-ymin)/5;grid+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#263244" stroke-width="1"/><text x="${W-R+8}" y="${yy+4}" fill="#94a3b8" font-size="12">${fmt(price,2)}</text>`}
+  const cw=Math.max(2,Math.min(7,plotW/Math.max(1,idx.length)*.62));
+  for(const i of idx){const xx=x(i),up=df.c[i]>=df.o[i],col=up?"#10b981":"#ef4444";candles+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}" stroke-width="1"/><rect x="${xx-cw/2}" y="${Math.min(y(df.o[i]),y(df.c[i]))}" width="${cw}" height="${Math.max(1,Math.abs(y(df.o[i])-y(df.c[i])))}" fill="${col}" rx="1"/>`}
+  const pvals=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),labs=["X","A","B","C","D"];
+  const pxy=pvals.map((v,k)=>({x:x(Math.max(start,Math.min(end,piv[k]))),y:y(v),v,lab:labs[k]}));
+  const poly=pxy.map(p=>`${p.x},${p.y}`).join(" ");
+  const fill=`<polygon points="${poly}" fill="#7c3aed" opacity=".12"/><polyline points="${poly}" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>`;
+  const nodes=pxy.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="5" fill="#8b5cf6"/><rect x="${p.x-11}" y="${p.y-28}" width="22" height="20" rx="5" fill="#6d28d9"/><text x="${p.x}" y="${p.y-14}" text-anchor="middle" fill="white" font-weight="700" font-size="12">${p.lab}</text>`).join("");
+  const prz=Number(r.prz),zonePct=Math.max(.008,Math.min(.04,Number(r.distance_pct||2)/100)),z1=prz*(1-zonePct),z2=prz*(1+zonePct),zy=Math.min(y(z1),y(z2)),zh=Math.abs(y(z1)-y(z2));
+  const przRect=`<rect x="${L}" y="${zy}" width="${plotW}" height="${Math.max(5,zh)}" fill="#10b981" opacity=".14" stroke="#10b981" stroke-opacity=".65"/><text x="${W-R-8}" y="${Math.max(T+15,zy-6)}" text-anchor="end" fill="#34d399" font-size="13" font-weight="700">PRZ ≈ ${fmt(prz)}</text>`;
+  let dates="";for(const f of [0,.25,.5,.75,1]){const ii=Math.round(start+(end-start)*f);dates+=`<text x="${x(ii)}" y="${H-18}" text-anchor="middle" fill="#94a3b8" font-size="11">${harmDate(df.t[ii],r.timeframe)}</text>`}
+  const lastP=df.c[end],lastCol=lastP>=df.o[end]?"#34d399":"#fb7185";
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block;background:#070d16;border-radius:14px">${grid}${przRect}${candles}${fill}${nodes}${dates}<text x="${L}" y="22" fill="#e5e7eb" font-size="14" font-weight="700">${r.symbol} · ${r.timeframe} · ${r.pattern}</text><text x="${W-R}" y="22" text-anchor="end" fill="${lastCol}" font-size="14" font-weight="700">${fmt(lastP)}</text></svg>`;
+}
+function harmInfoHtml(r){
+  const pat=HARM_PATTERNS.find(x=>x.name===r.pattern),ranges=harmPatternRanges(r.pattern)||{},rows=[
+    ["AB/XA",r.b_ratio,pat?.b,ranges.b],["BC/AB",r.bc_ratio,pat?.bc,ranges.bc],["CD/BC",r.cd_ratio,pat?.cd,ranges.cd],["AD/XA",r.ad_ratio,pat?.ad,ranges.ad]
+  ];
+  return `<div class="card p-4 h-full">
+    <div class="text-xl font-black ${r.direction==="BULLISH"?"good":"bad"}">${r.direction==="BULLISH"?"↗ BULLISH":"↘ BEARISH"}</div>
+    <div class="muted text-sm mb-4">Harmonik Potansiyel</div>
+    <div class="border-t border-gray-800 pt-3 space-y-2 text-sm">
+      <div class="flex justify-between gap-3"><span>Formasyon Türü</span><b>${r.pattern}</b></div>
+      <div class="flex justify-between gap-3"><span>Durum</span><b>${r.status}</b></div>
+      <div class="flex justify-between gap-3"><span>Uyum</span><b>${fmt(r.score,1)}%</b></div>
+      <div class="flex justify-between gap-3"><span>PRZ / D</span><b>${fmt(r.prz)}</b></div>
+      <div class="flex justify-between gap-3"><span>Mevcut Fiyat</span><b>${fmt(r.close)}</b></div>
+      <div class="flex justify-between gap-3"><span>PRZ Uzaklık</span><b>${fmt(r.distance_pct)}%</b></div>
+      <div class="flex justify-between gap-3"><span>D Mesafe / Mum</span><b>${r.d_bars_ago??"—"}</b></div>
+    </div>
+    <div class="font-black mt-5 mb-2">Oranlar (Gerçekleşen)</div>
+    <div class="space-y-2 text-sm">${rows.map(([n,v,rg,txt])=>`<div class="grid grid-cols-3 gap-2"><span>${n}</span><b>${fmt(v,3)}</b><span class="${harmRatioOk(v,rg)?"good":"muted"}">${harmRatioOk(v,rg)?"✓ ":""}${txt||"—"}</span></div>`).join("")}</div>
+  </div>`;
+}
+function renderHarmModal(){
+  const {row:r,df,tab}=harmModalState;if(!r)return;
+  $("harmModalTitle").innerHTML=`🦋 Harmonik Formasyon Detayı <span class="chip ml-2">${r.direction}</span> <span class="muted"> · ${r.symbol} / ${r.timeframe} · XABCD</span>`;
+  const priceActive=tab==="price",shapeActive=tab==="shape";
+  $("harmModalChart").innerHTML=`
+    <div class="flex flex-wrap gap-2 mb-3">
+      <button class="btn" style="${priceActive?"background:#6d28d9;color:white":""}" onclick="harmModalState.tab='price';renderHarmModal()">📈 Fiyat Grafiği</button>
+      <button class="btn" style="${shapeActive?"background:#6d28d9;color:white":""}" onclick="harmModalState.tab='shape';renderHarmModal()">⌁ Şematik Şekil</button>
+      <div class="ml-auto chip">${r.status}</div>
+    </div>
+    <div class="grid lg:grid-cols-4 gap-4">
+      <div class="lg:col-span-3">${priceActive?harmonicPriceSvg(r,df):`<div class="card p-4 flex items-center justify-center" style="min-height:560px">${harmonicSvg(r,900,500,true)}</div>`}</div>
+      <div>${harmInfoHtml(r)}</div>
+    </div>
+    <div class="card p-4 mt-4 text-sm"><b>Formasyon Yorumu:</b> ${r.symbol} ${r.timeframe} grafiğinde ${r.pattern} ${r.direction==="BULLISH"?"yükseliş":"düşüş"} formasyonu tespit edildi. PRZ/D seviyesi ${fmt(r.prz)}, mevcut fiyat ${fmt(r.close)} ve uyum skoru ${fmt(r.score,1)}%.</div>`;
+}
+async function openHarmonicModal(i){
   const r=harmShown[i];if(!r)return;
-  $("harmModalTitle").textContent=`${r.symbol} · ${r.timeframe} · ${r.pattern} · ${r.direction} · ${r.status}`;
-  $("harmModalChart").innerHTML=harmonicSvg(r,760,360,true)+`<div class="grid grid-cols-4 gap-3 mt-3 text-sm">
-    <div class="chip">Uyum: ${fmt(r.score,1)}%</div><div class="chip">PRZ/D: ${fmt(r.prz)}</div>
-    <div class="chip">PRZ Uzaklık: ${fmt(r.distance_pct)}%</div><div class="chip">Fiyat: ${fmt(r.close)}</div>
-    <div class="chip">AB/XA: ${fmt(r.b_ratio,3)}</div><div class="chip">BC/AB: ${fmt(r.bc_ratio,3)}</div>
-    <div class="chip">CD/BC: ${fmt(r.cd_ratio,3)}</div><div class="chip">AD/XA: ${fmt(r.ad_ratio,3)}</div></div>`;
   $("harmModal").classList.remove("hidden");$("harmModal").classList.add("flex");
+  $("harmModalTitle").textContent="Harmonik Formasyon Detayı · fiyat verisi hazırlanıyor…";
+  $("harmModalChart").innerHTML=`<div class="warn rounded-xl p-4">Gerçek fiyat grafiği hazırlanıyor…</div>`;
+  try{
+    const tf=harmTfKey(r.timeframe),df=await getHarmDf(r.symbol,tf);
+    harmModalState={row:r,df,tab:"price"};renderHarmModal();
+  }catch(e){
+    harmModalState={row:r,df:null,tab:"shape"};renderHarmModal();
+  }
 }
 function closeHarmonicModal(){$("harmModal").classList.add("hidden");$("harmModal").classList.remove("flex")}
 function renderHarmonic(){
