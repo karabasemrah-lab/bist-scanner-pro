@@ -1895,7 +1895,8 @@ function harmFindPivotIndices(df,r){
   }
   // Eski localStorage sonuçları için geri uyumluluk:
   // fiyat değerlerinden en yakın pivotları sıra bozulmadan bul.
-  const prices=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),out=[];
+  const hasD=r.d!==null&&r.d!==undefined&&r.d!==""&&finite(Number(r.d));
+  const prices=[r.x,r.a,r.b,r.c,hasD?r.d:r.prz].map(Number),out=[];
   let start=0;
   for(const price of prices){
     let best=-1,err=Infinity;
@@ -1918,16 +1919,18 @@ function harmonicPriceSvg(r,df){
   let start=left,end=Math.max(right,Math.min(last,piv[4]+24));
   if(end-start<70){const need=70-(end-start);start=Math.max(0,start-Math.ceil(need/2));end=Math.min(last,end+Math.floor(need/2))}
   const idx=[];for(let i=start;i<=end;i++)idx.push(i);
+  const hasD=r.d!==null&&r.d!==undefined&&r.d!==""&&finite(Number(r.d));
   const W=1000,H=560,L=58,R=72,T=34,B=58,plotW=W-L-R,plotH=H-T-B;
-  const lo=Math.min(...idx.map(i=>df.l[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
-  const hi=Math.max(...idx.map(i=>df.h[i]),Number(r.prz),...([r.x,r.a,r.b,r.c,r.d].filter(x=>finite(Number(x))).map(Number)));
+  const pattVals=[r.x,r.a,r.b,r.c].concat(hasD?[r.d]:[]).filter(x=>x!==null&&x!==undefined&&x!==""&&finite(Number(x))).map(Number);
+  const lo=Math.min(...idx.map(i=>df.l[i]),Number(r.prz),...pattVals);
+  const hi=Math.max(...idx.map(i=>df.h[i]),Number(r.prz),...pattVals);
   const pad=(hi-lo)*.08||1,ymin=lo-pad,ymax=hi+pad;
   const x=i=>L+(i-start)/Math.max(1,end-start)*plotW,y=v=>T+(ymax-v)/(ymax-ymin)*plotH;
   let grid="",candles="";
   for(let g=0;g<=5;g++){const yy=T+g*plotH/5,price=ymax-g*(ymax-ymin)/5;grid+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#263244" stroke-width="1"/><text x="${W-R+8}" y="${yy+4}" fill="#94a3b8" font-size="12">${fmt(price,2)}</text>`}
   const cw=Math.max(2,Math.min(7,plotW/Math.max(1,idx.length)*.62));
   for(const i of idx){const xx=x(i),up=df.c[i]>=df.o[i],col=up?"#10b981":"#ef4444";candles+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}" stroke-width="1"/><rect x="${xx-cw/2}" y="${Math.min(y(df.o[i]),y(df.c[i]))}" width="${cw}" height="${Math.max(1,Math.abs(y(df.o[i])-y(df.c[i])))}" fill="${col}" rx="1"/>`}
-  const pvals=[r.x,r.a,r.b,r.c,finite(Number(r.d))?r.d:r.prz].map(Number),labs=["X","A","B","C","D"];
+  const pvals=[r.x,r.a,r.b,r.c,hasD?r.d:r.prz].map(Number),labs=["X","A","B","C","D"];
   const pxy=pvals.map((v,k)=>({x:x(piv[k]),y:y(v),v,lab:labs[k]}));
   const poly=pxy.map(p=>`${p.x},${p.y}`).join(" ");
   const fill=`<polygon points="${poly}" fill="#7c3aed" opacity=".12"/><polyline points="${poly}" fill="none" stroke="#8b5cf6" stroke-width="2.5"/>`;
