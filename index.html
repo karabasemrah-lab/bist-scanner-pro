@@ -97,6 +97,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab active" style="--ac:#fb4b5b" data-tab="fusion">🎯 Fusion Faz</button>
   <button class="tab" style="--ac:#9b6cff" data-tab="continuation">🟣 Trend Devam</button>
   <button class="tab" style="--ac:#f59e0b" data-tab="earlyvolume">🔥 Erken Hacim</button>
+  <button class="tab" style="--ac:#2dd4bf" data-tab="mediancompare">📐 Median vs Ortalama</button>
   <button class="tab" style="--ac:#22c55e" data-tab="divergence">🧭 Uyumsuzluk</button>
   <button class="tab" style="--ac:#38bdf8" data-tab="opportunity">🧠 Akıllı Fırsat</button>
   <button class="tab" style="--ac:#f97316" data-tab="macd3buy">📈 MACD 0 Altı 3. AL</button>
@@ -203,6 +204,28 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+
+<section id="mediancompare" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">📐 Median vs Ortalama · Robust Karşılaştırma</h2>
+    <div class="text-sm muted mt-2">Aynı fiyat ve hacim verisinde klasik SMA/EMA yaklaşımı ile Median + MAD yaklaşımını yan yana ölçer. Mevcut taramaları değiştirmez.</div>
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Periyot</label><select id="medTf" class="input mt-1"><option value="1d">Günlük</option><option value="4h">4 Saat</option><option value="1h">1 Saat</option><option value="30m">30 Dakika</option><option value="15m">15 Dakika</option></select></div>
+      <div><label class="text-xs muted">Merkez Periyodu</label><input id="medPeriod" class="input mt-1" type="number" value="21" min="5" max="200"></div>
+      <div><label class="text-xs muted">Klasik Ortalama</label><select id="medMaType" class="input mt-1"><option value="EMA">EMA</option><option value="SMA">SMA</option></select></div>
+      <div><label class="text-xs muted">Robust Z Eşiği</label><input id="medZThreshold" class="input mt-1" type="number" value="2" min="0.25" max="10" step="0.25"></div>
+    </div>
+    <div class="text-xs muted mt-3">Robust Z = (Fiyat − Median) / (1.4826 × MAD). Hacim karşılaştırması: son hacim / 21 mum ortalama hacim ve son hacim / 21 mum medyan hacim.</div>
+    <button id="medBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#0f766e,#2dd4bf);color:#041412">📐 Median Karşılaştırmasını Başlat</button>
+    <div id="medCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="medProg"></div></div>
+    <div id="medStatus" class="mt-3 rounded-xl p-3 text-sm warn">Karşılaştırma taramasını başlat.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800"><h3 class="font-black text-xl">📊 Median / Ortalama Sonuçları · <span id="medCount">0</span> hisse</h3><button id="medExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button></div>
+    <div class="overflow-auto max-h-[700px]"><table id="medTable"></table></div>
+  </div>
+</section>
 
 <section id="divergence" class="tabpage space-y-4 hidden">
   <div class="card p-5">
@@ -855,7 +878,7 @@ const TV_BASE = [
 const REFS = {XU100:"XU100.IS",XU030:"XU030.IS",XBANK:"XBANK.IS",XUTUM:"XUTUM.IS",XBANA:"XBANA.IS"};
 const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 BİRİKİM","🟠 YAŞLANMA / DAĞITIM","🟠 OLGUN TREND"]);
 
-let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], failures=[];
+let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], failures=[];
 let refCache=null;
 
 const $ = id => document.getElementById(id);
@@ -1575,6 +1598,27 @@ async function scanEarly(){
     setStatus("earlyStatus","Hata: "+(err?.message||err),"bad");
   }finally{b.disabled=false}
 }
+
+
+function medianValue(a){const v=a.filter(finite).slice().sort((x,y)=>x-y);if(!v.length)return NaN;const m=Math.floor(v.length/2);return v.length%2?v[m]:(v[m-1]+v[m])/2}
+function rollingMedian(a,n){const out=Array(a.length).fill(NaN);for(let i=n-1;i<a.length;i++){const w=a.slice(i-n+1,i+1);if(w.every(finite))out[i]=medianValue(w)}return out}
+function rollingMAD(a,n,medSeries){const out=Array(a.length).fill(NaN);for(let i=n-1;i<a.length;i++){const m=medSeries[i],w=a.slice(i-n+1,i+1);if(finite(m)&&w.every(finite))out[i]=medianValue(w.map(x=>Math.abs(x-m)))}return out}
+function analyzeMedianCompare(symbol,df){
+  const period=Math.max(5,Math.trunc(val("medPeriod"))),type=$("medMaType").value,zThr=Math.max(.01,val("medZThreshold"));
+  if(!df||df.c.length<period+5)return null;const c=df.c,v=df.v,i=c.length-1;
+  const classic=type==="EMA"?ema(c,period):rollingMean(c,period),med=rollingMedian(c,period),mad=rollingMAD(c,period,med),vMean=rollingMean(v,period),vMed=rollingMedian(v,period);
+  const px=c[i],cm=classic[i],md=med[i],madv=mad[i],scale=finite(madv)?1.4826*madv:NaN;
+  const classicDist=finite(cm)&&cm!==0?(px/cm-1)*100:NaN,medianDist=finite(md)&&md!==0?(px/md-1)*100:NaN,robustZ=finite(scale)&&scale>0?(px-md)/scale:NaN;
+  const meanVolRatio=finite(vMean[i])&&vMean[i]>0?v[i]/vMean[i]:NaN,medianVolRatio=finite(vMed[i])&&vMed[i]>0?v[i]/vMed[i]:NaN;
+  if([px,cm,md,classicDist,medianDist].some(x=>!finite(x)))return null;
+  const classicBull=px>cm,medianBull=px>md,agree=classicBull===medianBull;
+  let robustSignal='NORMAL';if(finite(robustZ)){if(robustZ>=zThr)robustSignal='POZİTİF ANOMALİ';else if(robustZ<=-zThr)robustSignal='NEGATİF ANOMALİ'}
+  const volDelta=finite(meanVolRatio)&&finite(medianVolRatio)?medianVolRatio-meanVolRatio:NaN;
+  return{symbol,close:+px.toFixed(2),classic_type:type,classic:+cm.toFixed(2),classic_distance:+classicDist.toFixed(2),median:+md.toFixed(2),median_distance:+medianDist.toFixed(2),mad:finite(madv)?+madv.toFixed(4):null,robust_z:finite(robustZ)?+robustZ.toFixed(2):null,mean_volume_ratio:finite(meanVolRatio)?+meanVolRatio.toFixed(2):null,median_volume_ratio:finite(medianVolRatio)?+medianVolRatio.toFixed(2):null,volume_delta:finite(volDelta)?+volDelta.toFixed(2):null,classic_trend:classicBull?'ÜSTÜNDE':'ALTINDA',median_trend:medianBull?'ÜSTÜNDE':'ALTINDA',agreement:agree?'AYNI':'FARKLI',robust_signal:robustSignal};
+}
+function renderMedianCompare(){medShown=medAll.slice().sort((a,b)=>Math.abs(b.robust_z||0)-Math.abs(a.robust_z||0)||a.symbol.localeCompare(b.symbol));$("medCount").textContent=medShown.length;const h=["Hisse","Periyot","Fiyat","Klasik","Klasik Değer","Klasik Uzaklık %","Median","Median Uzaklık %","MAD","Robust Z","Ort. Hacim x","Medyan Hacim x","Hacim Farkı","Klasik Trend","Median Trend","Uyum","Robust Sinyal"];$("medTable").innerHTML=`<thead><tr>${h.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+medShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td>${fmt(r.close)}</td><td>${r.classic_type}</td><td>${fmt(r.classic)}</td><td>${fmt(r.classic_distance)}</td><td>${fmt(r.median)}</td><td>${fmt(r.median_distance)}</td><td>${fmt(r.mad,4)}</td><td><b>${fmt(r.robust_z)}</b></td><td>${fmt(r.mean_volume_ratio)}</td><td>${fmt(r.median_volume_ratio)}</td><td>${fmt(r.volume_delta)}</td><td>${r.classic_trend}</td><td>${r.median_trend}</td><td>${r.agreement}</td><td>${r.robust_signal}</td></tr>`).join('')+'</tbody>'}
+async function scanMedianCompare(){const b=$("medBtn"),tf=$("medTf").value,cfg=EARLY_TF[tf];b.disabled=true;medAll=[];failures=[];$("medProg").style.width='0';setStatus('medStatus','Evren hazırlanıyor…','warn');try{const u=await getUniverse();$("medCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse · ${cfg.label}`;let next=0,done=0;async function run(){while(true){const ix=next++;if(ix>=u.symbols.length)return;const sym=u.symbols[ix];try{const df=await getEarlyDf(sym,tf),r=analyzeMedianCompare(sym,df);if(r)medAll.push({...r,timeframe:cfg.label})}catch(e){failures.push({symbol:`${sym} (${cfg.label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("medProg").style.width=(100*done/u.symbols.length)+'%';setStatus('medStatus',`${cfg.label} · ${sym} · ${done}/${u.symbols.length}`,'warn');if(done%10===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,u.symbols.length||1)},run));renderMedianCompare();renderFails();setStatus('medStatus',`Karşılaştırma tamamlandı · ${medShown.length} hisse · ${failures.length} hata`,'good');localStorage.setItem('bist_html_median_compare',JSON.stringify({at:Date.now(),results:medAll,failures}))}catch(e){setStatus('medStatus','Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}}
+function exportMedianCompare(){if(!medShown.length){alert('Dışa aktarılacak Median karşılaştırma sonucu yok.');return}const rows=medShown.map(r=>({...r}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'MedianCompare');XLSX.writeFile(wb,`BIST_Median_vs_Ortalama_${new Date().toISOString().slice(0,10)}.xlsx`)}
 
 
 const DUK_TF={"4h":{label:"4 Saat",range:"6mo",interval:"1h"},"1d":{label:"Günlük",range:"1y",interval:"1d"},"1w":{label:"Haftalık",range:"5y",interval:"1wk"}};
@@ -2691,10 +2735,10 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
-$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
+$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
-renderFusion();renderCont();renderEarly();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
+renderFusion();renderCont();renderEarly();renderMedianCompare();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
 
 <style>
