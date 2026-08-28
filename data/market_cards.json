@@ -168,8 +168,8 @@
       "code": "USDTRY",
       "name": "Dolar / TL",
       "category": "Döviz",
-      "value": 48.24,
-      "changePct": 0.22,
+      "value": 48.23,
+      "changePct": 0.2,
       "spark": [
         47.0366,
         47.1021,
@@ -202,15 +202,15 @@
         48.0766,
         48.1107,
         48.1324,
-        48.2369
+        48.23
       ]
     },
     {
       "code": "EURTRY",
       "name": "Euro / TL",
       "category": "Döviz",
-      "value": 56.22,
-      "changePct": 0.09,
+      "value": 55.87,
+      "changePct": -0.53,
       "spark": [
         54.0526,
         53.8641,
@@ -243,17 +243,16 @@
         56.0861,
         56.185,
         56.1675,
-        56.2156
+        55.8696
       ]
     },
     {
       "code": "XAUUSD",
       "name": "Altın Ons / USD",
       "category": "Emtia",
-      "value": 4650.1,
-      "changePct": 1.13,
+      "value": 4504.1,
+      "changePct": -2.29,
       "spark": [
-        4044.0,
         3985.6001,
         4012.7,
         4010.3,
@@ -284,17 +283,17 @@
         4640.7998,
         4638.1001,
         4598.2002,
-        4650.1001
+        4609.7002,
+        4504.1001
       ]
     },
     {
       "code": "XAGUSD",
       "name": "Gümüş / USD",
       "category": "Emtia",
-      "value": 70.38,
-      "changePct": 3.52,
+      "value": 67.09,
+      "changePct": -3.37,
       "spark": [
-        57.11,
         55.898,
         56.038,
         56.802,
@@ -325,17 +324,17 @@
         68.541,
         68.636,
         67.99,
-        70.38
+        69.429,
+        67.09
       ]
     },
     {
       "code": "BRENT",
       "name": "Brent Petrol / USD",
       "category": "Enerji",
-      "value": 88.41,
-      "changePct": 0.65,
+      "value": 88.29,
+      "changePct": -1.57,
       "spark": [
-        84.95,
         84.23,
         88.1,
         89.22,
@@ -366,17 +365,17 @@
         92.17,
         88.58,
         87.84,
-        88.41
+        89.7,
+        88.29
       ]
     },
     {
       "code": "WTI",
       "name": "WTI Petrol / USD",
       "category": "Enerji",
-      "value": 83.38,
-      "changePct": 1.4,
+      "value": 83.44,
+      "changePct": -0.11,
       "spark": [
-        79.6,
         78.95,
         82.49,
         83.23,
@@ -407,17 +406,17 @@
         85.01,
         82.36,
         82.23,
-        83.38
+        83.53,
+        83.44
       ]
     },
     {
       "code": "NATGAS",
       "name": "Doğal Gaz / USD",
       "category": "Enerji",
-      "value": 2.91,
-      "changePct": 2.36,
+      "value": 2.88,
+      "changePct": -0.89,
       "spark": [
-        2.924,
         2.858,
         2.911,
         2.86,
@@ -448,17 +447,17 @@
         2.782,
         2.77,
         2.842,
-        2.909
+        2.907,
+        2.881
       ]
     },
     {
       "code": "COPPER",
       "name": "Bakır / USD",
       "category": "Metal",
-      "value": 6.7,
-      "changePct": 1.64,
+      "value": 6.64,
+      "changePct": 0.8,
       "spark": [
-        6.2935,
         6.296,
         6.22,
         6.299,
@@ -489,17 +488,17 @@
         6.599,
         6.7095,
         6.5945,
-        6.7025
+        6.587,
+        6.64
       ]
     },
     {
       "code": "PLATIN",
       "name": "Platin / USD",
       "category": "Metal",
-      "value": 1856.6,
-      "changePct": 1.14,
+      "value": 1833.5,
+      "changePct": -0.64,
       "spark": [
-        1631.5,
         1635.7,
         1605.8,
         1592.2,
@@ -530,17 +529,17 @@
         1880.1,
         1852.6,
         1835.7,
-        1856.6
+        1845.3,
+        1833.5
       ]
     },
     {
       "code": "PALLAD",
       "name": "Paladyum / USD",
       "category": "Metal",
-      "value": 1371.0,
-      "changePct": 3.46,
+      "value": 1446.0,
+      "changePct": 8.1,
       "spark": [
-        1283.2,
         1263.5,
         1244.0,
         1261.0,
@@ -571,17 +570,17 @@
         1361.8,
         1331.9,
         1325.1,
-        1371.0
+        1337.6,
+        1446.0
       ]
     },
     {
       "code": "WHEAT",
       "name": "Buğday / USD",
       "category": "Tarım",
-      "value": 758.5,
-      "changePct": 3.83,
+      "value": 783.5,
+      "changePct": 5.49,
       "spark": [
-        677.5,
         674.75,
         682.75,
         674.0,
@@ -612,17 +611,17 @@
         681.75,
         685.5,
         730.5,
-        758.5
+        742.75,
+        783.5
       ]
     },
     {
       "code": "CORN",
       "name": "Mısır / USD",
       "category": "Tarım",
-      "value": 534.75,
-      "changePct": 4.04,
+      "value": 536.25,
+      "changePct": 5.1,
       "spark": [
-        447.5,
         441.5,
         444.75,
         449.5,
@@ -653,17 +652,17 @@
         491.5,
         500.5,
         514.0,
-        534.75
+        510.25,
+        536.25
       ]
     },
     {
       "code": "BTCUSD",
       "name": "Bitcoin / USD",
       "category": "Kripto",
-      "value": 81163.45,
-      "changePct": 2.7,
+      "value": 77377.66,
+      "changePct": -3.59,
       "spark": [
-        63724.8984,
         63871.3633,
         63908.168,
         64725.3086,
@@ -694,11 +693,12 @@
         78964.4844,
         78564.9766,
         79027.4219,
-        81163.4531
+        80257.5391,
+        77377.6562
       ]
     }
   ],
-  "updatedAt": "2026-08-28 01:32:27",
+  "updatedAt": "2026-08-28 22:01:29",
   "warning": null,
   "fromCache": false
 }
