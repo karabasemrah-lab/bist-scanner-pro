@@ -116,6 +116,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#f97316" data-tab="momshock">⚡ Momentum Shock</button>
   <button class="tab" style="--ac:#8b5cf6" data-tab="quantquality">📊 Quant Quality</button>
   <button class="tab" style="--ac:#facc15" data-tab="consensus">🏆 Master Konsensüs</button>
+  <button class="tab" style="--ac:#22c55e" data-tab="performance">🧪 Performans</button>
 </div>
 
 <section id="fusion" class="tabpage space-y-4">
@@ -861,6 +862,40 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+<section id="performance" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🧪 Tarama Performans Merkezi v1 · İleri Test</h2>
+    <div class="text-sm muted mt-2">Taramaların gerçek sinyallerini tarih ve giriş fiyatıyla kaydeder; sonraki 1 / 3 / 5 / 10 / 20 işlem günü getirilerini yön düzeltilmiş olarak ölçer. Böylece taramalar aynı kuralla karşılaştırılır.</div>
+    <div class="mt-3 rounded-xl p-3 text-xs warn"><b>Önemli:</b> Bu sürüm look-ahead kullanmayan ileri testtir. Önce taramaları çalıştır, sonra “Mevcut Sinyalleri Kaydet” de. Günler geçtikçe “Performansı Güncelle” ile sonuçlar dolar. Bu, geçmişe dönük tam replay backtestinden daha yavaş ama daha dürüst bir doğrulama katmanıdır.</div>
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Minimum tekrar aralığı</label><select id="perfDedupDays" class="input mt-1"><option value="1">Aynı gün 1 kayıt</option><option value="3" selected>3 günde 1 kayıt</option><option value="5">5 günde 1 kayıt</option><option value="10">10 günde 1 kayıt</option></select></div>
+      <div><label class="text-xs muted">Detayda son N kayıt</label><input id="perfDetailN" class="input mt-1" type="number" value="300" min="50" max="5000" step="50"></div>
+      <div class="flex items-end"><label class="chip"><input id="perfOnlyEvaluated" type="checkbox"> Yalnız değerlendirilmiş kayıtlar</label></div>
+      <div class="flex items-end"><span class="chip">Kazanç = yön düzeltilmiş getiri &gt; 0</span></div>
+    </div>
+    <div class="grid grid-cols-4 gap-3 mt-4 grid-settings">
+      <button id="perfCaptureBtn" class="btn" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📌 Mevcut Sinyalleri Kaydet</button>
+      <button id="perfUpdateBtn" class="btn" style="background:linear-gradient(90deg,#0369a1,#38bdf8);color:white">🔄 Performansı Güncelle</button>
+      <button id="perfExcelBtn" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+      <button id="perfClearBtn" class="btn" style="background:#3a1720;color:#ff9aa6">🗑️ Kayıtları Temizle</button>
+    </div>
+    <div id="perfCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="perfProg"></div></div>
+    <div id="perfStatus" class="mt-3 rounded-xl p-3 text-sm warn">Önce taramaları çalıştır, sonra mevcut sinyalleri kaydet.</div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🏁 Tarama Karşılaştırması</h3></div>
+    <div class="overflow-auto max-h-[650px]"><table id="perfSummaryTable"></table></div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🧾 Sinyal Günlüğü · <span id="perfDetailCount">0</span> kayıt</h3></div>
+    <div class="overflow-auto max-h-[650px]"><table id="perfDetailTable"></table></div>
+  </div>
+</section>
+
+
 <section class="card p-4">
   <details>
     <summary class="cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary>
@@ -869,7 +904,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 <footer class="text-xs muted text-center py-5">
-  BIST Scanner HTML v3.1 · 20 Modül + 3 Motor Master Konsensüs · Mevcut 14 modül + Bollinger Confluence + EMA20 Pullback/ADX + Likidite Sweep/MSS/Breaker · Harmonik XABCD görsel önizleme · Tarayıcı içi JavaScript motoru
+  BIST Scanner HTML v3.2 · 20+ Modül + Performans Merkezi + 3 Motor Master Konsensüs · Mevcut 14 modül + Bollinger Confluence + EMA20 Pullback/ADX + Likidite Sweep/MSS/Breaker · Harmonik XABCD görsel önizleme · Tarayıcı içi JavaScript motoru
 </footer>
 </div>
 
@@ -2767,17 +2802,84 @@ async function exportConsensusXLSX(){
   saveAs(new Blob([buffer],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),"bist_master_konsensus.xlsx");
 }
 
+
+
+// ============================================================
+// TARScan Performans Merkezi v1 · ileri test
+// ============================================================
+const PERF_KEY="bist_scanner_perf_v1";
+const PERF_H=[1,3,5,10,20];
+let perfRecords=[];
+function perfLoad(){try{const x=JSON.parse(localStorage.getItem(PERF_KEY)||"[]");perfRecords=Array.isArray(x)?x:[]}catch(e){perfRecords=[]}}
+function perfSave(){localStorage.setItem(PERF_KEY,JSON.stringify(perfRecords))}
+function perfDate(ts=Date.now()){return new Date(ts).toLocaleDateString("sv-SE",{timeZone:"Europe/Istanbul"})}
+function perfNum(x){x=Number(x);return Number.isFinite(x)?x:null}
+function perfDir(x){return x==="SHORT"?"SHORT":"LONG"}
+function perfRet(entry,exit,dir){if(!(entry>0)||!(exit>0))return null;return dir==="SHORT"?100*(entry/exit-1):100*(exit/entry-1)}
+function perfMedian(a){const z=a.filter(Number.isFinite).slice().sort((x,y)=>x-y);if(!z.length)return null;const m=Math.floor(z.length/2);return z.length%2?z[m]:(z[m-1]+z[m])/2}
+function perfSourceRows(){
+  const out=[];
+  const add=(scanner,rows,fn)=>{for(const r of (rows||[])){try{const q=fn(r);if(!q)continue;const price=perfNum(q.price??r.close??r.last_close??r.signal_close);if(!r.symbol||!(price>0))continue;out.push({scanner,symbol:r.symbol,direction:perfDir(q.direction),price,tag:q.tag||"",timeframe:r.timeframe||r.best_timeframe||"",raw_signal:q.signal||r.signal||r.phase||r.stage||r.status||""})}catch(e){}}};
+  add("Fusion",fusionShown,r=>/DAĞITIM/.test(r.phase||"")?null:{direction:"LONG",tag:r.phase});
+  add("Trend Devam",contShown,r=>({direction:"LONG",tag:r.phase}));
+  add("Erken Hacim",earlyShown,r=>({direction:"LONG",tag:r.model+" · "+r.status}));
+  add("Median Robust",medAll,r=>{const z=Number(r.robust_z),v=Number(r.median_volume_ratio),d=Number(r.median_distance),zt=Math.max(.01,val("medZThreshold")||2),mv=Math.max(0,val("medMinVol")||2);return z>=zt&&v>=mv&&d>=0?{direction:"LONG",tag:d<=5?"ÇOK ERKEN":d<=10?"ERKEN":d<=15?"İLERLEMİŞ":"UZAMIŞ"}:null});
+  add("Uyumsuzluk",divShown,r=>r.type==="Pozitif"?{direction:"LONG",tag:"Pozitif"}:r.type==="Negatif"?{direction:"SHORT",tag:"Negatif"}:null);
+  add("Akıllı Fırsat",oppShown,r=>{const d=r.dominant_direction==="SAT"?"SHORT":"LONG";return /UZAK DUR|RİSKLİ/.test(r.decision||"")?null:{direction:d,tag:r.decision}});
+  add("MACD 0 Altı 3.AL",macdShown,r=>({direction:"LONG",tag:`${r.signal_count}. AL`,price:r.last_close||r.signal_close}));
+  add("Market Intelligence",miShown,r=>r.candidate?{direction:r.direction==="SAT"?"SHORT":"LONG",tag:r.stage}:null);
+  add("DÜK",dukShown,r=>({direction:"LONG",tag:r.signals}));
+  add("A/D",adShown,r=>({direction:"LONG",tag:r.condition}));
+  add("Liderlik + Sıkışma",leadShown,r=>({direction:"LONG",tag:r.status}));
+  add("Volatilite / VRP",vrpShown,r=>/VOL SAT/.test(r.signal||"")?{direction:"SHORT",tag:r.signal}:/VOL AL/.test(r.signal||"")?{direction:"LONG",tag:r.signal}:null);
+  add("Harmonik",harmShown,r=>({direction:r.direction==="BEARISH"?"SHORT":"LONG",tag:r.pattern+" · "+r.status}));
+  add("XU100 Kompozit",compShown,r=>/GÜÇ KAYBI/.test(r.signal||"")?{direction:"SHORT",tag:r.signal}:/NÖTR/.test(r.signal||"")?null:{direction:"LONG",tag:r.signal});
+  add("RSI Breakout",rsiBreakShown,r=>/NÖTR|İZLE/.test(r.signal||"")?null:{direction:"LONG",tag:r.signal});
+  add("Bollinger Confluence",bbShown,r=>({direction:r.direction==="SHORT"?"SHORT":"LONG",tag:r.signal}));
+  add("EMA20 Pullback",epShown,r=>/AL|TETİK/.test(r.stage||"")?{direction:"LONG",tag:r.stage}:null);
+  add("Likidite / MSS",lqShown,r=>/RETEST|LONG/.test(r.stage||"")?{direction:"LONG",tag:r.stage}:null);
+  add("MFI Para Akışı",mfiShown,r=>/NÖTR|İZLE/.test(r.signal||"")?null:{direction:"LONG",tag:r.signal});
+  add("Momentum Shock",msShown,r=>/NÖTR/.test(r.signal||"")?null:{direction:"LONG",tag:r.signal});
+  add("Quant Quality",qqShown,r=>/LİDER/.test(r.signal||"")?{direction:"LONG",tag:r.signal}:/ENDİKSTEN ZAYIF/.test(r.signal||"")?{direction:"SHORT",tag:r.signal}:null);
+  add("Master Konsensüs",consensusShown,r=>({direction:"LONG",tag:r.grade||r.decision||"Konsensüs",price:r.close||r.price}));
+  return out;
+}
+function perfCapture(){
+  perfLoad();const rows=perfSourceRows();if(!rows.length){alert("Kaydedilecek aktif sinyal yok. Önce taramaları çalıştır.");return}
+  const now=Date.now(),day=perfDate(now),gap=Math.max(1,Number($("perfDedupDays").value||3));let added=0,skip=0;
+  for(const r of rows){const dup=perfRecords.some(x=>x.scanner===r.scanner&&x.symbol===r.symbol&&x.direction===r.direction&&Math.abs(now-x.captured_at)<gap*86400000);if(dup){skip++;continue}perfRecords.push({id:`${now}_${added}_${r.scanner}_${r.symbol}`,captured_at:now,captured_date:day,scanner:r.scanner,symbol:r.symbol,direction:r.direction,entry_price:r.price,timeframe:r.timeframe,tag:r.tag,signal:r.raw_signal,returns:{}});added++}
+  perfSave();renderPerformance();setStatus("perfStatus",`Kaydedildi · ${added} yeni sinyal · ${skip} tekrar atlandı` ,"good");
+}
+async function perfUpdate(){
+  perfLoad();if(!perfRecords.length){alert("Henüz kayıt yok.");return}const b=$("perfUpdateBtn");b.disabled=true;$("perfProg").style.width="0";setStatus("perfStatus","Günlük fiyatlar hazırlanıyor…","warn");
+  try{const syms=[...new Set(perfRecords.map(x=>x.symbol))],cache=new Map();let next=0,done=0;async function run(){while(1){const i=next++;if(i>=syms.length)return;const s=syms[i];try{cache.set(s,await yahoo(s+".IS","2y","1d"))}catch(e){cache.set(s,null)}done++;$("perfProg").style.width=(100*done/syms.length)+"%";setStatus("perfStatus",`${s} · ${done}/${syms.length}` ,"warn");if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,syms.length||1)},run));
+    let filled=0;for(const r of perfRecords){const df=cache.get(r.symbol);if(!df||!df.t?.length)continue;let base=-1;const target=r.captured_date;for(let i=0;i<df.t.length;i++){const d=perfDate(df.t[i]*1000);if(d>=target){base=i;break}}if(base<0)continue;for(const h of PERF_H){if(r.returns[h]!=null)continue;const j=base+h;if(j<df.c.length){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null){r.returns[h]=+v.toFixed(3);filled++}}}if(r.returns[20]!=null){const path=[];for(let j=base+1;j<=Math.min(base+20,df.c.length-1);j++){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null)path.push(v)}if(path.length){r.mfe20=+Math.max(...path).toFixed(3);r.mae20=+Math.min(...path).toFixed(3)}}}
+    perfSave();renderPerformance();setStatus("perfStatus",`Güncelleme tamamlandı · ${filled} yeni getiri hücresi dolduruldu` ,"good");
+  }catch(e){setStatus("perfStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false;$("perfProg").style.width="100%"}
+}
+function perfStats(rows,h){const a=rows.map(r=>Number(r.returns?.[h])).filter(Number.isFinite);if(!a.length)return{n:0,win:null,avg:null,med:null};return{n:a.length,win:100*a.filter(x=>x>0).length/a.length,avg:a.reduce((s,x)=>s+x,0)/a.length,med:perfMedian(a)}}
+function renderPerformance(){
+  perfLoad();const groups=new Map();for(const r of perfRecords){if(!groups.has(r.scanner))groups.set(r.scanner,[]);groups.get(r.scanner).push(r)}const rows=[];for(const [scanner,g] of groups){const s={scanner,total:g.length};for(const h of PERF_H)s[h]=perfStats(g,h);const e=g.map(x=>x.mae20).filter(Number.isFinite),f=g.map(x=>x.mfe20).filter(Number.isFinite);s.mae=e.length?e.reduce((a,b)=>a+b,0)/e.length:null;s.mfe=f.length?f.reduce((a,b)=>a+b,0)/f.length:null;rows.push(s)}rows.sort((a,b)=>(b[5].avg??-999)-(a[5].avg??-999)||(b[5].win??-1)-(a[5].win??-1));
+  const heads=["Tarama","Kayıt",...PERF_H.flatMap(h=>[`${h}G N`,`${h}G Kazan %`,`${h}G Ort %`,`${h}G Medyan %`]),"20G Ort. MFE %","20G Ort. MAE %"];
+  $("perfSummaryTable").innerHTML=`<thead><tr>${heads.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+rows.map(r=>`<tr><td><b>${r.scanner}</b></td><td>${r.total}</td>${PERF_H.map(h=>`<td>${r[h].n}</td><td>${r[h].win==null?"—":fmt(r[h].win,1)}</td><td>${r[h].avg==null?"—":fmt(r[h].avg,2)}</td><td>${r[h].med==null?"—":fmt(r[h].med,2)}</td>`).join("")}<td>${r.mfe==null?"—":fmt(r.mfe,2)}</td><td>${r.mae==null?"—":fmt(r.mae,2)}</td></tr>`).join("")+"</tbody>";
+  let detail=perfRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);if($("perfOnlyEvaluated")?.checked)detail=detail.filter(r=>PERF_H.some(h=>Number.isFinite(Number(r.returns?.[h]))));detail=detail.slice(0,Math.max(50,Number($("perfDetailN")?.value||300)));$("perfDetailCount").textContent=detail.length;
+  $("perfDetailTable").innerHTML=`<thead><tr>${["Tarih","Tarama","Hisse","Yön","TF","Etiket","Giriş",...PERF_H.map(h=>`${h}G %`),"MFE20","MAE20"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${r.scanner}</td><td>${link(r.symbol)}</td><td>${r.direction}</td><td>${r.timeframe||"—"}</td><td>${r.tag||"—"}</td><td>${fmt(r.entry_price)}</td>${PERF_H.map(h=>`<td>${Number.isFinite(Number(r.returns?.[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
+  const eval20=perfRecords.filter(r=>Number.isFinite(Number(r.returns?.[20]))).length;$("perfCounts").textContent=`Toplam ${perfRecords.length} sinyal · ${groups.size} tarama · 20G tamamlanan ${eval20}`;
+}
+function perfClear(){if(!confirm("Tüm performans kayıtları silinsin mi?"))return;perfRecords=[];perfSave();renderPerformance();setStatus("perfStatus","Performans kayıtları temizlendi.","warn")}
+function perfExport(){perfLoad();if(!perfRecords.length){alert("Dışa aktarılacak performans kaydı yok.");return}const rows=perfRecords.map(r=>({Tarih:r.captured_date,Tarama:r.scanner,Hisse:r.symbol,Yon:r.direction,Periyot:r.timeframe,Etiket:r.tag,Giris:r.entry_price,...Object.fromEntries(PERF_H.map(h=>[`${h}G_Getiri_%`,r.returns?.[h]??null])),MFE20:r.mfe20??null,MAE20:r.mae20??null}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Performans");XLSX.writeFile(wb,`BIST_Tarama_Performans_${new Date().toISOString().slice(0,10)}.xlsx`)}
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");
   document.querySelectorAll(".tabpage").forEach(x=>x.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");
 });
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
+$("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$("perfExcelBtn").onclick=perfExport;$("perfClearBtn").onclick=perfClear;$("perfOnlyEvaluated").onchange=renderPerformance;$("perfDetailN").onchange=renderPerformance;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
 $("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
-renderFusion();renderCont();renderEarly();renderMedianCompare();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
+renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
 
 <style>
