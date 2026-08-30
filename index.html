@@ -3295,6 +3295,30 @@ function uvPriceSvg(df,overlays=[]){const n=df?.c?.length||0;if(!n)return'<div c
  for(let k=0;k<=4;k++){let p=lo+(hi-lo)*k/4,yy=y(p);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#263244" opacity=".65"/><text x="${W-PR+8}" y="${yy+4}" fill="#94a3b8" font-size="11">${uvFmt(p)}</text>`}
  for(let i=start;i<=end;i++){let xx=x(i),up=df.c[i]>=df.o[i],col=up?'#34d399':'#fb7185',yo=y(df.o[i]),yc=y(df.c[i]);s+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}"/><rect x="${xx-cw/2}" y="${Math.min(yo,yc)}" width="${cw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${col}" opacity=".9"/>`}
  for(const o of overlays){let yy=y(o.v);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="${o.color||'#38bdf8'}" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-PR-4}" y="${yy-6}" text-anchor="end" fill="${o.color||'#38bdf8'}" font-size="11" font-weight="700">${uvEsc(o.label)} ${uvFmt(o.v)}</text>`}
+
+ // Standalone W4→W5: T1/T2 etiketlerini her zaman görünür tut.
+ if(String(r.setup||'').includes('W4')&&String(r.setup||'').includes('W5')){
+   const t1=r.w5_target1??r.target1??r.target;
+   const t2=r.w5_target2??r.target2;
+   const labelX=W-PR-8;
+   if(uvFinite(t1)){
+     const yy1=y(Number(t1));
+     let ly1=Math.max(PT+24,Math.min(H-PB-34,yy1-10));
+     s+=`<rect x="${W-PR-(mobile?190:160)}" y="${ly1-(mobile?17:15)}" width="${mobile?186:156}" height="${mobile?22:20}" rx="6" fill="#0b111b" opacity=".9"/>`;
+     s+=`<text x="${labelX}" y="${ly1}" text-anchor="end" fill="#d8b4fe" font-size="${mobile?13:11}" font-weight="800">W5 Hedef-1 ${uvFmt(t1)}</text>`;
+   }
+   if(uvFinite(t2)){
+     const yy2=y(Number(t2));
+     let ly2=Math.max(PT+18,Math.min(H-PB-56,yy2-10));
+     if(uvFinite(t1)){
+       const yy1=y(Number(t1));
+       if(Math.abs(ly2-(yy1-10))<(mobile?26:22)) ly2-=mobile?28:24;
+     }
+     s+=`<rect x="${W-PR-(mobile?190:160)}" y="${ly2-(mobile?17:15)}" width="${mobile?186:156}" height="${mobile?22:20}" rx="6" fill="#0b111b" opacity=".9"/>`;
+     s+=`<text x="${labelX}" y="${ly2}" text-anchor="end" fill="#e9d5ff" font-size="${mobile?13:11}" font-weight="800">W5 Hedef-2 ${uvFmt(t2)}</text>`;
+   }
+ }
+
  const date=t=>{try{return new Date(t*1000).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'2-digit'})}catch{return''}};for(let k=0;k<5;k++){let ii=Math.round(start+(end-start)*k/4);s+=`<text x="${x(ii)}" y="${H-18}" text-anchor="middle" fill="#64748b" font-size="10">${date(df.t[ii])}</text>`}return s+'</svg>'}
 
 function uvNearestTimeIndex(df,t){if(!uvFinite(t)||!df?.t?.length)return-1;let best=0,bd=Infinity;for(let i=0;i<df.t.length;i++){const d=Math.abs(Number(df.t[i])-Number(t));if(d<bd){bd=d;best=i}}return best}
