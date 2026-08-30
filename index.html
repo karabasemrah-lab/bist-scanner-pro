@@ -2794,28 +2794,64 @@ function renderElliott(){
   else if(q==="w5t2")rows=rows.filter(r=>r.lifecycle==="W5_T2_DONE");
   else if(q==="w5t3")rows=rows.filter(r=>r.lifecycle==="W5_T3_DONE");
   else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID","W4INVALID","W5_STOP"].includes(r.lifecycle));
-  // Elliott fırsat sıralaması v19: önce işlem/fırsat aşaması, sonra skor, sonra tazelik.
-  // Hesap/pivot/hedef motoruna dokunmaz; yalnız sonuç tablosunun önceliğini değiştirir.
+  // Elliott fırsat sıralaması v20:
+  // 1) AŞAMA kesin öncelik taşır.
+  // 2) Aynı aşamada LONG önce, SHORT sonra gruplanır.
+  // 3) Aynı aşama/yönde Opportunity Score yüksek olan öne çıkar.
+  // 4) Eşitlikte daha taze setup öne çıkar.
+  // Pivot/Fibonacci/hedef/stop hesaplarına dokunmaz.
   const elOpportunityRank=r=>{
     const lc=String(r.lifecycle||"").toUpperCase();
-    // 1) Tetiğe yakın / yeni fırsatlar
-    if(["W5READY","W5_READY","PREP","NEAR","W5PREP"].includes(lc)) return 10;
-    // 2) Yeni tetiklenenler
-    if(lc==="TRIGGERED") return 20;
-    // 3) Aktif biçimde hedefe ilerleyenler
-    if(["PROGRESS","W5_ACTIVE"].includes(lc)) return 30;
-    // 4) W3 tamamlandı, W4/W5 takip aşaması
-    if(lc==="W4WATCH") return 40;
-    // 5) Kısmi W5 hedefleri görülmüş; fırsatın önemli bölümü gerçekleşmiş
-    if(lc==="W5_T1_DONE") return 50;
-    if(lc==="W5_T2_DONE") return 60;
-    // 6) Ana/nihai hedef gerçekleşmiş
-    if(["TARGET","W5_T3_DONE"].includes(lc)||r.target_hit) return 70;
-    // 7) Stop/geçersiz yapılar en alta
-    if(["STOP","INVALID","W4INVALID","W5_STOP"].includes(lc)) return 90;
-    return 80;
+    const st=String(r.status||"").toUpperCase();
+
+    // 1 — En yakın işlem fırsatı
+    if(lc==="NEAR" || st.includes("TETİĞE YAKIN")) return 10;
+
+    // 2 — Yeni tetiklenen
+    if(lc==="TRIGGERED" || st.includes("TETİKLENDİ")) return 20;
+
+    // 3 — Aktif hareket / hedefe ilerliyor
+    if(lc==="PROGRESS" || st.includes("HEDEFE İLERLİYOR")) return 30;
+
+    // 4 — W3 tamamlandı; artık yeni W3 girişi değil
+    if(lc==="W4WATCH" || st.includes("W3 TAMAMLANDI")) return 40;
+
+    // 5 — W5 fırsatı aktif/hazır
+    if(["W5READY","W5_READY","W5_ACTIVE"].includes(lc) ||
+       st.includes("W5 FIRSATI HAZIR") ||
+       st.includes("W5 HEDEF-1'E İLERLİYOR")) return 50;
+
+    // 6 — Henüz tetik oluşmamış hazırlık
+    if(lc==="PREP" || lc==="W5PREP" || st.includes("HAZIRLIK")) return 60;
+
+    // 7 — W5 kısmi hedefleri gerçekleşmiş
+    if(lc==="W5_T1_DONE" || st.includes("HEDEF-1 GERÇEKLEŞTİ")) return 70;
+    if(lc==="W5_T2_DONE" || st.includes("HEDEF-2 GERÇEKLEŞTİ")) return 75;
+
+    // 8 — Ana / nihai hedef gerçekleşmiş
+    if(["TARGET","W5_T3_DONE"].includes(lc) || r.target_hit || st.includes("HEDEF GERÇEKLEŞTİ")) return 80;
+
+    // 9 — Stop / geçersiz
+    if(["STOP","INVALID","W4INVALID","W5_STOP"].includes(lc) ||
+       st.includes("STOP") || st.includes("GEÇERSİZ")) return 90;
+
+    return 85;
   };
-  rows.sort((a,b)=>elOpportunityRank(a)-elOpportunityRank(b)||b.score-a.score||a.anchor_age-b.anchor_age);
+
+  const elDirectionRank=r=>{
+    const d=String(r.direction||"").toUpperCase();
+    if(d==="LONG") return 0;
+    if(d==="SHORT") return 1;
+    return 2;
+  };
+
+  rows.sort((a,b)=>
+    elOpportunityRank(a)-elOpportunityRank(b) ||
+    elDirectionRank(a)-elDirectionRank(b) ||
+    (Number(b.score)||0)-(Number(a.score)||0) ||
+    (Number(a.anchor_age)||9999)-(Number(b.anchor_age)||9999) ||
+    String(a.symbol||"").localeCompare(String(b.symbol||""))
+  );
   elliottShown=rows;$("elCount").textContent=rows.length;
   $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","W4 Retrace","W5 Tetik","W5 Hedef-1","W5 Hedef-2","W5 Uzatılmış","W5 R/R","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
   rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${finite(r.w4_retrace)?fmt(r.w4_retrace*100,1)+"%":"—"}</td><td>${finite(r.w5_trigger)?fmt(r.w5_trigger):"—"}</td><td>${finite(r.w5_target1)?fmt(r.w5_target1):"—"}</td><td>${finite(r.w5_target2)?fmt(r.w5_target2):"—"}</td><td>${finite(r.w5_target3)?fmt(r.w5_target3):"—"}</td><td>${finite(r.w5_rr1)?fmt(r.w5_rr1,2):"—"}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
