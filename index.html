@@ -2612,8 +2612,22 @@ function analyzeElliott(symbol,tf,df){
       const fib=(p3.p-p4.p)/w3;if(fib<.18||fib>.65)continue;
       const geom=35*(.65*elFibScore(fib,.382,.236,.50)+.35*elClamp(w3/w1/1.2,0,1)),cm=elCommon(df,p3.p,"LONG",n-1-p4.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      const target=p4.p+w1,life=elLifecycle(df,p4.i,p3.p,target,p4.p,p4.p,"LONG","W4"),status=life.status;
-      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target,invalidation:p4.p,setup_stop:p4.p,rr:(df.c.at(-1)>p4.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-p4.p):null),anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
+      // W4→W5 hedef motoru v2:
+      // LONG setup'ta hedef MUTLAKA W3 tepesinin/tetiğin üzerinde olmalı.
+      const risk45=Math.max(.000001,p3.p-p4.p);
+      const eqW1=p4.p+w1;                 // W5 = W1
+      const fibW3=p4.p+.618*w3;           // W3'ün %61.8'i
+      const minBreakTarget=p3.p+.618*risk45; // tetik üstünde minimum anlamlı uzatma
+      const target1=Math.max(eqW1,fibW3,minBreakTarget);
+      const target2=Math.max(p4.p+1.618*w1,p4.p+w3,target1+.618*risk45);
+      const target=target1;
+
+      // Güvenlik: herhangi bir nedenle hedef tetik altındaysa setup geçerli sayılmaz.
+      if(!(target>p3.p)) continue;
+
+      const life=elLifecycle(df,p4.i,p3.p,target,p4.p,p4.p,"LONG","W4"),status=life.status;
+      const rr45=(df.c.at(-1)>p4.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-p4.p):null);
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target,target1,target2,w5_target1:target1,w5_target2:target2,w5_rr1:rr45,invalidation:p4.p,setup_stop:p4.p,rr:rr45,anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
       break;
     }
   }
@@ -3264,12 +3278,15 @@ function uvOverlay(kind,r){const a=[];const add=(v,label,color)=>{if(uvFinite(v)
  if(kind==='ad'){add(r.ma,'Ortalama','#38bdf8')}
  if(kind==='elliott'){
    const w5phase=['W5PREP','W5READY'].includes(r.lifecycle);
+   const standaloneW45=String(r.setup||'').includes('W4')&&String(r.setup||'').includes('W5');
    add(r.trigger,w5phase?'W3 Eski Tetik':'Tetik','#facc15');
-   add(r.target,w5phase?'W3 Tamamlanan Hedef':'Hedef','#34d399');
+   add(r.target,w5phase?'W3 Tamamlanan Hedef':standaloneW45?'W5 Hedef-1':'Hedef','#34d399');
    if(w5phase){
      add(r.w5_trigger,'W5 Tetik','#60a5fa');
      add(r.w5_target1??r.w5_target,'W5 Hedef-1','#a78bfa');
      add(r.w5_target2,'W5 Hedef-2','#c084fc')
+   }else if(standaloneW45){
+     add(r.w5_target2??r.target2,'W5 Hedef-2','#c084fc')
    }
    add(r.setup_stop,'Setup Stop','#fb7185');add(r.invalidation,'Dalga Geçersiz','#ef4444')
  }
