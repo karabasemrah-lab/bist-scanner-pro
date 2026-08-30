@@ -893,7 +893,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <label class="chip"><input id="elOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
     </div>
     <div class="grid grid-cols-3 gap-4 mt-4 grid-settings">
-      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="fresh">🟡 Yeni fırsatlar · Hazırlık/Tetiğe yakın</option><option value="active">🚀 Aktif · Tetiklendi/Hedefe ilerliyor</option><option value="target">🎯 Hedef gerçekleşti</option><option value="w4watch">🌊 W3 tamamlandı · W4 takip</option><option value="w5prep">🔥 W5 fırsatı hazırlanıyor</option><option value="w5ready">🚀 W5 fırsatı hazır</option><option value="invalid">🔴 Stop/Geçersiz</option></select></div>
+      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="fresh">🟡 Yeni fırsatlar · Hazırlık/Tetiğe yakın</option><option value="active">🚀 Aktif · Tetiklendi/Hedefe ilerliyor</option><option value="target">🎯 Hedef gerçekleşti</option><option value="w4watch">🌊 W3 tamamlandı · W4 takip</option><option value="w5prep">🔥 W5 fırsatı hazırlanıyor</option><option value="w5ready">🚀 W5 fırsatı hazır</option><option value="w5t1">✅ W5 Hedef-1 gerçekleşti</option><option value="w5t2">🎯 W5 Hedef-2 gerçekleşti</option><option value="w5t3">🏁 W5 Uzatılmış gerçekleşti</option><option value="invalid">🔴 Stop/Geçersiz</option></select></div>
       <div class="flex items-end"><span class="chip">📊 Görsel düğmesi = gerçek mum grafiği + dalga çizimi</span></div>
       <div class="flex items-end"><span class="chip">🎯 Hedef / tetik / geçersiz seviyesi gösterilir</span></div>
     </div>
@@ -2495,6 +2495,42 @@ function elCommon(df,triggerLevel,direction,anchorAge){
 
 
 
+
+function elW5TargetLifecycle(df,row){
+  const n=df?.c?.length||0;
+  if(!n) return null;
+  const long=(row.direction||"LONG")==="LONG";
+  const trig=Number(row.w5_trigger??row.trigger);
+  const t1=Number(row.w5_target1??row.target1??row.target);
+  const t2=Number(row.w5_target2??row.target2);
+  const t3=Number(row.w5_target3??row.target3);
+  const stop=Number(row.setup_stop??row.invalidation);
+  const start=Math.max(0,Number(row.target_index??row.trigger_index??0));
+
+  let trigI=-1,t1I=-1,t2I=-1,t3I=-1,stopI=-1;
+  for(let i=start;i<n;i++){
+    const hi=Number(df.h[i]),lo=Number(df.l[i]);
+    if(trigI<0 && Number.isFinite(trig) && (long?hi>=trig:lo<=trig)) trigI=i;
+    if(trigI>=0 && t1I<0 && Number.isFinite(t1) && (long?hi>=t1:lo<=t1)) t1I=i;
+    if(trigI>=0 && t2I<0 && Number.isFinite(t2) && (long?hi>=t2:lo<=t2)) t2I=i;
+    if(trigI>=0 && t3I<0 && Number.isFinite(t3) && (long?hi>=t3:lo<=t3)) t3I=i;
+    if(trigI>=0 && stopI<0 && Number.isFinite(stop) && (long?lo<=stop:hi>=stop)) stopI=i;
+  }
+
+  let code="W5_READY",status="🟢 W5 TETİK BEKLENİYOR";
+  if(stopI>=0 && (t1I<0 || stopI<t1I)){code="W5_STOP";status="🔴 W5 STOP";}
+  else if(t3I>=0){code="W5_T3_DONE";status="🏁 W5 UZATILMIŞ HEDEF GERÇEKLEŞTİ";}
+  else if(t2I>=0){code="W5_T2_DONE";status="🎯 W5 HEDEF-2 GERÇEKLEŞTİ · UZATILMIŞ TAKİP";}
+  else if(t1I>=0){code="W5_T1_DONE";status="✅ W5 HEDEF-1 GERÇEKLEŞTİ · HEDEF-2 TAKİP";}
+  else if(trigI>=0){code="W5_ACTIVE";status="🚀 W5 HEDEF-1'E İLERLİYOR";}
+
+  return {
+    w5_lifecycle:code,w5_status:status,
+    w5_trigger_index:trigI,w5_t1_index:t1I,w5_t2_index:t2I,w5_t3_index:t3I,w5_stop_index:stopI,
+    w5_t1_hit:t1I>=0,w5_t2_hit:t2I>=0,w5_t3_hit:t3I>=0
+  };
+}
+
 function elUnifiedW5Targets({p0,p1,p2,p3,p4}){
   const w1=Math.max(.000001,p1-p0);
   const w3=Math.max(.000001,p3-p2);
@@ -2633,7 +2669,14 @@ function analyzeElliott(symbol,tf,df){
 
       const life=elLifecycle(df,p4.i,p3.p,target1,p4.p,p4.p,"LONG","W4"),status=life.status;
       const rr45=U.rr1;
-      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target:target1,target1,target2,target3,w5_target1:target1,w5_target2:target2,w5_target3:target3,w5_rr1:U.rr1,w5_rr2:U.rr2,w5_rr3:U.rr3,invalidation:p4.p,setup_stop:p4.p,rr:rr45,anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
+      const row45={symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,w5_trigger:p3.p,target:target1,target1,target2,target3,w5_target1:target1,w5_target2:target2,w5_target3:target3,w5_rr1:U.rr1,w5_rr2:U.rr2,w5_rr3:U.rr3,invalidation:p4.p,setup_stop:p4.p,rr:rr45,anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]};
+      const w5life45=elW5TargetLifecycle(df,row45);
+      if(w5life45){
+        Object.assign(row45,w5life45);
+        row45.lifecycle=w5life45.w5_lifecycle;
+        row45.status=w5life45.w5_status;
+      }
+      out.push(row45);
       break;
     }
   }
@@ -2670,6 +2713,14 @@ function analyzeElliott(symbol,tf,df){
           r.lifecycle=f.code;
           r.status=f.status;
         }
+        if(["W5PREP","W5READY"].includes(r.lifecycle)){
+          const w5life=elW5TargetLifecycle(df,r);
+          if(w5life && w5life.w5_trigger_index>=0){
+            Object.assign(r,w5life);
+            r.lifecycle=w5life.w5_lifecycle;
+            r.status=w5life.w5_status;
+          }
+        }
       }
     }
   }
@@ -2686,8 +2737,11 @@ function renderElliott(){
   else if(q==="target")rows=rows.filter(r=>r.lifecycle==="TARGET"||r.target_hit);
   else if(q==="w4watch")rows=rows.filter(r=>r.lifecycle==="W4WATCH");
   else if(q==="w5prep")rows=rows.filter(r=>r.lifecycle==="W5PREP");
-  else if(q==="w5ready")rows=rows.filter(r=>r.lifecycle==="W5READY");
-  else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID","W4INVALID"].includes(r.lifecycle));
+  else if(q==="w5ready")rows=rows.filter(r=>["W5READY","W5_READY","W5_ACTIVE"].includes(r.lifecycle));
+  else if(q==="w5t1")rows=rows.filter(r=>r.lifecycle==="W5_T1_DONE");
+  else if(q==="w5t2")rows=rows.filter(r=>r.lifecycle==="W5_T2_DONE");
+  else if(q==="w5t3")rows=rows.filter(r=>r.lifecycle==="W5_T3_DONE");
+  else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID","W4INVALID","W5_STOP"].includes(r.lifecycle));
   rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
   elliottShown=rows;$("elCount").textContent=rows.length;
   $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","W4 Retrace","W5 Tetik","W5 Hedef-1","W5 Hedef-2","W5 Uzatılmış","W5 R/R","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
@@ -3285,7 +3339,7 @@ function uvOverlay(kind,r){const a=[];const add=(v,label,color)=>{if(uvFinite(v)
  if(kind==='momshock')add(r.pullback_level,'Pullback','#f59e0b');
  if(kind==='ad'){add(r.ma,'Ortalama','#38bdf8')}
  if(kind==='elliott'){
-   const w5phase=['W5PREP','W5READY'].includes(r.lifecycle);
+   const w5phase=['W5PREP','W5READY','W5_READY','W5_ACTIVE','W5_T1_DONE','W5_T2_DONE','W5_T3_DONE'].includes(r.lifecycle);
    const standaloneW45=String(r.setup||'').includes('W4')&&String(r.setup||'').includes('W5');
    add(r.trigger,w5phase?'W3 Eski Tetik':'Tetik','#facc15');
    add(r.target,w5phase?'W3 Tamamlanan Hedef':standaloneW45?'W5 Hedef-1':'Hedef','#34d399');
@@ -3314,7 +3368,7 @@ function uvElliottPoints(r){
 }
 function uvElliottSvg(df,r,overlays=[]){
  const n=df?.c?.length||0;if(!n)return'<div class="uv-card">Grafik verisi bulunamadı.</div>';
- const w5phase=['W5PREP','W5READY'].includes(r.lifecycle)&&r.w4_follow;
+ const w5phase=['W5PREP','W5READY','W5_READY','W5_ACTIVE','W5_T1_DONE','W5_T2_DONE','W5_T3_DONE'].includes(r.lifecycle)&&r.w4_follow;
  const w4watch=r.lifecycle==='W4WATCH'&&r.w4_follow;
  const standaloneW45=String(r.setup||'').includes('W4')&&String(r.setup||'').includes('W5');
  let pts=uvElliottPoints(r).filter(q=>uvFinite(q.p)&&uvFinite(q.t));
@@ -3390,7 +3444,13 @@ function uvElliottSvg(df,r,overlays=[]){
      }
    }
    const rr=uvFinite(r.w4_retrace)?(Number(r.w4_retrace)*100).toFixed(1)+'%':'—';
-   s+=`<rect x="${PL+8}" y="${PT+8}" width="255" height="43" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+26}" fill="${r.lifecycle==='W5READY'?'#34d399':'#fb923c'}" font-size="13" font-weight="900">${r.lifecycle==='W5READY'?'🚀 W5 FIRSATI HAZIR':'🔥 W5 FIRSATI HAZIRLANIYOR'}</text><text x="${PL+18}" y="${PT+43}" fill="#cbd5e1" font-size="11">W4 geri çekilme: ${rr}</text>`;
+   const stageText=r.status||"🔥 W5 FIRSATI HAZIRLANIYOR";
+   const stageColor=
+     r.lifecycle==="W5_T3_DONE"?"#e879f9":
+     r.lifecycle==="W5_T2_DONE"?"#c084fc":
+     r.lifecycle==="W5_T1_DONE"?"#a78bfa":
+     ["W5READY","W5_READY","W5_ACTIVE"].includes(r.lifecycle)?"#34d399":"#fb923c";
+   s+=`<rect x="${PL+8}" y="${PT+8}" width="${mobile?370:310}" height="${mobile?52:43}" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+(mobile?29:26)}" fill="${stageColor}" font-size="${mobile?13:12}" font-weight="900">${uvEsc(stageText)}</text><text x="${PL+18}" y="${PT+(mobile?48:43)}" fill="#cbd5e1" font-size="${mobile?13:11}">W4 geri çekilme: ${rr}</text>`;
  }else if(standaloneW45 && mapped.length){
    // Doğrudan W4→W5 setup'ı: hedefleri kendi çizim bloğunda göster.
    const p4=mapped.find(q=>q.l==='4')||mapped.at(-1);
