@@ -893,7 +893,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <label class="chip"><input id="elOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
     </div>
     <div class="grid grid-cols-3 gap-4 mt-4 grid-settings">
-      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="fresh">🟡 Yeni fırsatlar · Hazırlık/Tetiğe yakın</option><option value="active">🚀 Aktif · Tetiklendi/Hedefe ilerliyor</option><option value="target">🎯 Hedef gerçekleşti</option><option value="w4watch">🌊 W3 tamamlandı · W4 takip</option><option value="invalid">🔴 Stop/Geçersiz</option></select></div>
+      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="fresh">🟡 Yeni fırsatlar · Hazırlık/Tetiğe yakın</option><option value="active">🚀 Aktif · Tetiklendi/Hedefe ilerliyor</option><option value="target">🎯 Hedef gerçekleşti</option><option value="w4watch">🌊 W3 tamamlandı · W4 takip</option><option value="w5prep">🔥 W5 fırsatı hazırlanıyor</option><option value="w5ready">🚀 W5 fırsatı hazır</option><option value="invalid">🔴 Stop/Geçersiz</option></select></div>
       <div class="flex items-end"><span class="chip">📊 Görsel düğmesi = gerçek mum grafiği + dalga çizimi</span></div>
       <div class="flex items-end"><span class="chip">🎯 Hedef / tetik / geçersiz seviyesi gösterilir</span></div>
     </div>
@@ -2493,6 +2493,39 @@ function elCommon(df,triggerLevel,direction,anchorAge){
   return {breakout,near,mom,trend,vol,rsi:rsi[i],adx:adx[i],hist:mac.hist[i],breakoutPts,momentumPts,volumePts,trendPts,freshPts};
 }
 
+
+function elW4W5Follow(df,row){
+  if(!row || row.direction!=="LONG" || !String(row.setup||"").includes("W2") || !row.target_hit) return null;
+  const n=df.c.length, t0=Math.max(0,Number(row.target_index)||0);
+  if(t0>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP"};
+  let peakI=t0, peak=df.h[t0];
+  for(let i=t0;i<n;i++){ if(df.h[i]>peak){peak=df.h[i];peakI=i;} }
+  if(peakI>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI};
+
+  let lowI=peakI, low=df.l[peakI];
+  for(let i=peakI;i<n;i++){ if(df.l[i]<low){low=df.l[i];lowI=i;} }
+
+  const w3len=Math.max(.000001, peak-(row.p2??row.setupStop??row.trigger));
+  const retr=(peak-low)/w3len;
+  const fib236=peak-.236*w3len, fib382=peak-.382*w3len, fib50=peak-.50*w3len, fib618=peak-.618*w3len;
+  const latest=df.c[n-1];
+  const rsi=rsiSeries(df.c,14), mac=macdSeries(df.c), e20=ema(df.c,20);
+  const turn=latest>df.c[Math.max(0,n-2)] && latest>e20[n-1] && rsi[n-1]>=48 && mac.hist[n-1]>=mac.hist[Math.max(0,n-2)];
+  const valid=low>(row.p1??row.trigger)*.985;
+  let code="W4WAIT",status="🌊 W3 TAMAMLANDI · W4 TAKİP";
+  if(!valid){code="W4INVALID";status="🔴 W4 YAPISI GEÇERSİZ";}
+  else if(retr>=.236 && retr<=.55){
+    code=turn?"W5READY":"W5PREP";
+    status=turn?"🚀 W5 FIRSATI HAZIR":"🔥 W5 FIRSATI HAZIRLANIYOR";
+  }else if(retr>.55 && retr<=.68){
+    code=turn?"W5READY":"W5PREP";
+    status=turn?"🚀 W5 FIRSATI HAZIR":"⚠️ DERİN W4 · W5 TAKİP";
+  }
+  const w5Trigger=peak;
+  const w5Target=low + Math.max((row.p1??row.trigger)-(row.p0??row.invalidation), .618*w3len);
+  return {code,status,peak,peakI,low,lowI,retr,fib236,fib382,fib50,fib618,w5Trigger,w5Target,turn,valid};
+}
+
 function elLifecycle(df,anchorIndex,trigger,target,setupStop,invalidation,direction,setup){
   const long=direction==="LONG", start=Math.max(0,Number(anchorIndex)||0), end=df.c.length-1;
   let trigI=-1,targetI=-1,stopI=-1,invalidI=-1;
@@ -2568,6 +2601,21 @@ function analyzeElliott(symbol,tf,df){
       break;
     }
   }
+  for(const r of out){
+    if(r.lifecycle==="W4WATCH" && r.direction==="LONG" && String(r.setup||"").includes("W2")){
+      const f=elW4W5Follow(df,r);
+      if(f){
+        r.w4_follow=f;
+        r.w4_retrace=finite(f.retr)?f.retr:null;
+        r.w5_trigger=f.w5Trigger;
+        r.w5_target=f.w5Target;
+        if(["W5PREP","W5READY","W4INVALID"].includes(f.code)){
+          r.lifecycle=f.code;
+          r.status=f.status;
+        }
+      }
+    }
+  }
   return out;
 }
 function renderElliott(){
@@ -2580,11 +2628,13 @@ function renderElliott(){
   else if(q==="active")rows=rows.filter(r=>["TRIGGERED","PROGRESS"].includes(r.lifecycle));
   else if(q==="target")rows=rows.filter(r=>r.lifecycle==="TARGET"||r.target_hit);
   else if(q==="w4watch")rows=rows.filter(r=>r.lifecycle==="W4WATCH");
-  else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID"].includes(r.lifecycle));
+  else if(q==="w5prep")rows=rows.filter(r=>r.lifecycle==="W5PREP");
+  else if(q==="w5ready")rows=rows.filter(r=>r.lifecycle==="W5READY");
+  else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID","W4INVALID"].includes(r.lifecycle));
   rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
   elliottShown=rows;$("elCount").textContent=rows.length;
-  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
-  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
+  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","W4 Retrace","W5 Tetik","W5 Hedef","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${finite(r.w4_retrace)?fmt(r.w4_retrace*100,1)+"%":"—"}</td><td>${finite(r.w5_trigger)?fmt(r.w5_trigger):"—"}</td><td>${finite(r.w5_target)?fmt(r.w5_target):"—"}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
 }
 async function scanElliott(){
   const tfs=selectedElTF();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
@@ -3223,7 +3273,7 @@ function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  case'elliott':{
    const is23=String(r.setup).includes('W2'),is45=String(r.setup).includes('W4');
    const wave=is23?'Wave 3':is45?'Wave 5':'Wave C';
-   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}. ${r.lifecycle==='W4WATCH'?'W3 hedefi görülmüş; bu artık yeni W3 girişi değil, olası Wave 4 düzeltmesi sonrası Wave 5 için takip adayıdır.':''}`;
+   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}. ${r.lifecycle==='W4WATCH'?'W3 hedefi görülmüş; bu artık yeni W3 girişi değil, olası Wave 4 düzeltmesi sonrası Wave 5 için takip adayıdır.':''}${r.lifecycle==='W5PREP'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. W5 henüz teyit edilmedi; dönüş teyidi bekleniyor.`:''}${r.lifecycle==='W5READY'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. Dönüş teyidi geldi. W5 tetik ${finite(r.w5_trigger)?fmt(r.w5_trigger):'—'}, olası W5 hedef ${finite(r.w5_target)?fmt(r.w5_target):'—'}.`:''}`;
    confirm=[r.breakout?`Tetik seviyesi ${uvFmt(r.trigger)} kırıldı`:`Tetik ${uvFmt(r.trigger)} henüz kırılmadı`,r.momentum?'Momentum ✓':'Momentum teyidi yok',r.trend?'Trend ✓':'Trend teyidi zayıf',uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',`RSI ${uvFmt(r.rsi,1)}`,`ADX ${uvFmt(r.adx,1)}`,uvFinite(r.rr)?`Yaklaşık R/R ${uvFmt(r.rr,2)}`:''];
    missing=[!r.breakout?'Fiyat tetik kırılımı':'',!r.momentum?'Momentum teyidi':'',!r.trend?'Trend uyumu':''];
    invalid=`Kısa vadeli setup stop ${uvFmt(r.setup_stop)}; Elliott dalga sayımının ana geçersizlik seviyesi ${uvFmt(r.invalidation)}. Algoritmik hedef ${wave} için yaklaşık ${uvFmt(r.target)} bölgesidir; hedef garanti değildir.`;
