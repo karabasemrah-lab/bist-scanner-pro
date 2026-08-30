@@ -893,7 +893,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <label class="chip"><input id="elOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
     </div>
     <div class="grid grid-cols-3 gap-4 mt-4 grid-settings">
-      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="triggered">✅ Sadece tetiklenmiş setup</option></select></div>
+      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="fresh">🟡 Yeni fırsatlar · Hazırlık/Tetiğe yakın</option><option value="active">🚀 Aktif · Tetiklendi/Hedefe ilerliyor</option><option value="target">🎯 Hedef gerçekleşti</option><option value="w4watch">🌊 W3 tamamlandı · W4 takip</option><option value="invalid">🔴 Stop/Geçersiz</option></select></div>
       <div class="flex items-end"><span class="chip">📊 Görsel düğmesi = gerçek mum grafiği + dalga çizimi</span></div>
       <div class="flex items-end"><span class="chip">🎯 Hedef / tetik / geçersiz seviyesi gösterilir</span></div>
     </div>
@@ -2492,6 +2492,32 @@ function elCommon(df,triggerLevel,direction,anchorAge){
   const freshPts=10*(1-elClamp(anchorAge/Math.max(1,val("elRecent")),0,1));
   return {breakout,near,mom,trend,vol,rsi:rsi[i],adx:adx[i],hist:mac.hist[i],breakoutPts,momentumPts,volumePts,trendPts,freshPts};
 }
+
+function elLifecycle(df,anchorIndex,trigger,target,setupStop,invalidation,direction,setup){
+  const long=direction==="LONG", start=Math.max(0,Number(anchorIndex)||0), end=df.c.length-1;
+  let trigI=-1,targetI=-1,stopI=-1,invalidI=-1;
+  for(let i=start;i<=end;i++){
+    if(trigI<0 && (long?df.h[i]>=trigger:df.l[i]<=trigger))trigI=i;
+    if(trigI>=0 && targetI<0 && (long?df.h[i]>=target:df.l[i]<=target))targetI=i;
+    if(trigI>=0 && targetI<0 && stopI<0 && (long?df.l[i]<=setupStop:df.h[i]>=setupStop))stopI=i;
+    if(invalidI<0 && (long?df.l[i]<=invalidation:df.h[i]>=invalidation))invalidI=i;
+  }
+  const close=df.c[end], near=long?close>=trigger*.985:close<=trigger*1.015;
+  let code="PREP",status="⚪ HAZIRLIK";
+  if(invalidI>=0 && (trigI<0 || invalidI>=trigI)){code="INVALID";status="🔴 DALGA GEÇERSİZ";}
+  else if(stopI>=0 && targetI<0){code="STOP";status="🔴 STOP";}
+  else if(targetI>=0){
+    if(String(setup).includes("W2")){code="W4WATCH";status="🌊 W3 TAMAMLANDI · W4 TAKİP";}
+    else {code="TARGET";status="🎯 HEDEF GERÇEKLEŞTİ";}
+  }else if(trigI>=0){
+    const progress=long?(close-trigger)/Math.max(.000001,target-trigger):(trigger-close)/Math.max(.000001,trigger-target);
+    if(progress>=.20){code="PROGRESS";status="🚀 HEDEFE İLERLİYOR";}
+    else {code="TRIGGERED";status="🟢 TETİKLENDİ";}
+  }else if(near){code="NEAR";status="🟡 TETİĞE YAKIN";}
+  return {lifecycle:code,status,trigger_index:trigI,target_index:targetI,stop_index:stopI,invalid_index:invalidI,
+    target_hit:targetI>=0,stop_hit:stopI>=0,invalid_hit:invalidI>=0};
+}
+
 function analyzeElliott(symbol,tf,df){
   if(!df||df.c.length<120)return [];
   const w=Math.max(2,Math.trunc(val("elPivot"))),minSwing=Math.max(.25,val("elMinSwing")),recent=Math.max(1,Math.trunc(val("elRecent")));
@@ -2507,8 +2533,8 @@ function analyzeElliott(symbol,tf,df){
       const fib=(b.p-c.p)/w1;if(fib<.25||fib>.9)continue;
       const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"LONG",n-1-c.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      const target=c.p+1.618*w1,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
-      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"⭐ W2 → W3",direction:"LONG",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)>c.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-c.p):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:a.p,p1:b.p,p2:c.p,t0:df.t[a.i],t1:df.t[b.i],t2:df.t[c.i]});
+      const target=c.p+1.618*w1,life=elLifecycle(df,c.i,b.p,target,c.p,a.p,"LONG","W2"),status=life.status;
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"⭐ W2 → W3",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)>c.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-c.p):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:a.p,p1:b.p,p2:c.p,t0:df.t[a.i],t1:df.t[b.i],t2:df.t[c.i]});
       break;
     }
   }
@@ -2522,8 +2548,8 @@ function analyzeElliott(symbol,tf,df){
       const fib=(p3.p-p4.p)/w3;if(fib<.18||fib>.65)continue;
       const geom=35*(.65*elFibScore(fib,.382,.236,.50)+.35*elClamp(w3/w1/1.2,0,1)),cm=elCommon(df,p3.p,"LONG",n-1-p4.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      const target=p4.p+w1,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
-      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target,invalidation:p4.p,setup_stop:p4.p,rr:(df.c.at(-1)>p4.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-p4.p):null),anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
+      const target=p4.p+w1,life=elLifecycle(df,p4.i,p3.p,target,p4.p,p4.p,"LONG","W4"),status=life.status;
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target,invalidation:p4.p,setup_stop:p4.p,rr:(df.c.at(-1)>p4.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-p4.p):null),anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
       break;
     }
   }
@@ -2537,8 +2563,8 @@ function analyzeElliott(symbol,tf,df){
       const fib=(c.p-b.p)/A;if(fib<.25||fib>.9)continue;
       const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"SHORT",n-1-c.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      const target=c.p-A,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
-      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🔻 B → C",direction:"SHORT",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)<c.p?Math.max(0,df.c.at(-1)-target)/Math.max(.000001,c.p-df.c.at(-1)):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,pA0:a.p,pA:b.p,pB:c.p,tA0:df.t[a.i],tA:df.t[b.i],tB:df.t[c.i]});
+      const target=c.p-A,life=elLifecycle(df,c.i,b.p,target,c.p,a.p,"SHORT","BC"),status=life.status;
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🔻 B → C",direction:"SHORT",status,...life,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)<c.p?Math.max(0,df.c.at(-1)-target)/Math.max(.000001,c.p-df.c.at(-1)):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,pA0:a.p,pA:b.p,pB:c.p,tA0:df.t[a.i],tA:df.t[b.i],tB:df.t[c.i]});
       break;
     }
   }
@@ -2550,7 +2576,11 @@ function renderElliott(){
   if(only)rows=rows.filter(r=>r.score>=min);
   if(q==="w23_75")rows=rows.filter(r=>String(r.setup).includes("W2")&&r.score>=75);
   else if(q==="w23_85")rows=rows.filter(r=>String(r.setup).includes("W2")&&r.score>=85);
-  else if(q==="triggered")rows=rows.filter(r=>r.breakout);
+  else if(q==="fresh")rows=rows.filter(r=>["PREP","NEAR"].includes(r.lifecycle));
+  else if(q==="active")rows=rows.filter(r=>["TRIGGERED","PROGRESS"].includes(r.lifecycle));
+  else if(q==="target")rows=rows.filter(r=>r.lifecycle==="TARGET"||r.target_hit);
+  else if(q==="w4watch")rows=rows.filter(r=>r.lifecycle==="W4WATCH");
+  else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID"].includes(r.lifecycle));
   rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
   elliottShown=rows;$("elCount").textContent=rows.length;
   $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
@@ -3193,7 +3223,7 @@ function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  case'elliott':{
    const is23=String(r.setup).includes('W2'),is45=String(r.setup).includes('W4');
    const wave=is23?'Wave 3':is45?'Wave 5':'Wave C';
-   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}.`;
+   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}. ${r.lifecycle==='W4WATCH'?'W3 hedefi görülmüş; bu artık yeni W3 girişi değil, olası Wave 4 düzeltmesi sonrası Wave 5 için takip adayıdır.':''}`;
    confirm=[r.breakout?`Tetik seviyesi ${uvFmt(r.trigger)} kırıldı`:`Tetik ${uvFmt(r.trigger)} henüz kırılmadı`,r.momentum?'Momentum ✓':'Momentum teyidi yok',r.trend?'Trend ✓':'Trend teyidi zayıf',uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',`RSI ${uvFmt(r.rsi,1)}`,`ADX ${uvFmt(r.adx,1)}`,uvFinite(r.rr)?`Yaklaşık R/R ${uvFmt(r.rr,2)}`:''];
    missing=[!r.breakout?'Fiyat tetik kırılımı':'',!r.momentum?'Momentum teyidi':'',!r.trend?'Trend uyumu':''];
    invalid=`Kısa vadeli setup stop ${uvFmt(r.setup_stop)}; Elliott dalga sayımının ana geçersizlik seviyesi ${uvFmt(r.invalidation)}. Algoritmik hedef ${wave} için yaklaşık ${uvFmt(r.target)} bölgesidir; hedef garanti değildir.`;
