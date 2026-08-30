@@ -2500,12 +2500,13 @@ function elW4W5Follow(df,row){
   if(t0>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP"};
   let peakI=t0, peak=df.h[t0];
   for(let i=t0;i<n;i++){ if(df.h[i]>peak){peak=df.h[i];peakI=i;} }
-  if(peakI>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI};
+  if(peakI>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,retr:null};
 
   let lowI=peakI, low=df.l[peakI];
   for(let i=peakI;i<n;i++){ if(df.l[i]<low){low=df.l[i];lowI=i;} }
 
   const w3len=Math.max(.000001, peak-(row.p2??row.setupStop??row.trigger));
+  if(lowI===peakI) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,low,lowI,retr:null};
   const retr=(peak-low)/w3len;
   const fib236=peak-.236*w3len, fib382=peak-.382*w3len, fib50=peak-.50*w3len, fib618=peak-.618*w3len;
   const latest=df.c[n-1];
@@ -2522,8 +2523,38 @@ function elW4W5Follow(df,row){
     status=turn?"🚀 W5 FIRSATI HAZIR":"⚠️ DERİN W4 · W5 TAKİP";
   }
   const w5Trigger=peak;
-  const w5Target=low + Math.max((row.p1??row.trigger)-(row.p0??row.invalidation), .618*w3len);
-  return {code,status,peak,peakI,low,lowI,retr,fib236,fib382,fib50,fib618,w5Trigger,w5Target,turn,valid};
+  const w1len=Math.max(.000001,(row.p1??row.trigger)-(row.p0??row.invalidation));
+  const w03len=Math.max(.000001,peak-(row.p0??row.invalidation));
+  const risk=Math.max(.000001,w5Trigger-low);
+
+  // Elliott/Fibonacci W5 projeksiyon havuzu
+  const eqW1=low+w1len;           // Wave 5 = Wave 1
+  const extW1=low+1.618*w1len;    // Wave 1'in 1.618 uzatması
+  const fibW3=low+.618*w3len;     // Wave 3'ün %61.8'i
+  const fib03=low+.618*w03len;    // 0->3 hareketinin %61.8'i
+
+  // T1 en az 1R yukarı alan bırakır; eski HKTM gibi tetiğe yapışık hedefleri engeller.
+  const minT1=w5Trigger+risk;
+  const raw1=Math.max(eqW1,fibW3,fib03);
+  const w5Target1=Math.max(raw1,minT1);
+
+  // T2 daha geniş Elliott/Fibonacci uzatma hedefidir.
+  const raw2=Math.max(extW1,low+w3len,low+w03len*.786);
+  const w5Target2=Math.max(raw2,w5Trigger+1.618*risk,w5Target1);
+
+  const w5RR1=(w5Target1-w5Trigger)/risk;
+  const w5RR2=(w5Target2-w5Trigger)/risk;
+
+  // Dönüş teyidi gelse bile R/R 1'in altındaysa "hazır" sayma.
+  if(code==="W5READY" && w5RR1<1){
+    code="W5PREP";
+    status="🔥 W5 FIRSATI HAZIRLANIYOR";
+  }
+
+  const w5Target=w5Target1; // geriye dönük uyumluluk
+  return {code,status,peak,peakI,low,lowI,retr,fib236,fib382,fib50,fib618,
+    w5Trigger,w5Target,w5Target1,w5Target2,w5RR1,w5RR2,
+    w1len,w3len,w03len,eqW1,extW1,fibW3,fib03,turn,valid};
 }
 
 function elLifecycle(df,anchorIndex,trigger,target,setupStop,invalidation,direction,setup){
@@ -2606,9 +2637,13 @@ function analyzeElliott(symbol,tf,df){
       const f=elW4W5Follow(df,r);
       if(f){
         r.w4_follow=f;
-        r.w4_retrace=finite(f.retr)?f.retr:null;
+        r.w4_retrace=(finite(f.retr)&&f.retr>0)?f.retr:null;
         r.w5_trigger=f.w5Trigger;
         r.w5_target=f.w5Target;
+        r.w5_target1=f.w5Target1;
+        r.w5_target2=f.w5Target2;
+        r.w5_rr1=f.w5RR1;
+        r.w5_rr2=f.w5RR2;
         if(["W5PREP","W5READY","W4INVALID"].includes(f.code)){
           r.lifecycle=f.code;
           r.status=f.status;
@@ -2633,8 +2668,8 @@ function renderElliott(){
   else if(q==="invalid")rows=rows.filter(r=>["STOP","INVALID","W4INVALID"].includes(r.lifecycle));
   rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
   elliottShown=rows;$("elCount").textContent=rows.length;
-  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","W4 Retrace","W5 Tetik","W5 Hedef","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
-  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${finite(r.w4_retrace)?fmt(r.w4_retrace*100,1)+"%":"—"}</td><td>${finite(r.w5_trigger)?fmt(r.w5_trigger):"—"}</td><td>${finite(r.w5_target)?fmt(r.w5_target):"—"}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
+  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","W4 Retrace","W5 Tetik","W5 Hedef-1","W5 Hedef-2","W5 R/R","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${finite(r.w4_retrace)?fmt(r.w4_retrace*100,1)+"%":"—"}</td><td>${finite(r.w5_trigger)?fmt(r.w5_trigger):"—"}</td><td>${finite(r.w5_target1)?fmt(r.w5_target1):"—"}</td><td>${finite(r.w5_target2)?fmt(r.w5_target2):"—"}</td><td>${finite(r.w5_rr1)?fmt(r.w5_rr1,2):"—"}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
 }
 async function scanElliott(){
   const tfs=selectedElTF();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
@@ -3173,6 +3208,13 @@ renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();
 .uv-visual-btn{border:0;border-radius:9px;padding:6px 9px;font-weight:800;cursor:pointer;background:#1e3a5f;color:#bfdbfe;white-space:nowrap}
 @media(max-width:760px){#uvModal .uv-panel{width:98vw;padding:10px;border-radius:14px}#uvModal .uv-grid,#uvModal .uv-explain{grid-template-columns:1fr 1fr}.uv-card{padding:8px}}
 @media(max-width:480px){#uvModal .uv-grid,#uvModal .uv-explain{grid-template-columns:1fr}}
+@media(max-width:700px){
+  #uvModal{padding:0!important}
+  #uvModal .uv-panel{width:100vw!important;max-width:100vw!important;max-height:100dvh!important;height:100dvh;border-radius:0!important;padding:8px!important}
+  #uvModal #uvBody>.overflow-x-auto{overflow-x:hidden!important;width:100%!important}
+  #uvModal #uvBody svg{width:100%!important;max-width:100%!important;min-width:0!important;height:auto!important}
+  #uvModal #uvTitle{font-size:18px!important;line-height:1.2}
+}
 </style>
 <div id="uvModal" class="fixed inset-0 hidden items-start justify-center p-2" style="background:#020617dd">
   <div class="uv-panel mt-2">
@@ -3221,10 +3263,14 @@ function uvOverlay(kind,r){const a=[];const add=(v,label,color)=>{if(uvFinite(v)
  if(kind==='momshock')add(r.pullback_level,'Pullback','#f59e0b');
  if(kind==='ad'){add(r.ma,'Ortalama','#38bdf8')}
  if(kind==='elliott'){
-   const w5phase=['W5PREP','W5READY','W4WATCH'].includes(r.lifecycle);
+   const w5phase=['W5PREP','W5READY'].includes(r.lifecycle);
    add(r.trigger,w5phase?'W3 Eski Tetik':'Tetik','#facc15');
    add(r.target,w5phase?'W3 Tamamlanan Hedef':'Hedef','#34d399');
-   if(w5phase){add(r.w5_trigger,'W5 Tetik','#60a5fa');add(r.w5_target,'W5 Hedef','#a78bfa')}
+   if(w5phase){
+     add(r.w5_trigger,'W5 Tetik','#60a5fa');
+     add(r.w5_target1??r.w5_target,'W5 Hedef-1','#a78bfa');
+     add(r.w5_target2,'W5 Hedef-2','#c084fc')
+   }
    add(r.setup_stop,'Setup Stop','#fb7185');add(r.invalidation,'Dalga Geçersiz','#ef4444')
  }
  return a}
@@ -3242,7 +3288,8 @@ function uvElliottPoints(r){
 }
 function uvElliottSvg(df,r,overlays=[]){
  const n=df?.c?.length||0;if(!n)return'<div class="uv-card">Grafik verisi bulunamadı.</div>';
- const w5phase=['W5PREP','W5READY','W4WATCH'].includes(r.lifecycle)&&r.w4_follow;
+ const w5phase=['W5PREP','W5READY'].includes(r.lifecycle)&&r.w4_follow;
+ const w4watch=r.lifecycle==='W4WATCH'&&r.w4_follow;
  let pts=uvElliottPoints(r).filter(q=>uvFinite(q.p)&&uvFinite(q.t));
  // W5 fazında 3 ve 4 noktalarını gerçek tarama indekslerinden grafiğin zamanına çevir.
  if(w5phase){
@@ -3251,17 +3298,20 @@ function uvElliottSvg(df,r,overlays=[]){
    const p3t=ti(f.peakI),p4t=ti(f.lowI);
    if(uvFinite(p3t)&&uvFinite(p4t))pts=pts.concat([{t:p3t,p:f.peak,l:'3'},{t:p4t,p:f.low,l:'4'}]);
  }
- let idx=pts.map(q=>uvNearestTimeIndex(df,q.t)).filter(i=>i>=0),minIdx=idx.length?Math.min(...idx):Math.max(0,n-80),start=Math.max(0,Math.min(minIdx-12,n-90)),end=n-1,count=end-start+1,W=1060,H=550,PL=58,PR=118,PT=30,PB=58,gW=W-PL-PR,gH=H-PT-PB;
+ const mobile=window.innerWidth<=700;
+ let idx=pts.map(q=>uvNearestTimeIndex(df,q.t)).filter(i=>i>=0),minIdx=idx.length?Math.min(...idx):Math.max(0,n-(mobile?48:80));
+ let start=Math.max(0,Math.min(minIdx-(mobile?5:12),n-(mobile?55:90))),end=n-1,count=end-start+1;
+ let W=mobile?720:1060,H=mobile?650:550,PL=mobile?42:58,PR=mobile?92:118,PT=mobile?42:30,PB=mobile?52:58,gW=W-PL-PR,gH=H-PT-PB;
  let lows=df.l.slice(start,end+1),highs=df.h.slice(start,end+1);
  for(const o of overlays){if(uvFinite(o.v)){lows.push(+o.v);highs.push(+o.v)}}
  for(const q of pts){lows.push(+q.p);highs.push(+q.p)}
  if(w5phase){
    const f=r.w4_follow;
-   for(const v of [f.fib236,f.fib382,f.fib50,f.fib618,r.w5_trigger,r.w5_target])if(uvFinite(v)){lows.push(+v);highs.push(+v)}
+   for(const v of [f.fib236,f.fib382,f.fib50,f.fib618,r.w5_trigger,r.w5_target1??r.w5_target,r.w5_target2])if(uvFinite(v)){lows.push(+v);highs.push(+v)}
  }
  let lo=Math.min(...lows),hi=Math.max(...highs),pad=(hi-lo)*.09||1;lo-=pad;hi+=pad;
  const x=i=>PL+(i-start+.5)*gW/count,y=p=>PT+(hi-p)*gH/(hi-lo),step=gW/count,cw=Math.max(2,Math.min(8,step*.58));
- let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;min-width:690px;background:#0b111b;border-radius:14px">`;
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" height="auto" preserveAspectRatio="xMidYMid meet" style="display:block;width:100%;max-width:100%;min-width:0;background:#0b111b;border-radius:14px">`;
  for(let k=0;k<=4;k++){let p=lo+(hi-lo)*k/4,yy=y(p);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#263244" opacity=".65"/><text x="${W-PR+8}" y="${yy+4}" fill="#94a3b8" font-size="11">${uvFmt(p)}</text>`}
  for(let i=start;i<=end;i++){let xx=x(i),up=df.c[i]>=df.o[i],col=up?'#34d399':'#fb7185',yo=y(df.o[i]),yc=y(df.c[i]);s+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}"/><rect x="${xx-cw/2}" y="${Math.min(yo,yc)}" width="${cw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${col}" opacity=".9"/>`}
  const mapped=pts.map(q=>({...q,i:uvNearestTimeIndex(df,q.t)})).filter(q=>q.i>=start&&q.i<=end);
@@ -3272,22 +3322,31 @@ function uvElliottSvg(df,r,overlays=[]){
    const fibs=[[f.fib236,'Fib 23,6%'],[f.fib382,'Fib 38,2%'],[f.fib50,'Fib 50%'],[f.fib618,'Fib 61,8%']];
    for(const [v,lab] of fibs)if(uvFinite(v)){const yy=y(v);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#fbbf24" opacity=".42" stroke-dasharray="3 5"/><text x="${PL+5}" y="${yy-4}" fill="#fbbf24" font-size="10">${lab}</text>`}
    const p4=mapped.find(q=>q.l==='4')||mapped.at(-1);
-   if(p4&&uvFinite(r.w5_target)){
-     const x1=x(p4.i),y1=y(p4.p),x2=W-PR-28,y2=y(Number(r.w5_target));
-     s+=`<defs><marker id="w5Arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#a78bfa"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#a78bfa" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#w5Arrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#d8b4fe" font-size="12" font-weight="800">Beklenen W5 bölgesi</text>`;
+   const t1=r.w5_target1??r.w5_target,t2=r.w5_target2;
+   if(p4&&uvFinite(t1)){
+     const x1=x(p4.i),y1=y(p4.p),x2=W-PR-28,y2=y(Number(t1));
+     s+=`<defs><marker id="w5Arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#a78bfa"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#a78bfa" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#w5Arrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#d8b4fe" font-size="${mobile?14:12}" font-weight="800">W5 Hedef-1</text>`;
+     if(uvFinite(t2)){
+       const y3=y(Number(t2));
+       s+=`<line x1="${PL}" y1="${y3}" x2="${W-PR}" y2="${y3}" stroke="#c084fc" stroke-width="1.6" stroke-dasharray="5 5"/><text x="${W-PR-4}" y="${y3-6}" text-anchor="end" fill="#e9d5ff" font-size="${mobile?13:11}" font-weight="800">W5 Hedef-2 ${uvFmt(t2)}</text>`;
+     }
    }
    const rr=uvFinite(r.w4_retrace)?(Number(r.w4_retrace)*100).toFixed(1)+'%':'—';
    s+=`<rect x="${PL+8}" y="${PT+8}" width="255" height="43" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+26}" fill="${r.lifecycle==='W5READY'?'#34d399':'#fb923c'}" font-size="13" font-weight="900">${r.lifecycle==='W5READY'?'🚀 W5 FIRSATI HAZIR':'🔥 W5 FIRSATI HAZIRLANIYOR'}</text><text x="${PL+18}" y="${PT+43}" fill="#cbd5e1" font-size="11">W4 geri çekilme: ${rr}</text>`;
  }else if(mapped.length&&uvFinite(r.target)){
    const a=mapped.at(-1),x1=x(a.i),y1=y(a.p),x2=W-PR-28,y2=y(Number(r.target));
-   s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">Beklenen ${String(r.setup).includes('W2')?'W3':String(r.setup).includes('W4')?'W5':'C'} bölgesi</text>`;
+   const completedW3=w4watch&&String(r.setup||'').includes('W2');
+   s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">${completedW3?'W3 tamamlanan hedef':'Beklenen '+(String(r.setup).includes('W2')?'W3':String(r.setup).includes('W4')?'W5':'C')+' bölgesi'}</text>`;
+   if(completedW3){
+     s+=`<rect x="${PL+8}" y="${PT+8}" width="270" height="43" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+26}" fill="#7dd3fc" font-size="13" font-weight="900">🌊 W3 TAMAMLANDI · W4 TAKİP</text><text x="${PL+18}" y="${PT+43}" fill="#cbd5e1" font-size="11">W4 geri çekilmesi henüz oluşmadı / teyit edilmedi.</text>`;
+   }
  }
  for(const o of overlays){let yy=y(o.v);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="${o.color||'#38bdf8'}" stroke-width="1.4" stroke-dasharray="7 5"/><text x="${W-PR-4}" y="${yy-6}" text-anchor="end" fill="${o.color||'#38bdf8'}" font-size="11" font-weight="700">${uvEsc(o.label)} ${uvFmt(o.v)}</text>`}
  const date=t=>{try{return new Date(t*1000).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'2-digit'})}catch{return''}};
  for(let k=0;k<5;k++){let ii=Math.round(start+(end-start)*k/4);s+=`<text x="${x(ii)}" y="${H-18}" text-anchor="middle" fill="#64748b" font-size="10">${date(df.t[ii])}</text>`}
  return s+'</svg>'
 }
-function uvCards(r){const skip=new Set(['symbol','timeframe','timeframe_label','tf_key']);const preferred=['setup','status','direction','score','fib','w4_retrace','w5_trigger','w5_target','trigger','target','setup_stop','invalidation','rr','wave_score','breakout_score','momentum_score','volume_score','trend_score','fresh_score','stage','signal','decision','grade','smart_score','quality','confidence','risk','close','volume_ratio','rsi','mfi','adx','alpha','beta','sharpe','sortino','maxdd','vrp_proxy','opportunity_score','entry_score','momentum','change','distance_pct'];let keys=preferred.filter(k=>r[k]!==undefined);for(const k of Object.keys(r)){if(keys.length>=12)break;if(!skip.has(k)&&!keys.includes(k)&&(typeof r[k]==='number'||typeof r[k]==='string'||typeof r[k]==='boolean'))keys.push(k)}return keys.slice(0,12).map(k=>`<div class="uv-card"><div class="uv-k">${uvEsc(k.replaceAll('_',' '))}</div><div class="uv-v">${typeof r[k]==='number'?uvFmt(r[k],3):uvEsc(r[k])}</div></div>`).join('')}
+function uvCards(r){const skip=new Set(['symbol','timeframe','timeframe_label','tf_key']);const preferred=['setup','status','direction','score','fib','w4_retrace','w5_trigger','w5_target1','w5_target2','w5_rr1','trigger','target','setup_stop','invalidation','rr','wave_score','breakout_score','momentum_score','volume_score','trend_score','fresh_score','stage','signal','decision','grade','smart_score','quality','confidence','risk','close','volume_ratio','rsi','mfi','adx','alpha','beta','sharpe','sortino','maxdd','vrp_proxy','opportunity_score','entry_score','momentum','change','distance_pct'];let keys=preferred.filter(k=>r[k]!==undefined);for(const k of Object.keys(r)){if(keys.length>=12)break;if(!skip.has(k)&&!keys.includes(k)&&(typeof r[k]==='number'||typeof r[k]==='string'||typeof r[k]==='boolean'))keys.push(k)}return keys.slice(0,12).map(k=>`<div class="uv-card"><div class="uv-k">${uvEsc(k.replaceAll('_',' '))}</div><div class="uv-v">${typeof r[k]==='number'?uvFmt(r[k],3):uvEsc(r[k])}</div></div>`).join('')}
 function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  const vol=Number(r.volume_ratio);const price=Number(r.close);
  switch(kind){
@@ -3311,7 +3370,7 @@ function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  case'elliott':{
    const is23=String(r.setup).includes('W2'),is45=String(r.setup).includes('W4');
    const wave=is23?'Wave 3':is45?'Wave 5':'Wave C';
-   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}. ${r.lifecycle==='W4WATCH'?'W3 hedefi görülmüş; bu artık yeni W3 girişi değil, olası Wave 4 düzeltmesi sonrası Wave 5 için takip adayıdır.':''}${r.lifecycle==='W5PREP'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. W5 henüz teyit edilmedi; dönüş teyidi bekleniyor.`:''}${r.lifecycle==='W5READY'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. Dönüş teyidi geldi. W5 tetik ${finite(r.w5_trigger)?fmt(r.w5_trigger):'—'}, olası W5 hedef ${finite(r.w5_target)?fmt(r.w5_target):'—'}.`:''}`;
+   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}. ${r.lifecycle==='W4WATCH'?'W3 hedefi görülmüş; bu artık yeni W3 girişi değil, olası Wave 4 düzeltmesi sonrası Wave 5 için takip adayıdır.':''}${r.lifecycle==='W5PREP'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. W5 henüz teyit edilmedi; dönüş teyidi bekleniyor.`:''}${r.lifecycle==='W5READY'?` Wave 4 geri çekilmesi yaklaşık ${finite(r.w4_retrace)?(r.w4_retrace*100).toFixed(1):'—'}%. Dönüş teyidi geldi. W5 tetik ${finite(r.w5_trigger)?fmt(r.w5_trigger):'—'}, Hedef-1 ${finite(r.w5_target1)?fmt(r.w5_target1):'—'}, Hedef-2 ${finite(r.w5_target2)?fmt(r.w5_target2):'—'}, Hedef-1 R/R ${finite(r.w5_rr1)?fmt(r.w5_rr1,2):'—'}.`:''}`;
    confirm=[r.breakout?`Tetik seviyesi ${uvFmt(r.trigger)} kırıldı`:`Tetik ${uvFmt(r.trigger)} henüz kırılmadı`,r.momentum?'Momentum ✓':'Momentum teyidi yok',r.trend?'Trend ✓':'Trend teyidi zayıf',uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',`RSI ${uvFmt(r.rsi,1)}`,`ADX ${uvFmt(r.adx,1)}`,uvFinite(r.rr)?`Yaklaşık R/R ${uvFmt(r.rr,2)}`:''];
    missing=[!r.breakout?'Fiyat tetik kırılımı':'',!r.momentum?'Momentum teyidi':'',!r.trend?'Trend uyumu':''];
    invalid=`Kısa vadeli setup stop ${uvFmt(r.setup_stop)}; Elliott dalga sayımının ana geçersizlik seviyesi ${uvFmt(r.invalidation)}. Algoritmik hedef ${wave} için yaklaşık ${uvFmt(r.target)} bölgesidir; hedef garanti değildir.`;
