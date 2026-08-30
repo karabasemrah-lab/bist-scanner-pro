@@ -116,6 +116,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#f97316" data-tab="momshock">⚡ Momentum Shock</button>
   <button class="tab" style="--ac:#8b5cf6" data-tab="quantquality">📊 Quant Quality</button>
   <button class="tab" style="--ac:#facc15" data-tab="consensus">🏆 Master Konsensüs</button>
+  <button class="tab" style="--ac:#0ea5e9" data-tab="elliott">🌊 Elliott Fırsat</button>
   <button class="tab" style="--ac:#22c55e" data-tab="performance">🧪 Performans</button>
 </div>
 
@@ -862,6 +863,52 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+
+<section id="elliott" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🌊 Elliott Opportunity Engine v1.0</h2>
+    <div class="text-sm muted mt-2">Trade edilebilir üç geçişi tarar: Wave 2 → 3 · Wave 4 → 5 · Wave B → C. Dalga geometrisini Fibonacci, momentum, hacim, breakout ve üst trend teyidiyle puanlar.</div>
+
+    <div class="mt-4">
+      <div class="text-xs muted mb-2">Zaman Dilimleri · çoklu seçilebilir</div>
+      <div class="grid grid-cols-4 gap-3 grid-settings">
+        <label class="chip"><input id="elTf1h" type="checkbox"> 1 Saat</label>
+        <label class="chip"><input id="elTf4h" type="checkbox"> 4 Saat</label>
+        <label class="chip"><input id="elTf1d" type="checkbox" checked> Günlük</label>
+        <label class="chip"><input id="elTf1w" type="checkbox"> Haftalık</label>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Pivot Pencere</label><input id="elPivot" class="input mt-1" type="number" value="4" min="2" max="12"></div>
+      <div><label class="text-xs muted">Minimum Swing %</label><input id="elMinSwing" class="input mt-1" type="number" value="3" step="0.25" min="0.5" max="20"></div>
+      <div><label class="text-xs muted">Minimum Opportunity Score</label><input id="elMinScore" class="input mt-1" type="number" value="65" min="0" max="100"></div>
+      <div><label class="text-xs muted">Setup En Fazla Kaç Mum Önce</label><input id="elRecent" class="input mt-1" type="number" value="12" min="1" max="100"></div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      <label class="chip"><input id="elW23" type="checkbox" checked> ⭐ Wave 2 → 3</label>
+      <label class="chip"><input id="elW45" type="checkbox" checked> Wave 4 → 5</label>
+      <label class="chip"><input id="elBC" type="checkbox" checked> Wave B → C</label>
+      <label class="chip"><input id="elOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
+    </div>
+
+    <div class="text-xs muted mt-3">Skor: Dalga/Fibonacci 35 · Breakout 20 · Momentum 15 · Hacim 10 · Trend 10 · Tazelik 10. Elliott sayımı kesinlik iddiası taşımaz; algoritmik setup adayı üretir.</div>
+    <button id="elBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#0369a1,#0ea5e9);color:white">🌊 Elliott Fırsat Taramasını Başlat</button>
+    <div id="elCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="elProg"></div></div>
+    <div id="elStatus" class="mt-3 rounded-xl p-3 text-sm warn">Elliott taramasını başlat.</div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">🌊 Elliott Fırsat Sonuçları · <span id="elCount">0</span> satır</h3>
+      <button id="elExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="overflow-auto max-h-[700px]"><table id="elTable"></table></div>
+  </div>
+</section>
+
 <section id="performance" class="tabpage space-y-4 hidden">
   <div class="card p-5">
     <h2 class="text-2xl font-black">🧪 Tarama Performans Merkezi v1 · İleri Test</h2>
@@ -920,7 +967,7 @@ const TV_BASE = [
 const REFS = {XU100:"XU100.IS",XU030:"XU030.IS",XBANK:"XBANK.IS",XUTUM:"XUTUM.IS",XBANA:"XBANA.IS"};
 const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 BİRİKİM","🟠 YAŞLANMA / DAĞITIM","🟠 OLGUN TREND"]);
 
-let fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], failures=[];
+let elliottAll=[], elliottShown=[], fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], failures=[];
 let refCache=null;
 
 const $ = id => document.getElementById(id);
@@ -2377,6 +2424,148 @@ function analyzeMs(s,tf,df){if(!df||df.c.length<150)return null;const n=df.c.len
 function renderMs(){msShown=msAll.filter(r=>r.signal!=="⚪ NÖTR").sort((a,b)=>b.score-a.score||b.momentum-a.momentum);$("msCount").textContent=msShown.length;$("msTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Sinyal","Skor","RSI Δ","Momentum Δ","M Seviyesi","Pullback Seviye","Seviyeye Fark %","Sinyal Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+msShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.signal}</b></td><td>${r.score}</td><td>${fmt(r.rsi_change,1)}</td><td>${fmt(r.momentum,2)}</td><td>${r.level?"M"+r.level:"—"}</td><td>${fmt(r.pullback_level)}</td><td>${fmt(r.pullback_distance,2)}</td><td>${r.signal_age??"—"}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>"}
 async function scanMs(){const tfs=selectedMsTF();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}const b=$("msBtn");b.disabled=true;failures=[];msAll=[];msCache.clear();$("msProg").style.width="0";try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("msCounts").textContent=`${u.symbols.length} hisse × ${tfs.length} periyot`;let next=0,done=0;async function run(){while(1){const x=next++;if(x>=jobs.length)return;const[s,tf]=jobs[x];try{const r=analyzeMs(s,tf,await getMsDf(s,tf));if(r)msAll.push(r)}catch(e){failures.push({symbol:`${s} (${MS_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("msProg").style.width=100*done/jobs.length+"%";setStatus("msStatus",`${s} · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));renderMs();renderFails();setStatus("msStatus",`Tarama tamamlandı · ${msShown.length} sonuç · ${failures.length} hata`,"good")}catch(e){setStatus("msStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ELLIOTT OPPORTUNITY ENGINE v1.0 · 2→3 / 4→5 / B→C
+// ─────────────────────────────────────────────────────────────────────────────
+const EL_TF={
+  "1h":{label:"1 Saat",range:"180d",interval:"1h"},
+  "4h":{label:"4 Saat",range:"729d",interval:"1h"},
+  "1d":{label:"Günlük",range:"5y",interval:"1d"},
+  "1w":{label:"Haftalık",range:"10y",interval:"1wk"}
+};
+const elCache=new Map();
+function selectedElTF(){return [["1h","elTf1h"],["4h","elTf4h"],["1d","elTf1d"],["1w","elTf1w"]].filter(x=>$(x[1]).checked).map(x=>x[0])}
+async function getElDf(symbol,tf){
+  const k=`${symbol}|${tf}`;if(elCache.has(k))return elCache.get(k);
+  const cfg=EL_TF[tf];let d=tf==="4h"?resample4h(await yahoo(symbol+".IS",cfg.range,"1h")):await yahoo(symbol+".IS",cfg.range,cfg.interval);
+  elCache.set(k,d);return d;
+}
+function elClamp(x,a=0,b=1){return Math.max(a,Math.min(b,x))}
+function elPivots(df,w,minSwingPct){
+  const raw=[];
+  for(let i=w;i<df.c.length-w;i++){
+    let hi=true,lo=true;
+    for(let k=1;k<=w;k++){
+      if(df.h[i]<=df.h[i-k]||df.h[i]<df.h[i+k])hi=false;
+      if(df.l[i]>=df.l[i-k]||df.l[i]>df.l[i+k])lo=false;
+    }
+    if(hi)raw.push({i,p:df.h[i],type:"H"});
+    if(lo)raw.push({i,p:df.l[i],type:"L"});
+  }
+  raw.sort((a,b)=>a.i-b.i);
+  const alt=[];
+  for(const p of raw){
+    if(!alt.length){alt.push(p);continue}
+    const q=alt.at(-1);
+    if(p.type===q.type){
+      if((p.type==="H"&&p.p>q.p)||(p.type==="L"&&p.p<q.p))alt[alt.length-1]=p;
+      continue;
+    }
+    const move=Math.abs(p.p/q.p-1)*100;
+    if(move>=minSwingPct)alt.push(p);
+  }
+  return alt;
+}
+function elFibScore(x,ideal,lo,hi){
+  if(!finite(x))return 0;
+  if(x<lo||x>hi)return Math.max(0,1-Math.min(Math.abs(x-lo),Math.abs(x-hi))/Math.max(hi-lo,.01))*.35;
+  return 1-elClamp(Math.abs(x-ideal)/Math.max(ideal-lo,hi-ideal,.01),0,1)*.35;
+}
+function elCommon(df,triggerLevel,direction,anchorAge){
+  const n=df.c.length,i=n-1,c=df.c,volAvg=rollingMean(df.v,20),rsi=rsiSeries(c,14),mac=macdSeries(c),adx=adxSeries(df,14),e20=ema(c,20),e50=ema(c,50);
+  const vol=finite(volAvg[i])&&volAvg[i]>0?df.v[i]/volAvg[i]:1;
+  const long=direction==="LONG";
+  const breakout=long?c[i]>triggerLevel:c[i]<triggerLevel;
+  const near=long?(c[i]>=triggerLevel*.985):(c[i]<=triggerLevel*1.015);
+  const mom=(long?(rsi[i]>=52&&mac.hist[i]>0):(rsi[i]<=48&&mac.hist[i]<0));
+  const trend=long?(c[i]>e20[i]&&e20[i]>=e50[i]):(c[i]<e20[i]&&e20[i]<=e50[i]);
+  const breakoutPts=breakout?20:near?12:0;
+  const momentumPts=mom?15:(long?rsi[i]>=50:rsi[i]<=50)?8:0;
+  const volumePts=10*elClamp(vol/1.5,0,1);
+  const trendPts=trend?10:4;
+  const freshPts=10*(1-elClamp(anchorAge/Math.max(1,val("elRecent")),0,1));
+  return {breakout,mom,trend,vol,rsi:rsi[i],adx:adx[i],hist:mac.hist[i],breakoutPts,momentumPts,volumePts,trendPts,freshPts};
+}
+function analyzeElliott(symbol,tf,df){
+  if(!df||df.c.length<120)return [];
+  const w=Math.max(2,Math.trunc(val("elPivot"))),minSwing=Math.max(.25,val("elMinSwing")),recent=Math.max(1,Math.trunc(val("elRecent")));
+  const P=elPivots(df,w,minSwing),n=df.c.length,out=[];
+  if(P.length<4)return out;
+
+  // Wave 2 -> 3 LONG: L0-H1-L2, Wave 2 Wave 1 başlangıcını bozamaz.
+  if($("elW23").checked){
+    for(let z=P.length-1;z>=2;z--){
+      const a=P[z-2],b=P[z-1],c=P[z];
+      if(a.type!=="L"||b.type!=="H"||c.type!=="L"||n-1-c.i>recent)continue;
+      const w1=b.p-a.p;if(w1<=0||c.p<=a.p)continue;
+      const fib=(b.p-c.p)/w1;if(fib<.25||fib>.9)continue;
+      const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"LONG",n-1-c.i);
+      const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
+      out.push({symbol,timeframe:EL_TF[tf].label,setup:"⭐ W2 → W3",direction:"LONG",score,fib,close:df.c.at(-1),trigger:b.p,invalidation:a.p,anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,p0:a.p,p1:b.p,p2:c.p});
+      break;
+    }
+  }
+
+  // Wave 4 -> 5 LONG: L0-H1-L2-H3-L4. W3, W1'in tepesini aşmalı; W4 çoğunlukla W1 alanına girmemeli.
+  if($("elW45").checked&&P.length>=5){
+    for(let z=P.length-1;z>=4;z--){
+      const p0=P[z-4],p1=P[z-3],p2=P[z-2],p3=P[z-1],p4=P[z];
+      if([p0.type,p1.type,p2.type,p3.type,p4.type].join("")!=="LHLHL"||n-1-p4.i>recent)continue;
+      const w1=p1.p-p0.p,w3=p3.p-p2.p;if(w1<=0||w3<=0||p3.p<=p1.p||p4.p<=p1.p*.985)continue;
+      const fib=(p3.p-p4.p)/w3;if(fib<.18||fib>.65)continue;
+      const geom=35*(.65*elFibScore(fib,.382,.236,.50)+.35*elClamp(w3/w1/1.2,0,1)),cm=elCommon(df,p3.p,"LONG",n-1-p4.i);
+      const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
+      out.push({symbol,timeframe:EL_TF[tf].label,setup:"🌊 W4 → W5",direction:"LONG",score,fib,close:df.c.at(-1),trigger:p3.p,invalidation:p4.p,anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p});
+      break;
+    }
+  }
+
+  // B -> C SHORT: H(A başlangıcı)-L(A)-H(B); B önceki tepeyi aşmamalı.
+  if($("elBC").checked){
+    for(let z=P.length-1;z>=2;z--){
+      const a=P[z-2],b=P[z-1],c=P[z];
+      if(a.type!=="H"||b.type!=="L"||c.type!=="H"||n-1-c.i>recent)continue;
+      const A=a.p-b.p;if(A<=0||c.p>=a.p*1.01)continue;
+      const fib=(c.p-b.p)/A;if(fib<.25||fib>.9)continue;
+      const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"SHORT",n-1-c.i);
+      const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
+      out.push({symbol,timeframe:EL_TF[tf].label,setup:"🔻 B → C",direction:"SHORT",score,fib,close:df.c.at(-1),trigger:b.p,invalidation:a.p,anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,pA0:a.p,pA:b.p,pB:c.p});
+      break;
+    }
+  }
+  return out;
+}
+function renderElliott(){
+  const min=Number($("elMinScore").value||0),only=$("elOnlyCandidates").checked;
+  let rows=elliottAll.slice();
+  if(only)rows=rows.filter(r=>r.score>=min);
+  rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
+  elliottShown=rows;$("elCount").textContent=rows.length;
+  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Setup","Yön","Opportunity Score","Fib","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Geçersiz","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.setup}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.invalidation)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
+}
+async function scanElliott(){
+  const tfs=selectedElTF();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
+  const b=$("elBtn");b.disabled=true;failures=[];elliottAll=[];elCache.clear();$("elProg").style.width="0";
+  try{
+    const u=await getUniverse(),jobs=[];for(const sym of u.symbols)for(const tf of tfs)jobs.push([sym,tf]);
+    $("elCounts").textContent=`${u.symbols.length} hisse × ${tfs.length} periyot · ${jobs.length} iş`;
+    let next=0,done=0;
+    async function run(){
+      while(1){
+        const x=next++;if(x>=jobs.length)return;const [sym,tf]=jobs[x];
+        try{const rows=analyzeElliott(sym,tf,await getElDf(sym,tf));if(rows?.length)elliottAll.push(...rows)}
+        catch(e){failures.push({symbol:`${sym} (${EL_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}
+        done++;$("elProg").style.width=100*done/jobs.length+"%";setStatus("elStatus",`${sym} · ${done}/${jobs.length}`,"warn");if(done%10===0)await sleep(0);
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));
+    renderElliott();renderFails();setStatus("elStatus",`Tarama tamamlandı · ${elliottShown.length} aday · ${failures.length} hata`,"good");
+  }catch(e){setStatus("elStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}
+}
+
+
 // 20. MODÜL · QUANT QUALITY v1.0
 function arrStd(a){const v=a.filter(finite);if(v.length<2)return NaN;const m=mean(v);return Math.sqrt(v.reduce((z,x)=>z+(x-m)**2,0)/(v.length-1))}function cov(a,b){const n=Math.min(a.length,b.length),x=a.slice(-n),y=b.slice(-n),mx=mean(x),my=mean(y);return n>1?x.reduce((z,v,i)=>z+(v-mx)*(y[i]-my),0)/(n-1):NaN}function maxDD(c){let peak=-Infinity,m=0;for(const x of c){peak=Math.max(peak,x);if(peak>0)m=Math.min(m,x/peak-1)}return 100*m}
 function alignReturns(df,bm){const map=new Map();for(let i=1;i<bm.t.length;i++)map.set(bm.t[i],Math.log(bm.c[i]/bm.c[i-1]));const sr=[],br=[];for(let i=1;i<df.t.length;i++){const b=map.get(df.t[i]);if(finite(b)){sr.push(Math.log(df.c[i]/df.c[i-1]));br.push(b)}}return[sr,br]}
@@ -2458,7 +2647,7 @@ const smartObs=new MutationObserver(()=>{clearTimeout(window.__smartTblT);window
 if(document.body)smartObs.observe(document.body,{childList:true,subtree:true});
 window.addEventListener("DOMContentLoaded",smartEnhanceAll);
 
-const SMART_KIND_TABLE={fusion:"fusionTable",cont:"contTable",early:"earlyTable",opp:"oppTable",macd3:"macdTable",mi:"miTable",duk:"dukTable",ad:"adTable",lead:"leadTable",vrp:"vrpTable",harmonic:"harmTable",composite:"compTable",rsibreak:"rsiBreakTable",bbconf:"bbTable",emapull:"epTable",liqmss:"lqTable",mfiflow:"mfiTable",momshock:"msTable",quantquality:"qqTable",div:"divTable"};
+const SMART_KIND_TABLE={fusion:"fusionTable",cont:"contTable",early:"earlyTable",opp:"oppTable",macd3:"macdTable",mi:"miTable",duk:"dukTable",ad:"adTable",lead:"leadTable",vrp:"vrpTable",harmonic:"harmTable",composite:"compTable",rsibreak:"rsiBreakTable",bbconf:"bbTable",emapull:"epTable",liqmss:"lqTable",mfiflow:"mfiTable",momshock:"msTable",quantquality:"qqTable",elliott:"elTable",div:"divTable"};
 function smartDomExport(kind){
   const table=document.getElementById(SMART_KIND_TABLE[kind]);if(!table?.tHead?.rows?.[0]||!table.tBodies[0]?.rows?.length)return null;
   const heads=[...table.tHead.rows[0].cells],keep=heads.map((c,i)=>({i,h:smartNormHeader(c.innerText)})).filter(x=>x.h!=="Görsel");
@@ -2875,11 +3064,12 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
 $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$("perfExcelBtn").onclick=perfExport;$("perfClearBtn").onclick=perfClear;$("perfOnlyEvaluated").onchange=renderPerformance;$("perfDetailN").onchange=renderPerformance;
+$("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
 $("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
-renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
+renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
 
 <style>
