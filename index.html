@@ -866,7 +866,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 
 <section id="elliott" class="tabpage space-y-4 hidden">
   <div class="card p-5">
-    <h2 class="text-2xl font-black">🌊 Elliott Opportunity Engine v1.0</h2>
+    <h2 class="text-2xl font-black">🌊 Elliott Opportunity Engine v1.1 · Görsel Doğrulama</h2>
     <div class="text-sm muted mt-2">Trade edilebilir üç geçişi tarar: Wave 2 → 3 · Wave 4 → 5 · Wave B → C. Dalga geometrisini Fibonacci, momentum, hacim, breakout ve üst trend teyidiyle puanlar.</div>
 
     <div class="mt-4">
@@ -891,6 +891,11 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <label class="chip"><input id="elW45" type="checkbox" checked> Wave 4 → 5</label>
       <label class="chip"><input id="elBC" type="checkbox" checked> Wave B → C</label>
       <label class="chip"><input id="elOnlyCandidates" type="checkbox" checked> Yalnız adaylar</label>
+    </div>
+    <div class="grid grid-cols-3 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">Hızlı Sonuç Filtresi</label><select id="elQuickFilter" class="input mt-1"><option value="all">Tüm Elliott adayları</option><option value="w23_75" selected>⭐ Sadece W2 → W3 · Skor ≥ 75</option><option value="w23_85">🔥 W2 → W3 · Skor ≥ 85</option><option value="triggered">✅ Sadece tetiklenmiş setup</option></select></div>
+      <div class="flex items-end"><span class="chip">📊 Görsel düğmesi = gerçek mum grafiği + dalga çizimi</span></div>
+      <div class="flex items-end"><span class="chip">🎯 Hedef / tetik / geçersiz seviyesi gösterilir</span></div>
     </div>
 
     <div class="text-xs muted mt-3">Skor: Dalga/Fibonacci 35 · Breakout 20 · Momentum 15 · Hacim 10 · Trend 10 · Tazelik 10. Elliott sayımı kesinlik iddiası taşımaz; algoritmik setup adayı üretir.</div>
@@ -2485,7 +2490,7 @@ function elCommon(df,triggerLevel,direction,anchorAge){
   const volumePts=10*elClamp(vol/1.5,0,1);
   const trendPts=trend?10:4;
   const freshPts=10*(1-elClamp(anchorAge/Math.max(1,val("elRecent")),0,1));
-  return {breakout,mom,trend,vol,rsi:rsi[i],adx:adx[i],hist:mac.hist[i],breakoutPts,momentumPts,volumePts,trendPts,freshPts};
+  return {breakout,near,mom,trend,vol,rsi:rsi[i],adx:adx[i],hist:mac.hist[i],breakoutPts,momentumPts,volumePts,trendPts,freshPts};
 }
 function analyzeElliott(symbol,tf,df){
   if(!df||df.c.length<120)return [];
@@ -2502,7 +2507,8 @@ function analyzeElliott(symbol,tf,df){
       const fib=(b.p-c.p)/w1;if(fib<.25||fib>.9)continue;
       const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"LONG",n-1-c.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      out.push({symbol,timeframe:EL_TF[tf].label,setup:"⭐ W2 → W3",direction:"LONG",score,fib,close:df.c.at(-1),trigger:b.p,invalidation:a.p,anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,p0:a.p,p1:b.p,p2:c.p});
+      const target=c.p+1.618*w1,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"⭐ W2 → W3",direction:"LONG",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)>c.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-c.p):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:a.p,p1:b.p,p2:c.p,t0:df.t[a.i],t1:df.t[b.i],t2:df.t[c.i]});
       break;
     }
   }
@@ -2516,7 +2522,8 @@ function analyzeElliott(symbol,tf,df){
       const fib=(p3.p-p4.p)/w3;if(fib<.18||fib>.65)continue;
       const geom=35*(.65*elFibScore(fib,.382,.236,.50)+.35*elClamp(w3/w1/1.2,0,1)),cm=elCommon(df,p3.p,"LONG",n-1-p4.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      out.push({symbol,timeframe:EL_TF[tf].label,setup:"🌊 W4 → W5",direction:"LONG",score,fib,close:df.c.at(-1),trigger:p3.p,invalidation:p4.p,anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p});
+      const target=p4.p+w1,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🌊 W4 → W5",direction:"LONG",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:p3.p,target,invalidation:p4.p,setup_stop:p4.p,rr:(df.c.at(-1)>p4.p?Math.max(0,target-df.c.at(-1))/Math.max(.000001,df.c.at(-1)-p4.p):null),anchor_age:n-1-p4.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,p0:p0.p,p1:p1.p,p2:p2.p,p3:p3.p,p4:p4.p,t0:df.t[p0.i],t1:df.t[p1.i],t2:df.t[p2.i],t3:df.t[p3.i],t4:df.t[p4.i]});
       break;
     }
   }
@@ -2530,20 +2537,24 @@ function analyzeElliott(symbol,tf,df){
       const fib=(c.p-b.p)/A;if(fib<.25||fib>.9)continue;
       const geom=35*elFibScore(fib,.618,.382,.786),cm=elCommon(df,b.p,"SHORT",n-1-c.i);
       const score=Math.round(elClamp(geom+cm.breakoutPts+cm.momentumPts+cm.volumePts+cm.trendPts+cm.freshPts,0,100));
-      out.push({symbol,timeframe:EL_TF[tf].label,setup:"🔻 B → C",direction:"SHORT",score,fib,close:df.c.at(-1),trigger:b.p,invalidation:a.p,anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,momentum:cm.mom,trend:cm.trend,pA0:a.p,pA:b.p,pB:c.p});
+      const target=c.p-A,status=cm.breakout?"✅ TETİKLENDİ":cm.near?"🟡 TETİĞE YAKIN":"⚪ HAZIRLIK";
+      out.push({symbol,timeframe:EL_TF[tf].label,tf_key:tf,setup:"🔻 B → C",direction:"SHORT",status,score,fib,wave_score:geom,breakout_score:cm.breakoutPts,momentum_score:cm.momentumPts,volume_score:cm.volumePts,trend_score:cm.trendPts,fresh_score:cm.freshPts,close:df.c.at(-1),trigger:b.p,target,invalidation:a.p,setup_stop:c.p,rr:(df.c.at(-1)<c.p?Math.max(0,df.c.at(-1)-target)/Math.max(.000001,c.p-df.c.at(-1)):null),anchor_age:n-1-c.i,volume_ratio:cm.vol,rsi:cm.rsi,adx:cm.adx,breakout:cm.breakout,near:cm.near,momentum:cm.mom,trend:cm.trend,pA0:a.p,pA:b.p,pB:c.p,tA0:df.t[a.i],tA:df.t[b.i],tB:df.t[c.i]});
       break;
     }
   }
   return out;
 }
 function renderElliott(){
-  const min=Number($("elMinScore").value||0),only=$("elOnlyCandidates").checked;
+  const min=Number($("elMinScore").value||0),only=$("elOnlyCandidates").checked,q=$("elQuickFilter")?.value||"all";
   let rows=elliottAll.slice();
   if(only)rows=rows.filter(r=>r.score>=min);
+  if(q==="w23_75")rows=rows.filter(r=>String(r.setup).includes("W2")&&r.score>=75);
+  else if(q==="w23_85")rows=rows.filter(r=>String(r.setup).includes("W2")&&r.score>=85);
+  else if(q==="triggered")rows=rows.filter(r=>r.breakout);
   rows.sort((a,b)=>b.score-a.score||a.anchor_age-b.anchor_age);
   elliottShown=rows;$("elCount").textContent=rows.length;
-  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Setup","Yön","Opportunity Score","Fib","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Geçersiz","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
-  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.setup}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.invalidation)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
+  $("elTable").innerHTML=`<thead><tr>${["Hisse","Periyot","Görsel","Setup","Durum","Yön","Opportunity Score","Fib","Breakout","Momentum","Trend","Hacim x","RSI","ADX","Tetik","Hedef","Setup Stop","Dalga Geçersiz","R/R","Setup Yaşı","Fiyat"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+  rows.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><button class="uv-visual-btn" type="button" onclick="openUniversalVisual('elliott','${r.symbol}','${r.timeframe}')">📊 Görsel</button></td><td><b>${r.setup}</b></td><td><b>${r.status||"—"}</b></td><td><b>${r.direction}</b></td><td><b>${r.score}</b></td><td>${fmt(r.fib,3)}</td><td>${r.breakout?"✓":"—"}</td><td>${r.momentum?"✓":"—"}</td><td>${r.trend?"✓":"—"}</td><td>${fmt(r.volume_ratio,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.adx,1)}</td><td>${fmt(r.trigger)}</td><td>${fmt(r.target)}</td><td>${fmt(r.setup_stop)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.rr,2)}</td><td>${r.anchor_age}</td><td>${fmt(r.close)}</td></tr>`).join("")+"</tbody>";
 }
 async function scanElliott(){
   const tfs=selectedElTF();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
@@ -3064,7 +3075,7 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
 $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
 $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$("perfExcelBtn").onclick=perfExport;$("perfClearBtn").onclick=perfClear;$("perfOnlyEvaluated").onchange=renderPerformance;$("perfDetailN").onchange=renderPerformance;
-$("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;
+$("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;$("elQuickFilter").onchange=renderElliott;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
 $("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
@@ -3112,7 +3123,8 @@ const UV_MODULES={
  liqmss:{table:'lqTable',name:'Likidite / MSS',rows:()=>lqShown,special:true},
  mfiflow:{table:'mfiTable',name:'MFI Para Akışı',rows:()=>mfiShown},
  momshock:{table:'msTable',name:'Momentum Shock',rows:()=>msShown},
- quantquality:{table:'qqTable',name:'Quant Quality',rows:()=>qqShown}
+ quantquality:{table:'qqTable',name:'Quant Quality',rows:()=>qqShown},
+ elliott:{table:'elTable',name:'Elliott Fırsat',rows:()=>elliottShown,special:true}
 };
 function uvEsc(v){return String(v??'').replace(/[&<>\"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[c]))}
 function uvFinite(v){return Number.isFinite(Number(v))}
@@ -3128,13 +3140,36 @@ function uvOverlay(kind,r){const a=[];const add=(v,label,color)=>{if(uvFinite(v)
  if(kind==='emapull'){add(r.ema,'EMA','#38bdf8');add(r.trend_ema,'Trend EMA','#a78bfa');add(r.prev_high,'Önceki High','#facc15');add(r.entry,'Tetik Entry','#34d399');add(r.target,'Hedef','#c084fc')}
  if(kind==='momshock')add(r.pullback_level,'Pullback','#f59e0b');
  if(kind==='ad'){add(r.ma,'Ortalama','#38bdf8')}
+ if(kind==='elliott'){add(r.trigger,'Tetik','#facc15');add(r.target,'Hedef','#34d399');add(r.setup_stop,'Setup Stop','#fb7185');add(r.invalidation,'Dalga Geçersiz','#ef4444')}
  return a}
 function uvPriceSvg(df,overlays=[]){const n=df?.c?.length||0;if(!n)return'<div class="uv-card">Grafik verisi bulunamadı.</div>';const count=Math.min(90,n),start=n-count,end=n-1,W=1060,H=500,PL=58,PR=105,PT=24,PB=56,gW=W-PL-PR,gH=H-PT-PB;let lows=df.l.slice(start),highs=df.h.slice(start);for(const o of overlays){if(uvFinite(o.v)){lows.push(+o.v);highs.push(+o.v)}}let lo=Math.min(...lows),hi=Math.max(...highs),pad=(hi-lo)*.08||Math.abs(hi)*.03||1;lo-=pad;hi+=pad;const x=i=>PL+(i-start+.5)*gW/count,y=p=>PT+(hi-p)*gH/(hi-lo),step=gW/count,cw=Math.max(2,Math.min(8,step*.58));let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;min-width:690px;background:#0b111b;border-radius:14px">`;
  for(let k=0;k<=4;k++){let p=lo+(hi-lo)*k/4,yy=y(p);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#263244" opacity=".65"/><text x="${W-PR+8}" y="${yy+4}" fill="#94a3b8" font-size="11">${uvFmt(p)}</text>`}
  for(let i=start;i<=end;i++){let xx=x(i),up=df.c[i]>=df.o[i],col=up?'#34d399':'#fb7185',yo=y(df.o[i]),yc=y(df.c[i]);s+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}"/><rect x="${xx-cw/2}" y="${Math.min(yo,yc)}" width="${cw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${col}" opacity=".9"/>`}
  for(const o of overlays){let yy=y(o.v);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="${o.color||'#38bdf8'}" stroke-width="1.5" stroke-dasharray="7 5"/><text x="${W-PR-4}" y="${yy-6}" text-anchor="end" fill="${o.color||'#38bdf8'}" font-size="11" font-weight="700">${uvEsc(o.label)} ${uvFmt(o.v)}</text>`}
  const date=t=>{try{return new Date(t*1000).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'2-digit'})}catch{return''}};for(let k=0;k<5;k++){let ii=Math.round(start+(end-start)*k/4);s+=`<text x="${x(ii)}" y="${H-18}" text-anchor="middle" fill="#64748b" font-size="10">${date(df.t[ii])}</text>`}return s+'</svg>'}
-function uvCards(r){const skip=new Set(['symbol','timeframe','timeframe_label','tf_key']);const preferred=['stage','status','signal','decision','grade','score','smart_score','quality','confidence','risk','close','volume_ratio','rsi','mfi','adx','alpha','beta','sharpe','sortino','maxdd','vrp_proxy','opportunity_score','entry_score','momentum','change','distance_pct'];let keys=preferred.filter(k=>r[k]!==undefined);for(const k of Object.keys(r)){if(keys.length>=12)break;if(!skip.has(k)&&!keys.includes(k)&&(typeof r[k]==='number'||typeof r[k]==='string'||typeof r[k]==='boolean'))keys.push(k)}return keys.slice(0,12).map(k=>`<div class="uv-card"><div class="uv-k">${uvEsc(k.replaceAll('_',' '))}</div><div class="uv-v">${typeof r[k]==='number'?uvFmt(r[k],3):uvEsc(r[k])}</div></div>`).join('')}
+
+function uvNearestTimeIndex(df,t){if(!uvFinite(t)||!df?.t?.length)return-1;let best=0,bd=Infinity;for(let i=0;i<df.t.length;i++){const d=Math.abs(Number(df.t[i])-Number(t));if(d<bd){bd=d;best=i}}return best}
+function uvElliottPoints(r){
+ if(String(r.setup).includes('W2'))return[{t:r.t0,p:r.p0,l:'0'},{t:r.t1,p:r.p1,l:'1'},{t:r.t2,p:r.p2,l:'2'}];
+ if(String(r.setup).includes('W4'))return[{t:r.t0,p:r.p0,l:'0'},{t:r.t1,p:r.p1,l:'1'},{t:r.t2,p:r.p2,l:'2'},{t:r.t3,p:r.p3,l:'3'},{t:r.t4,p:r.p4,l:'4'}];
+ return[{t:r.tA0,p:r.pA0,l:'A0'},{t:r.tA,p:r.pA,l:'A'},{t:r.tB,p:r.pB,l:'B'}];
+}
+function uvElliottSvg(df,r,overlays=[]){
+ const n=df?.c?.length||0;if(!n)return'<div class="uv-card">Grafik verisi bulunamadı.</div>';
+ const pts=uvElliottPoints(r).filter(q=>uvFinite(q.p)&&uvFinite(q.t));let idx=pts.map(q=>uvNearestTimeIndex(df,q.t)).filter(i=>i>=0),minIdx=idx.length?Math.min(...idx):Math.max(0,n-80),start=Math.max(0,Math.min(minIdx-12,n-90)),end=n-1,count=end-start+1,W=1060,H=530,PL=58,PR=110,PT=28,PB=58,gW=W-PL-PR,gH=H-PT-PB;
+ let lows=df.l.slice(start,end+1),highs=df.h.slice(start,end+1);for(const o of overlays){if(uvFinite(o.v)){lows.push(+o.v);highs.push(+o.v)}}for(const q of pts){lows.push(+q.p);highs.push(+q.p)}
+ let lo=Math.min(...lows),hi=Math.max(...highs),pad=(hi-lo)*.09||1;lo-=pad;hi+=pad;const x=i=>PL+(i-start+.5)*gW/count,y=p=>PT+(hi-p)*gH/(hi-lo),step=gW/count,cw=Math.max(2,Math.min(8,step*.58));
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;min-width:690px;background:#0b111b;border-radius:14px">`;
+ for(let k=0;k<=4;k++){let p=lo+(hi-lo)*k/4,yy=y(p);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#263244" opacity=".65"/><text x="${W-PR+8}" y="${yy+4}" fill="#94a3b8" font-size="11">${uvFmt(p)}</text>`}
+ for(let i=start;i<=end;i++){let xx=x(i),up=df.c[i]>=df.o[i],col=up?'#34d399':'#fb7185',yo=y(df.o[i]),yc=y(df.c[i]);s+=`<line x1="${xx}" y1="${y(df.h[i])}" x2="${xx}" y2="${y(df.l[i])}" stroke="${col}"/><rect x="${xx-cw/2}" y="${Math.min(yo,yc)}" width="${cw}" height="${Math.max(1,Math.abs(yc-yo))}" fill="${col}" opacity=".9"/>`}
+ const mapped=pts.map(q=>({...q,i:uvNearestTimeIndex(df,q.t)})).filter(q=>q.i>=start&&q.i<=end);for(let j=1;j<mapped.length;j++){const a=mapped[j-1],b=mapped[j];s+=`<line x1="${x(a.i)}" y1="${y(a.p)}" x2="${x(b.i)}" y2="${y(b.p)}" stroke="#38bdf8" stroke-width="3"/>`}
+ for(const q of mapped){s+=`<circle cx="${x(q.i)}" cy="${y(q.p)}" r="6" fill="#0b111b" stroke="#7dd3fc" stroke-width="3"/><text x="${x(q.i)}" y="${y(q.p)-12}" text-anchor="middle" fill="#e0f2fe" font-size="15" font-weight="900">${uvEsc(q.l)}</text>`}
+ // Beklenen hareket oku
+ if(mapped.length&&uvFinite(r.target)){const a=mapped.at(-1),x1=x(a.i),y1=y(a.p),x2=W-PR-28,y2=y(Number(r.target));s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">Beklenen ${String(r.setup).includes('W2')?'W3':String(r.setup).includes('W4')?'W5':'C'} bölgesi</text>`}
+ for(const o of overlays){let yy=y(o.v);s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="${o.color||'#38bdf8'}" stroke-width="1.4" stroke-dasharray="7 5"/><text x="${W-PR-4}" y="${yy-6}" text-anchor="end" fill="${o.color||'#38bdf8'}" font-size="11" font-weight="700">${uvEsc(o.label)} ${uvFmt(o.v)}</text>`}
+ const date=t=>{try{return new Date(t*1000).toLocaleDateString('tr-TR',{day:'2-digit',month:'2-digit',year:'2-digit'})}catch{return''}};for(let k=0;k<5;k++){let ii=Math.round(start+(end-start)*k/4);s+=`<text x="${x(ii)}" y="${H-18}" text-anchor="middle" fill="#64748b" font-size="10">${date(df.t[ii])}</text>`}return s+'</svg>'
+}
+function uvCards(r){const skip=new Set(['symbol','timeframe','timeframe_label','tf_key']);const preferred=['setup','status','direction','score','fib','trigger','target','setup_stop','invalidation','rr','wave_score','breakout_score','momentum_score','volume_score','trend_score','fresh_score','stage','signal','decision','grade','smart_score','quality','confidence','risk','close','volume_ratio','rsi','mfi','adx','alpha','beta','sharpe','sortino','maxdd','vrp_proxy','opportunity_score','entry_score','momentum','change','distance_pct'];let keys=preferred.filter(k=>r[k]!==undefined);for(const k of Object.keys(r)){if(keys.length>=12)break;if(!skip.has(k)&&!keys.includes(k)&&(typeof r[k]==='number'||typeof r[k]==='string'||typeof r[k]==='boolean'))keys.push(k)}return keys.slice(0,12).map(k=>`<div class="uv-card"><div class="uv-k">${uvEsc(k.replaceAll('_',' '))}</div><div class="uv-v">${typeof r[k]==='number'?uvFmt(r[k],3):uvEsc(r[k])}</div></div>`).join('')}
 function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  const vol=Number(r.volume_ratio);const price=Number(r.close);
  switch(kind){
@@ -3155,12 +3190,21 @@ function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  case'emapull':found=`Trend içinde EMA20 geri çekilmesi/pullback yapısı yakalandı.`;confirm=[r.stage||'',`EMA uzaklık %${uvFmt(r.ema_distance)}`,`ADX ${uvFmt(r.adx)}`,uvFinite(r.entry)?`Tetik ${uvFmt(r.entry)}`:''];missing=[!uvFinite(r.entry)?'Tetik seviyesi':''];invalid='Trend EMA altına kalıcı geçiş ve son yapısal dibin kırılması pullback senaryosunu bozar.';break;
  case'mfiflow':found=`MFI para akışı motoru yükselen akış / dipten çıkış / breakout kombinasyonu yakaladı.`;confirm=[r.signal||'',`MFI ${uvFmt(r.mfi,1)}`,`MFI Δ ${uvFmt(r.change,1)}`,r.rising3?'3 mum yükseliş ✓':'',r.crossLow?'Dipten çıkış ✓':'',uvFinite(vol)?`Hacim ${uvFmt(vol)}x`:''];missing=[!r.b20?'20B breakout':'',!r.b50?'50B breakout':''];invalid='MFI yeniden düşer, hacim söner veya breakout seviyeleri kaybedilirse para akışı sinyali zayıflar.';break;
  case'momshock':found=`RSI ve momentum değişiminde olağandışı hızlanma/şok tespit edildi.`;confirm=[r.signal||'',`RSI Δ ${uvFmt(r.rsi_change,1)}`,`Momentum Δ ${uvFmt(r.momentum,2)}`,r.level?`M${r.level}`:''];missing=[!uvFinite(r.pullback_level)?'Pullback seviyesi henüz oluşmadı':''];invalid='Momentum hızla geri söner ve pullback seviyesi aşağı kırılırsa şok devam sinyali olmaktan çıkar.';break;
+ case'elliott':{
+   const is23=String(r.setup).includes('W2'),is45=String(r.setup).includes('W4');
+   const wave=is23?'Wave 3':is45?'Wave 5':'Wave C';
+   found=`${r.setup} yapısı algoritmik pivotlarla tespit edildi. Fibonacci geri çekilmesi ${uvFmt(r.fib,3)} ve Opportunity Score ${uvFmt(r.score,0)}/100. Skor dağılımı: dalga/Fib ${uvFmt(r.wave_score,1)}/35 · breakout ${uvFmt(r.breakout_score,1)}/20 · momentum ${uvFmt(r.momentum_score,1)}/15 · hacim ${uvFmt(r.volume_score,1)}/10 · trend ${uvFmt(r.trend_score,1)}/10 · tazelik ${uvFmt(r.fresh_score,1)}/10. Mevcut durum: ${r.status||'—'}.`;
+   confirm=[r.breakout?`Tetik seviyesi ${uvFmt(r.trigger)} kırıldı`:`Tetik ${uvFmt(r.trigger)} henüz kırılmadı`,r.momentum?'Momentum ✓':'Momentum teyidi yok',r.trend?'Trend ✓':'Trend teyidi zayıf',uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',`RSI ${uvFmt(r.rsi,1)}`,`ADX ${uvFmt(r.adx,1)}`,uvFinite(r.rr)?`Yaklaşık R/R ${uvFmt(r.rr,2)}`:''];
+   missing=[!r.breakout?'Fiyat tetik kırılımı':'',!r.momentum?'Momentum teyidi':'',!r.trend?'Trend uyumu':''];
+   invalid=`Kısa vadeli setup stop ${uvFmt(r.setup_stop)}; Elliott dalga sayımının ana geçersizlik seviyesi ${uvFmt(r.invalidation)}. Algoritmik hedef ${wave} için yaklaşık ${uvFmt(r.target)} bölgesidir; hedef garanti değildir.`;
+   break;
+ }
  case'quantquality':found=`Hisse XU100 karşısında risk ayarlı kalite ölçütleriyle sıralandı.`;confirm=[`Skor ${r.score??'—'}/10`,`Alpha %${uvFmt(r.alpha)}`,`Sharpe ${uvFmt(r.sharpe)}`,`Sortino ${uvFmt(r.sortino)}`,`Info ${uvFmt(r.info)}`];missing=[Number(r.maxdd)<-25?`Max DD yüksek: %${uvFmt(r.maxdd)}`:''];invalid='Alpha kaybolur, risk ayarlı oranlar bozulur veya drawdown belirgin artarsa kalite sınıfı zayıflar.';break;
  default:found=`${UV_MODULES[kind]?.name||'Tarama'} sonucu bu hisseyi aday olarak seçti.`;confirm=[`Fiyat ${uvFmt(price)}`];missing=['Ek fiyat teyidi kontrol edilmeli.'];invalid='Taramanın ana koşulları ortadan kalkarsa adaylık geçersizleşir.';
  }
  const clean=a=>a.filter(Boolean).join(' · ')||'—';return{found,confirm:clean(confirm),missing:clean(missing),invalid};}
 function uvCard(k,v){return`<div class="uv-card"><div class="uv-k">${uvEsc(k)}</div><div class="uv-v">${uvEsc(v)}</div></div>`}
-async function openUniversalVisual(kind,symbol,tf){const cfg=UV_MODULES[kind],r=uvRow(kind,symbol,tf);if(!cfg||!r)return alert('Sonuç satırı bulunamadı.');document.getElementById('uvTitle').textContent=`📊 ${symbol} · ${tf||r.timeframe||r.best_timeframe||'Günlük'} · ${cfg.name}`;const body=document.getElementById('uvBody');body.innerHTML='<div class="warn rounded-xl p-4">Grafik hazırlanıyor…</div>';document.getElementById('uvModal').classList.remove('hidden');document.getElementById('uvModal').classList.add('flex');document.body.style.overflow='hidden';try{const label=tf||r.timeframe||r.timeframe_label||r.best_timeframe||'Günlük',df=await uvFetchDf(symbol,label),nar=uvNarrative(kind,r),ov=uvOverlay(kind,r);body.innerHTML=`<div class="overflow-x-auto">${uvPriceSvg(df,ov)}</div><div class="uv-grid mt-3">${uvCards(r)}</div><div class="uv-explain mt-3">${uvCard('1 · Neden bulundu?',nar.found)}${uvCard('2 · Hangi teyitler var?',nar.confirm)}${uvCard('3 · Ne eksik?',nar.missing)}${uvCard('4 · Hangi durumda bozulur?',nar.invalid)}</div><div class="text-xs muted mt-3">Grafik yalnız bu pencere açıldığında yüklenir; tarama sırasında üretilmez. Görsel açıklama tarama motorunun kendi sonuç alanlarından oluşturulur.</div>`}catch(e){body.innerHTML=`<div class="bad rounded-xl p-4">Görsel veri alınamadı: ${uvEsc(e?.message||e)}</div>`}}
+async function openUniversalVisual(kind,symbol,tf){const cfg=UV_MODULES[kind],r=uvRow(kind,symbol,tf);if(!cfg||!r)return alert('Sonuç satırı bulunamadı.');document.getElementById('uvTitle').textContent=`📊 ${symbol} · ${tf||r.timeframe||r.best_timeframe||'Günlük'} · ${cfg.name}`;const body=document.getElementById('uvBody');body.innerHTML='<div class="warn rounded-xl p-4">Grafik hazırlanıyor…</div>';document.getElementById('uvModal').classList.remove('hidden');document.getElementById('uvModal').classList.add('flex');document.body.style.overflow='hidden';try{const label=tf||r.timeframe||r.timeframe_label||r.best_timeframe||'Günlük',df=await uvFetchDf(symbol,label),nar=uvNarrative(kind,r),ov=uvOverlay(kind,r);body.innerHTML=`<div class="overflow-x-auto">${kind==='elliott'?uvElliottSvg(df,r,ov):uvPriceSvg(df,ov)}</div><div class="uv-grid mt-3">${uvCards(r)}</div><div class="uv-explain mt-3">${uvCard('1 · Neden bulundu?',nar.found)}${uvCard('2 · Hangi teyitler var?',nar.confirm)}${uvCard('3 · Ne eksik?',nar.missing)}${uvCard('4 · Hangi durumda bozulur?',nar.invalid)}</div><div class="text-xs muted mt-3">Grafik yalnız bu pencere açıldığında yüklenir; tarama sırasında üretilmez. Görsel açıklama tarama motorunun kendi sonuç alanlarından oluşturulur.</div>`}catch(e){body.innerHTML=`<div class="bad rounded-xl p-4">Görsel veri alınamadı: ${uvEsc(e?.message||e)}</div>`}}
 function closeUniversalVisual(){document.getElementById('uvModal').classList.add('hidden');document.getElementById('uvModal').classList.remove('flex');document.getElementById('uvBody').innerHTML='';document.body.style.overflow=''}
 function uvDecorateTable(kind,cfg){if(cfg.special)return;const table=document.getElementById(cfg.table);if(!table?.tHead?.rows?.length||!table.tBodies?.[0])return;let heads=[...table.tHead.rows[0].cells];if(heads.some(h=>smartNormHeader(h.innerText)==='Görsel'))return;const hi=uvHeaderIndex(table,'Hisse');if(hi<0)return;let ti=uvHeaderIndex(table,'Periyot');if(ti<0)ti=uvHeaderIndex(table,'Zaman');const th=document.createElement('th');th.textContent='Görsel';table.tHead.rows[0].appendChild(th);for(const tr of [...table.tBodies[0].rows]){const symbol=tr.cells[hi]?.innerText?.trim();const tf=ti>=0?tr.cells[ti]?.innerText?.trim():'';const td=document.createElement('td');const b=document.createElement('button');b.className='uv-visual-btn';b.textContent='📊 Görsel';b.type='button';b.addEventListener('click',()=>openUniversalVisual(kind,symbol,tf));td.appendChild(b);tr.appendChild(td)}smartEnhanceTable(table)}
 function uvDecorateAll(){for(const [k,c] of Object.entries(UV_MODULES))uvDecorateTable(k,c)}
