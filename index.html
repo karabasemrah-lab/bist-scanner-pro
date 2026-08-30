@@ -3341,16 +3341,29 @@ function uvOverlay(kind,r){const a=[];const add=(v,label,color)=>{if(uvFinite(v)
  if(kind==='elliott'){
    const w5phase=['W5PREP','W5READY','W5_READY','W5_ACTIVE','W5_T1_DONE','W5_T2_DONE','W5_T3_DONE'].includes(r.lifecycle);
    const standaloneW45=String(r.setup||'').includes('W4')&&String(r.setup||'').includes('W5');
-   add(r.trigger,w5phase?'W3 Eski Tetik':'Tetik','#facc15');
-   add(r.target,w5phase?'W3 Tamamlanan Hedef':standaloneW45?'W5 Hedef-1':'Hedef','#34d399');
+   const activeW5 = w5phase || standaloneW45;
+
+   // Aktif W5 görünümünde eski W3 tetik/hedef etiketlerini gizle.
+   // Böylece aynı fiyat seviyesi iki kez yazılmaz.
+   if(!activeW5){
+     add(r.trigger,'Tetik','#facc15');
+     add(r.target,'Hedef','#34d399');
+   }
+
    if(w5phase){
      add(r.w5_trigger,'W5 Tetik','#60a5fa');
      add(r.w5_target1??r.w5_target,'W5 Hedef-1','#a78bfa');
-     add(r.w5_target2,'W5 Hedef-2','#c084fc');add(r.w5_target3,'W5 Uzatılmış','#e879f9')
+     add(r.w5_target2,'W5 Hedef-2','#c084fc');
+     add(r.w5_target3,'W5 Uzatılmış','#e879f9');
    }else if(standaloneW45){
-     add(r.w5_target2??r.target2,'W5 Hedef-2','#c084fc');add(r.w5_target3??r.target3,'W5 Uzatılmış','#e879f9')
+     add(r.w5_trigger??r.trigger,'W5 Tetik','#60a5fa');
+     add(r.w5_target1??r.target1??r.target,'W5 Hedef-1','#a78bfa');
+     add(r.w5_target2??r.target2,'W5 Hedef-2','#c084fc');
+     add(r.w5_target3??r.target3,'W5 Uzatılmış','#e879f9');
    }
-   add(r.setup_stop,'Setup Stop','#fb7185');add(r.invalidation,'Dalga Geçersiz','#ef4444')
+
+   add(r.setup_stop,'Setup Stop','#fb7185');
+   add(r.invalidation,'Dalga Geçersiz','#ef4444');
  }
  return a}
 function uvPriceSvg(df,overlays=[]){const n=df?.c?.length||0;if(!n)return'<div class="uv-card">Grafik verisi bulunamadı.</div>';const count=Math.min(90,n),start=n-count,end=n-1,W=1060,H=500,PL=58,PR=105,PT=24,PB=56,gW=W-PL-PR,gH=H-PT-PB;let lows=df.l.slice(start),highs=df.h.slice(start);for(const o of overlays){if(uvFinite(o.v)){lows.push(+o.v);highs.push(+o.v)}}let lo=Math.min(...lows),hi=Math.max(...highs),pad=(hi-lo)*.08||Math.abs(hi)*.03||1;lo-=pad;hi+=pad;const x=i=>PL+(i-start+.5)*gW/count,y=p=>PT+(hi-p)*gH/(hi-lo),step=gW/count,cw=Math.max(2,Math.min(8,step*.58));let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block;min-width:690px;background:#0b111b;border-radius:14px">`;
@@ -3496,7 +3509,8 @@ function uvElliottSvg(df,r,overlays=[]){
  }else if(mapped.length&&uvFinite(r.target)){
    const a=mapped.at(-1),x1=x(a.i),y1=y(a.p),x2=W-PR-28,y2=y(Number(r.target));
    const completedW3=w4watch&&String(r.setup||'').includes('W2');
-   s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">${completedW3?'W3 tamamlanan hedef':'Beklenen '+(String(r.setup).includes('W2')?'W3':'C')+' bölgesi'}</text>`;
+   const activeW5Now=['W5_READY','W5_ACTIVE','W5_T1_DONE','W5_T2_DONE','W5_T3_DONE','W5PREP','W5READY'].includes(r.lifecycle);
+   s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">${activeW5Now?'':(completedW3?'W3 tamamlanan hedef':'Beklenen '+(String(r.setup).includes('W2')?'W3':'C')+' bölgesi')}</text>`;
    if(completedW3){
      s+=`<rect x="${PL+8}" y="${PT+8}" width="270" height="43" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+26}" fill="#7dd3fc" font-size="13" font-weight="900">🌊 W3 TAMAMLANDI · W4 TAKİP</text><text x="${PL+18}" y="${PT+43}" fill="#cbd5e1" font-size="11">W4 geri çekilmesi henüz oluşmadı / teyit edilmedi.</text>`;
    }
