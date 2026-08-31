@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>High-Confidence BIST Lab v1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0b0d12;--card:#121620;--line:#252b38;--muted:#8d96a8;--text:#edf1f7;--green:#34d399;--amber:#f59e0b;--red:#fb7185;--blue:#60a5fa;--cyan:#22d3ee}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0%,#0f3b3c 0,#0b0d12 38%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;padding:18px}
+.wrap{max-width:1700px;margin:auto}.card{background:rgba(18,22,32,.96);border:1px solid var(--line);border-radius:18px}.input{width:100%;background:#0e121a;border:1px solid #29303d;border-radius:12px;padding:10px 12px;color:white}.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer}.btn:disabled{opacity:.45;cursor:not-allowed}.btn-main{background:linear-gradient(90deg,#0f766e,#0891b2);color:white}.btn-xlsx{background:#173d2c;color:#8cf0bd}.muted{color:var(--muted)}.chip{display:inline-flex;align-items:center;gap:6px;background:#171c27;border:1px solid #2c3442;border-radius:999px;padding:6px 10px;font-size:11px;color:#c6ccda}.progress{height:9px;background:#202633;border-radius:999px;overflow:hidden}.progress>div{height:100%;width:0;background:linear-gradient(90deg,#0f766e,#22d3ee);transition:width .15s}.status{border-radius:12px;padding:10px 12px;font-size:13px}.warn{background:#2a2110;border:1px solid #6c5216;color:#f7d978}.good{background:#0c2a20;border:1px solid #145c42;color:#80edbd}.bad{background:#301519;border:1px solid #75323b;color:#ff9aa6}table{border-collapse:collapse;width:100%;font-size:12px}th{position:sticky;top:0;background:#171c27;color:#d7ddea;text-align:left;padding:9px;border-bottom:1px solid #303746;white-space:nowrap;z-index:1}td{padding:8px 9px;border-bottom:1px solid #202633;white-space:nowrap}tr:hover td{background:#171c27}.kpi{background:#0e121a;border:1px solid #29303d;border-radius:14px;padding:14px}.kpi .v{font-size:24px;font-weight:900}.pos{color:#86efac}.neg{color:#fda4af}.neutral{color:#fde68a}.rank1{background:#123529}.rank2{background:#172a36}.rank3{background:#2a2516}.badge{font-size:10px;border-radius:999px;padding:3px 7px;border:1px solid #334155}.small{font-size:11px}@media(max-width:850px){body{padding:10px}.gridx{grid-template-columns:1fr!important}.card{border-radius:14px}}
+</style>
+</head>
+<body>
+<div class="wrap space-y-4">
+<header class="card p-5">
+  <div class="flex flex-col lg:flex-row justify-between gap-4">
+    <div><h1 class="text-2xl md:text-3xl font-black">🎯 High-Confidence BIST Lab v1</h1><div class="muted text-sm mt-2">Skewness rejim değişimini trend, momentum, relatif güç, hacim, risk ve piyasa rejimiyle yarıştırır. Amaç: az ama yüksek kaliteli haftalık/aylık adaylar.</div></div>
+    <div class="text-xs muted max-w-xl">Mevcut Scanner Pro'yu değiştirmez. Aynı <b>/api/yahoo</b> ve <b>/api/tradingview</b> uçlarını kullanır. Model seçimini kronolojik OOS (son %30) sonuçlarıyla kontrol eder.</div>
+  </div>
+</header>
+
+<section class="card p-5">
+<h2 class="text-xl font-black mb-4">1) Veri ve Skewness Tabanı</h2>
+<div class="grid grid-cols-4 gap-4 gridx">
+ <div><label class="text-xs muted">Evren</label><select id="source" class="input mt-1"><option value="special">Özel Liste</option><option value="tv" selected>TradingView Ön Eleme — Tüm BIST</option></select></div>
+ <div><label class="text-xs muted">Min. 30G Ortalama Hacim</label><input id="minVolume" class="input mt-1" type="number" value="250000" step="50000"></div>
+ <div><label class="text-xs muted">Yahoo Geçmişi</label><select id="range" class="input mt-1"><option value="5y" selected>5 yıl</option><option value="10y">10 yıl</option><option value="max">Maksimum</option></select></div>
+ <div><label class="text-xs muted">Rolling Skew Penceresi</label><input id="window" class="input mt-1" type="number" value="63" min="20" max="252"></div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-4 gridx">
+ <div><label class="text-xs muted">Negatif Rejim Eşiği</label><select id="threshold" class="input mt-1"><option value="-0.5" selected>-0.50</option><option value="-0.75">-0.75</option><option value="-1">-1.00</option><option value="-1.5">-1.50</option></select></div>
+ <div><label class="text-xs muted">Rejim Geri Bakış</label><input id="regimeLookback" class="input mt-1" type="number" value="20" min="1" max="126"></div>
+ <div><label class="text-xs muted">Sinyal Cooldown</label><input id="cooldown" class="input mt-1" type="number" value="20" min="0" max="126"></div>
+ <div><label class="text-xs muted">Minimum Veri</label><input id="minBars" class="input mt-1" type="number" value="260" min="180" max="1500"></div>
+</div>
+<div class="mt-4"><label class="text-xs muted">Özel Liste</label><textarea id="special" class="input mt-1" rows="2">ASELS,THYAO,EREGL,TUPRS,GARAN,CWENE</textarea></div>
+</section>
+
+<section class="card p-5">
+<h2 class="text-xl font-black mb-4">2) Kalite Filtre Eşikleri</h2>
+<div class="grid grid-cols-4 gap-4 gridx">
+ <div><label class="text-xs muted">Momentum Bakışı (gün)</label><input id="momLen" class="input mt-1" type="number" value="20" min="5" max="126"></div>
+ <div><label class="text-xs muted">Minimum Momentum %</label><input id="momMin" class="input mt-1" type="number" value="0" step="0.5"></div>
+ <div><label class="text-xs muted">RS Bakışı (gün)</label><input id="rsLen" class="input mt-1" type="number" value="20" min="5" max="126"></div>
+ <div><label class="text-xs muted">Minimum RS Excess %</label><input id="rsMin" class="input mt-1" type="number" value="0" step="0.5"></div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-4 gridx">
+ <div><label class="text-xs muted">Min. Hacim Oranı (V/20G)</label><input id="volMin" class="input mt-1" type="number" value="1.00" min="0" max="10" step="0.05"></div>
+ <div><label class="text-xs muted">Maks. ATR14 %</label><input id="atrMax" class="input mt-1" type="number" value="7.0" min="1" max="30" step="0.25"></div>
+ <div><label class="text-xs muted">Maks. EMA20 Uzaklık %</label><input id="extMax" class="input mt-1" type="number" value="10.0" min="0" max="50" step="0.5"></div>
+ <div><label class="text-xs muted">OOS Test Payı %</label><input id="testPct" class="input mt-1" type="number" value="30" min="15" max="50" step="5"></div>
+</div>
+<div class="flex flex-wrap gap-2 mt-4">
+ <span class="chip">Trend = Fiyat &gt; EMA20 &gt; EMA50</span>
+ <span class="chip">Momentum = T0 anındaki geçmiş fiyat değişimi</span>
+ <span class="chip">RS = Hisse getirisi − XU100 getirisi</span>
+ <span class="chip">Risk = ATR14% + EMA20 uzamışlık</span>
+ <span class="chip">Piyasa = XU100 &gt; EMA50 ve EMA50 yükseliyor</span>
+ <span class="chip">Look-ahead yok</span>
+</div>
+<button id="runBtn" class="btn btn-main w-full mt-5">🚀 High-Confidence Laboratuvarını Çalıştır</button>
+<div id="universeInfo" class="text-xs muted mt-3">TradingView evreni, hacim filtresi uygulanarak hazırlanır.</div>
+<div class="progress mt-3"><div id="prog"></div></div>
+<div id="status" class="status warn mt-3">Laboratuvarı başlat.</div>
+</section>
+
+<section class="grid grid-cols-5 gap-3 gridx">
+ <div class="kpi"><div class="text-xs muted">Baz Skew Sinyali</div><div id="kSignals" class="v">0</div></div>
+ <div class="kpi"><div class="text-xs muted">Sinyal Üreten Hisse</div><div id="kStocks" class="v">0</div></div>
+ <div class="kpi"><div class="text-xs muted">OOS Kesim Tarihi</div><div id="kCutoff" class="v" style="font-size:18px">—</div></div>
+ <div class="kpi"><div class="text-xs muted">En İyi Haftalık Model</div><div id="kWeekly" class="v" style="font-size:17px">—</div></div>
+ <div class="kpi"><div class="text-xs muted">En İyi Aylık Model</div><div id="kMonthly" class="v" style="font-size:17px">—</div></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800 flex flex-wrap items-center gap-3"><h2 class="font-black text-xl">🏆 OOS Model Yarışı — Haftalık (+10G)</h2><span class="chip">Son %30 kronolojik test</span><button id="excelBtn" class="btn btn-xlsx ml-auto" disabled>📥 Excel</button></div>
+ <div class="overflow-auto max-h-[560px]"><table id="weeklyTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800 flex flex-wrap items-center gap-3"><h2 class="font-black text-xl">🏆 OOS Model Yarışı — Aylık (+20G)</h2><span class="chip">Son %30 kronolojik test</span></div>
+ <div class="overflow-auto max-h-[560px]"><table id="monthlyTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800"><h2 class="font-black text-xl">🧪 Tüm Model × Ufuk Özeti</h2></div>
+ <div class="overflow-auto max-h-[650px]"><table id="allTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800"><h2 class="font-black text-xl">🧾 Baz Sinyal Günlüğü · <span id="eventCount">0</span></h2><div class="text-xs muted mt-1">Her satırda T0 anında hesaplanan filtre özellikleri gösterilir.</div></div>
+ <div class="overflow-auto max-h-[700px]"><table id="eventsTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <details><summary class="p-4 cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary><div class="overflow-auto max-h-[350px]"><table id="failTable"></table></div></details>
+</section>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), finite=Number.isFinite, sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TV_API='/api/tradingview';
+const TV_COLS=['name','close','change','volume','relative_volume_10d_calc','RSI','ADX','average_volume_30d_calc'];
+const TV_BASE=[{left:'is_primary',operation:'equal',right:true},{left:'typespecs',operation:'has',right:['common']}];
+const H=[5,10,20,40,63]; let events=[],failures=[],modelRows=[],cutoffDate=''; const cache=new Map();
+const MODELS=[
+ {id:'SKEW',name:'Skew',req:[]},
+ {id:'TREND',name:'Skew + Trend',req:['trend']},
+ {id:'MOM',name:'Skew + Momentum',req:['momentum']},
+ {id:'RS',name:'Skew + RS',req:['rs']},
+ {id:'VOL',name:'Skew + Hacim',req:['volume']},
+ {id:'T_M',name:'Skew + Trend + Momentum',req:['trend','momentum']},
+ {id:'T_RS',name:'Skew + Trend + RS',req:['trend','rs']},
+ {id:'T_M_RS',name:'Skew + Trend + Momentum + RS',req:['trend','momentum','rs']},
+ {id:'T_M_RS_V',name:'Skew + Trend + Momentum + RS + Hacim',req:['trend','momentum','rs','volume']},
+ {id:'QUALITY',name:'Skew + Trend + Mom + RS + Hacim + Risk',req:['trend','momentum','rs','volume','risk']},
+ {id:'FULL',name:'Tam Model + Piyasa Rejimi',req:['trend','momentum','rs','volume','risk','market']}
+];
+function val(id){return Number($(id).value)} function pct(x,d=2){return finite(x)?(x>=0?'+':'')+x.toFixed(d)+'%':'—'} function num(x,d=2){return finite(x)?x.toFixed(d):'—'}
+function parseSymbols(s){return [...new Set(String(s||'').toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/^BIST:/,'').replace(/\.IS$/,'').trim()).filter(Boolean))]}
+function setStatus(text,cls='warn'){$('status').className='status '+cls+' mt-3';$('status').textContent=text}
+async function fetchJSON(url,opt){const r=await fetch(url,opt);if(!r.ok){let m='';try{m=await r.text()}catch{}throw new Error(`HTTP ${r.status}${m?' · '+m.slice(0,150):''}`)}return r.json()}
+async function tvScan(filters,maxRows=2000){const body=JSON.stringify({symbols:{query:{types:[]},tickers:[]},options:{lang:'tr'},columns:TV_COLS,sort:{sortBy:'relative_volume_10d_calc',sortOrder:'desc'},range:[0,maxRows],filter:filters});return fetchJSON(TV_API,{method:'POST',headers:{'Content-Type':'application/json'},body})}
+async function getUniverse(){if($('source').value==='special'){const s=parseSymbols($('special').value);$('universeInfo').textContent=`Özel liste: ${s.length} hisse`;return s}const minV=val('minVolume');const fil=await tvScan(TV_BASE.concat([{left:'close',operation:'greater',right:1},{left:'average_volume_30d_calc',operation:'greater',right:minV}]));const s=(fil.data||[]).map(x=>String(x.s||'').replace('BIST:','').trim().toUpperCase()).filter(Boolean);$('universeInfo').textContent=`TradingView filtre sonrası: ${fil.totalCount??s.length} · Taranacak: ${s.length}`;return s}
+async function yahoo(symbol,range='5y'){const key=symbol+'|'+range;if(cache.has(key))return cache.get(key);const p=(async()=>{const j=await fetchJSON(`/api/yahoo?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}&interval=1d`);const r=j?.chart?.result?.[0];if(!r)throw new Error('Yahoo veri yok');const q=r.indicators?.quote?.[0]||{},adj=r.indicators?.adjclose?.[0]?.adjclose||[],ts=r.timestamp||[];const out={t:[],o:[],h:[],l:[],c:[],v:[]};for(let i=0;i<ts.length;i++){const c=Number(adj[i]??q.close?.[i]),o=Number(q.open?.[i]),h=Number(q.high?.[i]),l=Number(q.low?.[i]),v=Number(q.volume?.[i]||0);if(finite(c)&&c>0){out.t.push(ts[i]);out.c.push(c);out.o.push(finite(o)?o:c);out.h.push(finite(h)?h:c);out.l.push(finite(l)?l:c);out.v.push(finite(v)?v:0)}}return out})();cache.set(key,p);try{return await p}catch(e){cache.delete(key);throw e}}
+function mean(a){const x=a.filter(finite);return x.length?x.reduce((s,v)=>s+v,0)/x.length:NaN}
+function median(a){const x=a.filter(finite).slice().sort((a,b)=>a-b);if(!x.length)return NaN;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2}
+function ema(a,n){const out=new Array(a.length).fill(NaN),k=2/(n+1);let e=NaN;for(let i=0;i<a.length;i++){if(!finite(a[i]))continue;e=finite(e)?a[i]*k+e*(1-k):a[i];out[i]=e}return out}
+function smaAt(a,i,n){if(i<n-1)return NaN;let s=0,c=0;for(let j=i-n+1;j<=i;j++){if(finite(a[j])){s+=a[j];c++}}return c===n?s/n:NaN}
+function atr(df,n=14){const tr=new Array(df.c.length).fill(NaN);for(let i=0;i<df.c.length;i++){if(i===0)tr[i]=df.h[i]-df.l[i];else tr[i]=Math.max(df.h[i]-df.l[i],Math.abs(df.h[i]-df.c[i-1]),Math.abs(df.l[i]-df.c[i-1]))}return ema(tr,n)}
+function logReturns(c){const r=new Array(c.length).fill(NaN);for(let i=1;i<c.length;i++)if(c[i]>0&&c[i-1]>0)r[i]=Math.log(c[i]/c[i-1]);return r}
+function sampleSkew(a){const x=a.filter(finite),n=x.length;if(n<3)return NaN;const m=mean(x);let m2=0,m3=0;for(const v of x){const d=v-m;m2+=d*d;m3+=d*d*d}if(m2<=0)return 0;const s=Math.sqrt(m2/(n-1));return (n/((n-1)*(n-2)))*(m3/(s*s*s))}
+function rollingSkew(c,w){const r=logReturns(c),out=new Array(c.length).fill(NaN);for(let i=w;i<c.length;i++){const a=r.slice(i-w+1,i+1);if(a.every(finite))out[i]=sampleSkew(a)}return out}
+function benchMaps(bench){return{price:new Map(bench.t.map((t,i)=>[t,bench.c[i]])),idx:new Map(bench.t.map((t,i)=>[t,i])),ema50:ema(bench.c,50)}}
+function retPct(c,i,n){return i>=n&&c[i-n]>0?100*(c[i]/c[i-n]-1):NaN}
+function analyze(sym,df,bench,bm){const w=Math.max(20,Math.trunc(val('window'))),thr=val('threshold'),lb=Math.max(1,Math.trunc(val('regimeLookback'))),cool=Math.max(0,Math.trunc(val('cooldown'))),momLen=Math.max(2,Math.trunc(val('momLen'))),rsLen=Math.max(2,Math.trunc(val('rsLen'))),minBars=Math.max(220,Math.trunc(val('minBars')),w+64,momLen+5,rsLen+5);if(df.c.length<minBars)return[];const sk=rollingSkew(df.c,w),e20=ema(df.c,20),e50=ema(df.c,50),a14=atr(df,14),out=[];let last=-1e9;
+ for(let i=Math.max(w+1,60,momLen,rsLen);i<df.c.length-5;i++){
+  if(!(finite(sk[i-1])&&finite(sk[i])))continue;const cross=sk[i-1]<=0&&sk[i]>0;if(!cross||i-last<=cool)continue;
+  let minPrev=Infinity;for(let j=Math.max(w,i-lb);j<i;j++)if(finite(sk[j]))minPrev=Math.min(minPrev,sk[j]);if(!(minPrev<=thr))continue;
+  const t=df.t[i],bi=bm.idx.get(t);const b0=bm.price.get(t);const mom=retPct(df.c,i,momLen);let rs=NaN,market=false;
+  if(bi!==undefined&&bi>=rsLen){const br=100*(bench.c[bi]/bench.c[bi-rsLen]-1);rs=finite(mom)?mom-br:NaN;market=finite(bm.ema50[bi])&&finite(bm.ema50[bi-5])&&bench.c[bi]>bm.ema50[bi]&&bm.ema50[bi]>bm.ema50[bi-5]}
+  const volAvg=smaAt(df.v,i-1,20),volRatio=finite(volAvg)&&volAvg>0?df.v[i]/volAvg:NaN;const atrPct=finite(a14[i])&&df.c[i]>0?100*a14[i]/df.c[i]:NaN;const ext=finite(e20[i])&&e20[i]>0?100*(df.c[i]/e20[i]-1):NaN;
+  const flags={trend:finite(e20[i])&&finite(e50[i])&&df.c[i]>e20[i]&&e20[i]>e50[i],momentum:finite(mom)&&mom>=val('momMin'),rs:finite(rs)&&rs>=val('rsMin'),volume:finite(volRatio)&&volRatio>=val('volMin'),risk:finite(atrPct)&&finite(ext)&&atrPct<=val('atrMax')&&ext<=val('extMax'),market};
+  const e={symbol:sym,date:new Date(t*1000).toISOString().slice(0,10),ts:t,index:i,prior_min_skew:minPrev,skew_t0:sk[i],price0:df.c[i],mom20:mom,rs20:rs,volRatio,atrPct,ext20:ext,...flags};
+  for(const h of H){if(i+h<df.c.length){e['r'+h]=100*(df.c[i+h]/df.c[i]-1);const bh=bm.price.get(df.t[i+h]);e['x'+h]=(finite(b0)&&finite(bh)&&b0>0)?e['r'+h]-100*(bh/b0-1):NaN}else{e['r'+h]=NaN;e['x'+h]=NaN}}
+  const end=Math.min(df.c.length-1,i+63);let mfe=-Infinity,mae=Infinity;for(let j=i+1;j<=end;j++){const rr=100*(df.c[j]/df.c[i]-1);mfe=Math.max(mfe,rr);mae=Math.min(mae,rr)}e.mfe63=finite(mfe)?mfe:NaN;e.mae63=finite(mae)?mae:NaN;out.push(e);last=i;
+ }
+ return out}
+function modelPass(e,m){return m.req.every(k=>!!e[k])}
+function stats(arr,h){const r=arr.map(e=>e['r'+h]).filter(finite),x=arr.map(e=>e['x'+h]).filter(finite);return{n:r.length,mean:mean(r),median:median(r),win:r.length?100*r.filter(v=>v>0).length/r.length:NaN,exMean:mean(x),exMedian:median(x),beat:x.length?100*x.filter(v=>v>0).length/x.length:NaN,mfe:median(arr.map(e=>e.mfe63).filter(finite)),mae:median(arr.map(e=>e.mae63).filter(finite))}}
+function confidenceScore(s){if(!s||!s.n)return -999;const nFactor=Math.min(1,s.n/120);const ex=finite(s.exMedian)?Math.max(-10,Math.min(10,s.exMedian)): -10;return 0.38*(s.win||0)+0.38*(s.beat||0)+1.8*ex+10*nFactor}
+function buildModels(){if(!events.length){modelRows=[];cutoffDate='';return}const dates=events.map(e=>e.date).sort();const testPct=Math.max(15,Math.min(50,val('testPct')||30));const cutIx=Math.max(0,Math.min(dates.length-1,Math.floor(dates.length*(1-testPct/100))));cutoffDate=dates[cutIx];modelRows=[];for(const m of MODELS){const pass=events.filter(e=>modelPass(e,m)),train=pass.filter(e=>e.date<cutoffDate),test=pass.filter(e=>e.date>=cutoffDate);for(const h of H){const allS=stats(pass,h),trS=stats(train,h),teS=stats(test,h);modelRows.push({model:m.name,id:m.id,h,all:allS,train:trS,test:teS,score:confidenceScore(teS)})}}}
+function cls(v){return !finite(v)?'':v>0?'pos':v<0?'neg':'neutral'}
+function rankRows(h){return modelRows.filter(r=>r.h===h).slice().sort((a,b)=>b.score-a.score||b.test.beat-a.test.beat||b.test.win-a.test.win)}
+function renderRace(tableId,h){const rows=rankRows(h);$(tableId).innerHTML='<thead><tr>'+['#','Model','OOS N','OOS Kazanma','OOS Medyan','OOS XU100 Üstü','OOS Medyan Excess','OOS MFE63','OOS MAE63','TRAIN N','TRAIN Kazanma','TRAIN Medyan Excess','Skor'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+rows.map((r,i)=>`<tr class="${i===0?'rank1':i===1?'rank2':i===2?'rank3':''}"><td><b>${i+1}</b></td><td><b>${r.model}</b></td><td>${r.test.n}</td><td>${num(r.test.win,1)}%</td><td class="${cls(r.test.median)}">${pct(r.test.median)}</td><td>${num(r.test.beat,1)}%</td><td class="${cls(r.test.exMedian)}"><b>${pct(r.test.exMedian)}</b></td><td class="${cls(r.test.mfe)}">${pct(r.test.mfe)}</td><td class="${cls(r.test.mae)}">${pct(r.test.mae)}</td><td>${r.train.n}</td><td>${num(r.train.win,1)}%</td><td class="${cls(r.train.exMedian)}">${pct(r.train.exMedian)}</td><td>${num(r.score,1)}</td></tr>`).join('')+'</tbody>'}
+function render(){buildModels();$('eventCount').textContent=events.length;$('failCount').textContent=failures.length;$('kSignals').textContent=events.length;$('kStocks').textContent=new Set(events.map(e=>e.symbol)).size;$('kCutoff').textContent=cutoffDate||'—';const wk=rankRows(10)[0],mo=rankRows(20)[0];$('kWeekly').textContent=wk?wk.model:'—';$('kMonthly').textContent=mo?mo.model:'—';renderRace('weeklyTable',10);renderRace('monthlyTable',20);
+ $('allTable').innerHTML='<thead><tr>'+['Model','Ufuk','ALL N','ALL Win','ALL Medyan','ALL Medyan Excess','OOS N','OOS Win','OOS Medyan','OOS Beat','OOS Medyan Excess','OOS MFE','OOS MAE','OOS Skor'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+modelRows.map(r=>`<tr><td><b>${r.model}</b></td><td>+${r.h}G</td><td>${r.all.n}</td><td>${num(r.all.win,1)}%</td><td class="${cls(r.all.median)}">${pct(r.all.median)}</td><td class="${cls(r.all.exMedian)}">${pct(r.all.exMedian)}</td><td>${r.test.n}</td><td>${num(r.test.win,1)}%</td><td class="${cls(r.test.median)}">${pct(r.test.median)}</td><td>${num(r.test.beat,1)}%</td><td class="${cls(r.test.exMedian)}">${pct(r.test.exMedian)}</td><td>${pct(r.test.mfe)}</td><td>${pct(r.test.mae)}</td><td>${num(r.score,1)}</td></tr>`).join('')+'</tbody>';
+ const es=events.slice().sort((a,b)=>a.date<b.date?1:-1);$('eventsTable').innerHTML='<thead><tr>'+['Hisse','T0','Min Skew','T0 Skew','Trend','Mom%','RS%','Hacim x','ATR%','EMA20 Uzak%','Piyasa','10G','20G','10G Excess','20G Excess','MFE63','MAE63'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+es.map(e=>`<tr><td><b>${e.symbol}</b></td><td>${e.date}</td><td>${num(e.prior_min_skew,3)}</td><td>${num(e.skew_t0,3)}</td><td>${e.trend?'✓':'—'}</td><td class="${cls(e.mom20)}">${pct(e.mom20)}</td><td class="${cls(e.rs20)}">${pct(e.rs20)}</td><td>${num(e.volRatio,2)}</td><td>${pct(e.atrPct)}</td><td>${pct(e.ext20)}</td><td>${e.market?'✓':'—'}</td><td class="${cls(e.r10)}">${pct(e.r10)}</td><td class="${cls(e.r20)}">${pct(e.r20)}</td><td class="${cls(e.x10)}">${pct(e.x10)}</td><td class="${cls(e.x20)}">${pct(e.x20)}</td><td class="${cls(e.mfe63)}">${pct(e.mfe63)}</td><td class="${cls(e.mae63)}">${pct(e.mae63)}</td></tr>`).join('')+'</tbody>';
+ $('failTable').innerHTML='<thead><tr><th>Hisse</th><th>Neden</th></tr></thead><tbody>'+failures.map(f=>`<tr><td>${f.symbol}</td><td>${f.reason}</td></tr>`).join('')+'</tbody>';$('excelBtn').disabled=!events.length}
+async function run(){const b=$('runBtn');b.disabled=true;$('excelBtn').disabled=true;events=[];failures=[];modelRows=[];cache.clear();$('prog').style.width='0';render();try{setStatus('Evren hazırlanıyor…');const syms=await getUniverse();if(!syms.length)throw new Error('Taranacak hisse yok');const range=$('range').value;setStatus('XU100 referansı alınıyor…');const bench=await yahoo('XU100.IS',range),bm=benchMaps(bench);let next=0,done=0;async function worker(){while(true){const ix=next++;if(ix>=syms.length)return;const s=syms[ix];try{const df=await yahoo(s+'.IS',range);events.push(...analyze(s,df,bench,bm))}catch(e){failures.push({symbol:s,reason:(e?.message||String(e)).slice(0,180)})}done++;$('prog').style.width=(100*done/syms.length)+'%';setStatus(`${s} · ${done}/${syms.length} · ${events.length} baz sinyal`);if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,syms.length)},worker));render();setStatus(`Tamamlandı · ${syms.length} hisse · ${events.length} baz sinyal · OOS kesim ${cutoffDate} · ${failures.length} hata`,'good')}catch(e){setStatus('Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}}
+function exportExcel(){const wb=XLSX.utils.book_new();const rows=modelRows.map(r=>({Model:r.model,Ufuk:r.h,ALL_N:r.all.n,ALL_Ort:r.all.mean,ALL_Medyan:r.all.median,ALL_Win:r.all.win,ALL_ExcessMedyan:r.all.exMedian,ALL_Beat:r.all.beat,TRAIN_N:r.train.n,TRAIN_Win:r.train.win,TRAIN_ExcessMedyan:r.train.exMedian,OOS_N:r.test.n,OOS_Ort:r.test.mean,OOS_Medyan:r.test.median,OOS_Win:r.test.win,OOS_ExcessOrt:r.test.exMean,OOS_ExcessMedyan:r.test.exMedian,OOS_Beat:r.test.beat,OOS_MFE63:r.test.mfe,OOS_MAE63:r.test.mae,OOS_Skor:r.score}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),'Model_Yarisi');const er=events.map(e=>({Hisse:e.symbol,T0:e.date,MinSkew:e.prior_min_skew,T0Skew:e.skew_t0,Fiyat:e.price0,Trend:e.trend,Momentum:e.mom20,RS:e.rs20,HacimOrani:e.volRatio,ATR:e.atrPct,EMA20Uzak:e.ext20,Piyasa:e.market,R5:e.r5,R10:e.r10,R20:e.r20,R40:e.r40,R63:e.r63,Excess5:e.x5,Excess10:e.x10,Excess20:e.x20,Excess40:e.x40,Excess63:e.x63,MFE63:e.mfe63,MAE63:e.mae63}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(er),'Baz_Sinyaller');const cfg=[['Parametre','Deger'],['Rolling',$('window').value],['Skew esik',$('threshold').value],['Rejim lookback',$('regimeLookback').value],['Cooldown',$('cooldown').value],['Momentum len',$('momLen').value],['Momentum min',$('momMin').value],['RS len',$('rsLen').value],['RS min',$('rsMin').value],['Hacim min',$('volMin').value],['ATR max',$('atrMax').value],['EMA20 uzak max',$('extMax').value],['OOS test %',$('testPct').value],['OOS cutoff',cutoffDate],['Yahoo range',$('range').value],['Olusturma',new Date().toISOString()]];XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cfg),'Ayarlar');if(failures.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(failures),'Hatalar');XLSX.writeFile(wb,'High_Confidence_BIST_Lab_v1.xlsx')}
+$('runBtn').addEventListener('click',run);$('excelBtn').addEventListener('click',exportExcel);$('source').addEventListener('change',()=>{$('universeInfo').textContent=$('source').value==='special'?'Özel listedeki hisseler test edilir.':'TradingView evreni, hacim filtresi uygulanarak hazırlanır.'});render();
+</script>
+</body></html>
