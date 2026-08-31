@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Skewness Edge Lab v1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#0b0d12;--card:#121620;--line:#252b38;--muted:#8d96a8;--text:#edf1f7;--green:#34d399;--amber:#f59e0b;--red:#fb7185;--blue:#60a5fa}
+*{box-sizing:border-box} body{margin:0;background:radial-gradient(circle at 20% 0%,#172554 0,#0b0d12 38%);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Arial;padding:18px}
+.wrap{max-width:1550px;margin:auto}.card{background:rgba(18,22,32,.95);border:1px solid var(--line);border-radius:18px}.input{width:100%;background:#0e121a;border:1px solid #29303d;border-radius:12px;padding:10px 12px;color:white}.btn{border:0;border-radius:12px;padding:12px 18px;font-weight:800;cursor:pointer}.btn:disabled{opacity:.45;cursor:not-allowed}.btn-main{background:linear-gradient(90deg,#2563eb,#7c3aed);color:white}.btn-xlsx{background:#173d2c;color:#8cf0bd}.muted{color:var(--muted)}.chip{display:inline-flex;align-items:center;gap:6px;background:#171c27;border:1px solid #2c3442;border-radius:999px;padding:6px 10px;font-size:11px;color:#c6ccda}.progress{height:9px;background:#202633;border-radius:999px;overflow:hidden}.progress>div{height:100%;width:0;background:linear-gradient(90deg,#2563eb,#8b5cf6);transition:width .15s}.status{border-radius:12px;padding:10px 12px;font-size:13px}.warn{background:#2a2110;border:1px solid #6c5216;color:#f7d978}.good{background:#0c2a20;border:1px solid #145c42;color:#80edbd}.bad{background:#301519;border:1px solid #75323b;color:#ff9aa6}table{border-collapse:collapse;width:100%;font-size:12px}th{position:sticky;top:0;background:#171c27;color:#d7ddea;text-align:left;padding:9px;border-bottom:1px solid #303746;white-space:nowrap}td{padding:8px 9px;border-bottom:1px solid #202633;white-space:nowrap}tr:hover td{background:#171c27}.kpi{background:#0e121a;border:1px solid #29303d;border-radius:14px;padding:14px}.kpi .v{font-size:24px;font-weight:900}.pos{color:#86efac}.neg{color:#fda4af}.neutral{color:#fde68a}@media(max-width:850px){body{padding:10px}.gridx{grid-template-columns:1fr!important}.card{border-radius:14px}}
+</style>
+</head>
+<body>
+<div class="wrap space-y-4">
+<header class="card p-5">
+  <div class="flex flex-col lg:flex-row justify-between gap-4">
+    <div><h1 class="text-2xl md:text-3xl font-black">🧪 Skewness Edge Lab v1</h1><div class="muted text-sm mt-2">BIST günlük log getirilerinde negatif skew rejiminden 0 üstüne geçişin ileri dönem performansını ölçer.</div></div>
+    <div class="text-xs muted max-w-xl">Bu dosya mevcut Scanner Pro'yu değiştirmez. Aynı sunucudaki <b>/api/yahoo</b> ve <b>/api/tradingview</b> uçlarını kullanır.</div>
+  </div>
+</header>
+
+<section class="card p-5">
+<h2 class="text-xl font-black mb-4">Deney Ayarları</h2>
+<div class="grid grid-cols-4 gap-4 gridx">
+ <div><label class="text-xs muted">Evren</label><select id="source" class="input mt-1"><option value="special">Özel Liste</option><option value="tv">TradingView Ön Eleme — Tüm BIST</option></select></div>
+ <div><label class="text-xs muted">Min. 30G Ortalama Hacim</label><input id="minVolume" class="input mt-1" type="number" value="250000" step="50000"></div>
+ <div><label class="text-xs muted">Yahoo Geçmişi</label><select id="range" class="input mt-1"><option value="5y" selected>5 yıl</option><option value="10y">10 yıl</option><option value="max">Maksimum</option></select></div>
+ <div><label class="text-xs muted">Rolling Skew Penceresi</label><input id="window" class="input mt-1" type="number" value="63" min="20" max="252"></div>
+</div>
+<div class="grid grid-cols-4 gap-4 mt-4 gridx">
+ <div><label class="text-xs muted">Negatif Rejim Eşiği</label><select id="threshold" class="input mt-1"><option value="-0.5" selected>-0.50</option><option value="-0.75">-0.75</option><option value="-1">-1.00</option></select></div>
+ <div><label class="text-xs muted">Rejim Arama Geri Bakış</label><input id="regimeLookback" class="input mt-1" type="number" value="20" min="1" max="126"></div>
+ <div><label class="text-xs muted">Sinyal Cooldown (gün)</label><input id="cooldown" class="input mt-1" type="number" value="20" min="0" max="126"></div>
+ <div><label class="text-xs muted">Minimum Veri</label><input id="minBars" class="input mt-1" type="number" value="180" min="100" max="1000"></div>
+</div>
+<div class="mt-4"><label class="text-xs muted">Özel Liste</label><textarea id="special" class="input mt-1" rows="2">ASELS,THYAO,EREGL,TUPRS,GARAN,CWENE</textarea></div>
+<div class="flex flex-wrap gap-2 mt-4"><span class="chip">T0 = Rolling Skew ≤ 0 iken sonraki gün &gt; 0</span><span class="chip">Geçmiş rejim = son N günde skew ≤ eşik</span><span class="chip">Look-ahead yok</span><span class="chip">Ufuklar: 5 · 10 · 20 · 40 · 63 gün</span></div>
+<button id="runBtn" class="btn btn-main w-full mt-5">🧪 Skewness Edge Testini Başlat</button>
+<div id="universeInfo" class="text-xs muted mt-3">Özel listedeki hisseler test edilir.</div>
+<div class="progress mt-3"><div id="prog"></div></div>
+<div id="status" class="status warn mt-3">Testi başlat.</div>
+</section>
+
+<section class="grid grid-cols-5 gap-3 gridx">
+ <div class="kpi"><div class="text-xs muted">Sinyal</div><div id="kSignals" class="v">0</div></div>
+ <div class="kpi"><div class="text-xs muted">Hisse</div><div id="kStocks" class="v">0</div></div>
+ <div class="kpi"><div class="text-xs muted">20G Medyan</div><div id="kMed20" class="v">—</div></div>
+ <div class="kpi"><div class="text-xs muted">20G Kazanma</div><div id="kWin20" class="v">—</div></div>
+ <div class="kpi"><div class="text-xs muted">20G XU100 Üstü</div><div id="kEx20" class="v">—</div></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800 flex items-center gap-3"><h2 class="font-black text-xl">📊 Ufuk Bazlı Edge Özeti</h2><button id="excelBtn" class="btn btn-xlsx ml-auto" disabled>📥 Excel</button></div>
+ <div class="overflow-auto max-h-[430px]"><table id="summaryTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <div class="p-4 border-b border-gray-800"><h2 class="font-black text-xl">🧾 Sinyal Günlüğü · <span id="eventCount">0</span></h2></div>
+ <div class="overflow-auto max-h-[650px]"><table id="eventsTable"></table></div>
+</section>
+
+<section class="card overflow-hidden">
+ <details><summary class="p-4 cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary><div class="overflow-auto max-h-[350px]"><table id="failTable"></table></div></details>
+</section>
+</div>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), finite=Number.isFinite, sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const TV_API='/api/tradingview';
+const TV_COLS=['name','close','change','volume','relative_volume_10d_calc','RSI','ADX','average_volume_30d_calc'];
+const TV_BASE=[{left:'is_primary',operation:'equal',right:true},{left:'typespecs',operation:'has',right:['common']}];
+const H=[5,10,20,40,63]; let events=[], failures=[], summary=[]; const cache=new Map();
+function val(id){return Number($(id).value)} function pct(x,d=2){return finite(x)?(x>=0?'+':'')+x.toFixed(d)+'%':'—'} function num(x,d=2){return finite(x)?x.toFixed(d):'—'}
+function parseSymbols(s){return [...new Set(String(s||'').toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/^BIST:/,'').replace(/\.IS$/,'').trim()).filter(Boolean))]}
+function setStatus(text,cls='warn'){$('status').className='status '+cls+' mt-3';$('status').textContent=text}
+async function fetchJSON(url,opt){const r=await fetch(url,opt);if(!r.ok){let m='';try{m=await r.text()}catch{}throw new Error(`HTTP ${r.status}${m?' · '+m.slice(0,150):''}`)}return r.json()}
+async function tvScan(filters,maxRows=2000){const body=JSON.stringify({symbols:{query:{types:[]},tickers:[]},options:{lang:'tr'},columns:TV_COLS,sort:{sortBy:'relative_volume_10d_calc',sortOrder:'desc'},range:[0,maxRows],filter:filters});return fetchJSON(TV_API,{method:'POST',headers:{'Content-Type':'application/json'},body})}
+async function getUniverse(){if($('source').value==='special'){const s=parseSymbols($('special').value);$('universeInfo').textContent=`Özel liste: ${s.length} hisse`;return s} const minV=val('minVolume');const fil=await tvScan(TV_BASE.concat([{left:'close',operation:'greater',right:1},{left:'average_volume_30d_calc',operation:'greater',right:minV}]));const s=(fil.data||[]).map(x=>String(x.s||'').replace('BIST:','').trim().toUpperCase()).filter(Boolean);$('universeInfo').textContent=`TradingView filtre sonrası: ${fil.totalCount??s.length} · Taranacak: ${s.length}`;return s}
+async function yahoo(symbol,range='5y'){const key=symbol+'|'+range;if(cache.has(key))return cache.get(key);const p=(async()=>{const j=await fetchJSON(`/api/yahoo?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}&interval=1d`);const r=j?.chart?.result?.[0];if(!r)throw new Error('Yahoo veri yok');const q=r.indicators?.quote?.[0]||{}, adj=r.indicators?.adjclose?.[0]?.adjclose||[], ts=r.timestamp||[];const out={t:[],c:[],h:[],l:[]};for(let i=0;i<ts.length;i++){const c=Number(adj[i]??q.close?.[i]);const h=Number(q.high?.[i]),l=Number(q.low?.[i]);if(finite(c)&&c>0){out.t.push(ts[i]);out.c.push(c);out.h.push(finite(h)?h:c);out.l.push(finite(l)?l:c)}}return out})();cache.set(key,p);try{return await p}catch(e){cache.delete(key);throw e}}
+function logReturns(c){const r=new Array(c.length).fill(NaN);for(let i=1;i<c.length;i++)if(c[i]>0&&c[i-1]>0)r[i]=Math.log(c[i]/c[i-1]);return r}
+function sampleSkew(a){const x=a.filter(finite),n=x.length;if(n<3)return NaN;const m=x.reduce((s,v)=>s+v,0)/n;let m2=0,m3=0;for(const v of x){const d=v-m;m2+=d*d;m3+=d*d*d}if(m2<=0)return 0;const s=Math.sqrt(m2/(n-1));return (n/((n-1)*(n-2)))*(m3/(s*s*s))}
+function rollingSkew(c,w){const r=logReturns(c),out=new Array(c.length).fill(NaN);for(let i=w;i<c.length;i++){const a=r.slice(i-w+1,i+1);if(a.every(finite))out[i]=sampleSkew(a)}return out}
+function median(a){const x=a.filter(finite).slice().sort((a,b)=>a-b);if(!x.length)return NaN;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2}
+function mean(a){const x=a.filter(finite);return x.length?x.reduce((s,v)=>s+v,0)/x.length:NaN}
+function alignBench(bench){return new Map(bench.t.map((t,i)=>[t,bench.c[i]]))}
+function analyze(sym,df,benchMap){const w=Math.max(20,Math.trunc(val('window'))),thr=val('threshold'),lb=Math.max(1,Math.trunc(val('regimeLookback'))),cool=Math.max(0,Math.trunc(val('cooldown'))),minBars=Math.max(w+64,Math.trunc(val('minBars')));if(df.c.length<minBars)return [];const sk=rollingSkew(df.c,w),out=[];let last=-1e9;for(let i=w+1;i<df.c.length-5;i++){if(!(finite(sk[i-1])&&finite(sk[i])))continue;const cross=sk[i-1]<=0&&sk[i]>0;if(!cross||i-last<=cool)continue;let minPrev=Infinity;for(let j=Math.max(w,i-lb);j<i;j++)if(finite(sk[j]))minPrev=Math.min(minPrev,sk[j]);if(!(minPrev<=thr))continue;const e={symbol:sym,date:new Date(df.t[i]*1000).toISOString().slice(0,10),index:i,skew_prev:sk[i-1],skew_t0:sk[i],prior_min_skew:minPrev,price0:df.c[i]};const b0=benchMap.get(df.t[i]);for(const h of H){if(i+h<df.c.length){e['r'+h]=100*(df.c[i+h]/df.c[i]-1);const bh=benchMap.get(df.t[i+h]);e['x'+h]=(finite(b0)&&finite(bh)&&b0>0)?e['r'+h]-100*(bh/b0-1):NaN}else{e['r'+h]=NaN;e['x'+h]=NaN}}const end=Math.min(df.c.length-1,i+63);let mfe=-Infinity,mae=Infinity;for(let j=i+1;j<=end;j++){const rr=100*(df.c[j]/df.c[i]-1);mfe=Math.max(mfe,rr);mae=Math.min(mae,rr)}e.mfe63=finite(mfe)?mfe:NaN;e.mae63=finite(mae)?mae:NaN;out.push(e);last=i}return out}
+function aggregate(){summary=H.map(h=>{const a=events.map(e=>e['r'+h]).filter(finite),x=events.map(e=>e['x'+h]).filter(finite);return{h,n:a.length,mean:mean(a),median:median(a),win:a.length?100*a.filter(v=>v>0).length/a.length:NaN,excessMean:mean(x),excessMedian:median(x),beat:x.length?100*x.filter(v=>v>0).length/x.length:NaN}})}
+function cls(v){return !finite(v)?'':v>0?'pos':v<0?'neg':'neutral'}
+function render(){aggregate();$('eventCount').textContent=events.length;$('failCount').textContent=failures.length;const uniq=new Set(events.map(e=>e.symbol)).size;$('kSignals').textContent=events.length;$('kStocks').textContent=uniq;const s20=summary.find(x=>x.h===20)||{};$('kMed20').textContent=pct(s20.median);$('kMed20').className='v '+cls(s20.median);$('kWin20').textContent=finite(s20.win)?s20.win.toFixed(1)+'%':'—';$('kEx20').textContent=pct(s20.excessMedian);$('kEx20').className='v '+cls(s20.excessMedian);
+$('summaryTable').innerHTML='<thead><tr>'+['Ufuk','N','Ort. Getiri','Medyan Getiri','Kazanma %','Ort. Excess','Medyan Excess','XU100 Üstü %'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+summary.map(r=>`<tr><td><b>+${r.h}G</b></td><td>${r.n}</td><td class="${cls(r.mean)}">${pct(r.mean)}</td><td class="${cls(r.median)}"><b>${pct(r.median)}</b></td><td>${num(r.win,1)}%</td><td class="${cls(r.excessMean)}">${pct(r.excessMean)}</td><td class="${cls(r.excessMedian)}">${pct(r.excessMedian)}</td><td>${num(r.beat,1)}%</td></tr>`).join('')+'</tbody>';
+const es=events.slice().sort((a,b)=>a.date<b.date?1:-1);$('eventsTable').innerHTML='<thead><tr>'+['Hisse','T0','Önceki Min Skew','T0 Skew','5G','10G','20G','40G','63G','20G Excess','63G Excess','MFE63','MAE63','T0 Fiyat'].map(x=>`<th>${x}</th>`).join('')+'</tr></thead><tbody>'+es.map(e=>`<tr><td><b>${e.symbol}</b></td><td>${e.date}</td><td>${num(e.prior_min_skew,3)}</td><td>${num(e.skew_t0,3)}</td>${H.map(h=>`<td class="${cls(e['r'+h])}">${pct(e['r'+h])}</td>`).join('')}<td class="${cls(e.x20)}">${pct(e.x20)}</td><td class="${cls(e.x63)}">${pct(e.x63)}</td><td class="${cls(e.mfe63)}">${pct(e.mfe63)}</td><td class="${cls(e.mae63)}">${pct(e.mae63)}</td><td>${num(e.price0,2)}</td></tr>`).join('')+'</tbody>';
+$('failTable').innerHTML='<thead><tr><th>Hisse</th><th>Neden</th></tr></thead><tbody>'+failures.map(f=>`<tr><td>${f.symbol}</td><td>${f.reason}</td></tr>`).join('')+'</tbody>';$('excelBtn').disabled=!events.length}
+async function run(){const b=$('runBtn');b.disabled=true;$('excelBtn').disabled=true;events=[];failures=[];cache.clear();$('prog').style.width='0';render();try{setStatus('Evren hazırlanıyor…');const syms=await getUniverse();if(!syms.length)throw new Error('Taranacak hisse yok');const range=$('range').value;setStatus('XU100 referansı alınıyor…');const bench=await yahoo('XU100.IS',range),bm=alignBench(bench);let next=0,done=0;async function worker(){while(true){const ix=next++;if(ix>=syms.length)return;const s=syms[ix];try{const df=await yahoo(s+'.IS',range);const ee=analyze(s,df,bm);events.push(...ee)}catch(e){failures.push({symbol:s,reason:(e?.message||String(e)).slice(0,180)})}done++;$('prog').style.width=(100*done/syms.length)+'%';setStatus(`${s} · ${done}/${syms.length} · ${events.length} sinyal bulundu`);if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,syms.length)},worker));render();setStatus(`Tamamlandı · ${syms.length} hisse · ${events.length} geçmiş sinyal · ${failures.length} hata/işlenemeyen hisse`,'good')}catch(e){setStatus('Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}}
+function exportExcel(){const wb=XLSX.utils.book_new();const sRows=summary.map(r=>({Ufuk_Gun:r.h,N:r.n,Ortalama_Getiri_Yuzde:r.mean,Medyan_Getiri_Yuzde:r.median,Kazanma_Yuzde:r.win,Ortalama_Excess_Yuzde:r.excessMean,Medyan_Excess_Yuzde:r.excessMedian,XU100_Ustu_Yuzde:r.beat}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sRows),'Ozet');const eRows=events.map(e=>({Hisse:e.symbol,T0:e.date,Onceki_Min_Skew:e.prior_min_skew,T0_Skew:e.skew_t0,T0_Fiyat:e.price0,R5:e.r5,R10:e.r10,R20:e.r20,R40:e.r40,R63:e.r63,Excess5:e.x5,Excess10:e.x10,Excess20:e.x20,Excess40:e.x40,Excess63:e.x63,MFE63:e.mfe63,MAE63:e.mae63}));XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(eRows),'Sinyaller');if(failures.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(failures),'Hatalar');const cfg=[['Parametre','Deger'],['Rolling pencere',$('window').value],['Negatif esik',$('threshold').value],['Rejim geri bakis',$('regimeLookback').value],['Cooldown',$('cooldown').value],['Yahoo range',$('range').value],['Olusturma',new Date().toISOString()]];XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(cfg),'Ayarlar');XLSX.writeFile(wb,'Skewness_Edge_Lab_v1.xlsx')}
+$('runBtn').addEventListener('click',run);$('excelBtn').addEventListener('click',exportExcel);$('source').addEventListener('change',()=>{$('universeInfo').textContent=$('source').value==='special'?'Özel listedeki hisseler test edilir.':'TradingView evreni, hacim filtresi uygulanarak hazırlanır.'});
+render();
+</script>
+</body></html>
