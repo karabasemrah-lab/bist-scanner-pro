@@ -2592,7 +2592,11 @@ function elW5TargetLifecycle(df,row){
   const t2=Number(row.w5_target2??row.target2);
   const t3=Number(row.w5_target3??row.target3);
   const stop=Number(row.setup_stop??row.invalidation);
-  const start=Math.max(0,Number(row.target_index??row.trigger_index??0));
+  // W2→W3 sonrası üretilen W5 yaşam döngüsünde tetik araması W4 dibinden SONRA başlar.
+  // Aksi halde geçmişteki W3 tepesinin kendisi W5 tetiklenmiş gibi sayılıyordu.
+  const followLowI=Number(row?.w4_follow?.lowI);
+  const baseStart=Number(row.target_index??row.trigger_index??0);
+  const start=Math.max(0,Number.isFinite(followLowI)?followLowI+1:baseStart);
 
   let trigI=-1,t1I=-1,t2I=-1,t3I=-1,stopI=-1;
   for(let i=start;i<n;i++){
@@ -2604,7 +2608,7 @@ function elW5TargetLifecycle(df,row){
     if(trigI>=0 && stopI<0 && Number.isFinite(stop) && (long?lo<=stop:hi>=stop)) stopI=i;
   }
 
-  let code="W5_READY",status="🟢 W5 TETİK BEKLENİYOR";
+  let code="W5_READY",status="🟡 W5 TETİK BEKLİYOR";
   if(stopI>=0 && (t1I<0 || stopI<t1I)){code="W5_STOP";status="🔴 W5 STOP";}
   else if(t3I>=0){code="W5_T3_DONE";status="🏁 W5 UZATILMIŞ HEDEF GERÇEKLEŞTİ";}
   else if(t2I>=0){code="W5_T2_DONE";status="🎯 W5 HEDEF-2 GERÇEKLEŞTİ · UZATILMIŞ TAKİP";}
@@ -2645,18 +2649,36 @@ function elUnifiedW5Targets({p0,p1,p2,p3,p4}){
 function elW4W5Follow(df,row){
   if(!row || row.direction!=="LONG" || !String(row.setup||"").includes("W2") || !row.target_hit) return null;
   const n=df.c.length, t0=Math.max(0,Number(row.target_index)||0);
-  if(t0>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP"};
+  const w3base=Number(row.p2??row.setupStop??row.setup_stop??row.trigger);
+  const packFibs=peak=>{
+    const w3len=Math.max(.000001,Number(peak)-w3base);
+    return {
+      w3len,
+      fib236:Number(peak)-.236*w3len,
+      fib382:Number(peak)-.382*w3len,
+      fib50:Number(peak)-.50*w3len,
+      fib618:Number(peak)-.618*w3len
+    };
+  };
+
+  // W3 hedefi yeni gerçekleşmiş olsa bile W4 için beklenen Fibonacci bölgesini hemen üret.
+  if(t0>=n-1){
+    const peak=df.h[t0], fib=packFibs(peak);
+    return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI:t0,low:peak,lowI:t0,retr:null,...fib};
+  }
+
   let peakI=t0, peak=df.h[t0];
   for(let i=t0;i<n;i++){ if(df.h[i]>peak){peak=df.h[i];peakI=i;} }
-  if(peakI>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,retr:null};
+  const fib=packFibs(peak);
+  if(peakI>=n-1) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,low:peak,lowI:peakI,retr:null,...fib};
 
   let lowI=peakI, low=df.l[peakI];
   for(let i=peakI;i<n;i++){ if(df.l[i]<low){low=df.l[i];lowI=i;} }
+  if(lowI===peakI) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,low,lowI,retr:null,...fib};
 
-  const w3len=Math.max(.000001, peak-(row.p2??row.setupStop??row.trigger));
-  if(lowI===peakI) return {code:"W4WAIT",status:"🌊 W3 TAMAMLANDI · W4 TAKİP",peak,peakI,low,lowI,retr:null};
+  const w3len=fib.w3len;
+  const {fib236,fib382,fib50,fib618}=fib;
   const retr=(peak-low)/w3len;
-  const fib236=peak-.236*w3len, fib382=peak-.382*w3len, fib50=peak-.50*w3len, fib618=peak-.618*w3len;
   const latest=df.c[n-1];
   const rsi=rsiSeries(df.c,14), mac=macdSeries(df.c), e20=ema(df.c,20);
   const turn=latest>df.c[Math.max(0,n-2)] && latest>e20[n-1] && rsi[n-1]>=48 && mac.hist[n-1]>=mac.hist[Math.max(0,n-2)];
@@ -2692,7 +2714,6 @@ function elW4W5Follow(df,row){
     w5Trigger,w5Target,w5Target1,w5Target2,w5Target3,w5RR1,w5RR2,w5RR3,
     w1len:U.w1,w3len:U.w3,turn,valid};
 }
-
 function elLifecycle(df,anchorIndex,trigger,target,setupStop,invalidation,direction,setup){
   const long=direction==="LONG", start=Math.max(0,Number(anchorIndex)||0), end=df.c.length-1;
   let trigI=-1,targetI=-1,stopI=-1,invalidI=-1;
@@ -2904,9 +2925,8 @@ function renderElliott(){
     if(lc==="W4WATCH" || st.includes("W3 TAMAMLANDI")) return 40;
 
     // 5 — W5 fırsatı aktif/hazır
-    if(["W5READY","W5_READY","W5_ACTIVE"].includes(lc) ||
-       st.includes("W5 FIRSATI HAZIR") ||
-       st.includes("W5 HEDEF-1'E İLERLİYOR")) return 50;
+    if(lc==="W5_ACTIVE" || st.includes("W5 HEDEF-1'E İLERLİYOR")) return 50;
+    if(["W5READY","W5_READY"].includes(lc) || st.includes("W5 TETİK BEKLİYOR") || st.includes("W5 FIRSATI HAZIR")) return 55;
 
     // 6 — Henüz tetik oluşmamış hazırlık
     if(lc==="PREP" || lc==="W5PREP" || st.includes("HAZIRLIK")) return 60;
@@ -3612,7 +3632,7 @@ function uvElliottSvg(df,r,overlays=[]){
  let lows=df.l.slice(start,end+1),highs=df.h.slice(start,end+1);
  for(const o of overlays){if(uvFinite(o.v)){lows.push(+o.v);highs.push(+o.v)}}
  for(const q of pts){lows.push(+q.p);highs.push(+q.p)}
- if(w5phase){
+ if(w5phase||w4watch){
    const f=r.w4_follow;
    for(const v of [f.fib236,f.fib382,f.fib50,f.fib618,r.w5_trigger,r.w5_target1??r.w5_target,r.w5_target2])if(uvFinite(v)){lows.push(+v);highs.push(+v)}
  }
@@ -3725,7 +3745,19 @@ function uvElliottSvg(df,r,overlays=[]){
    const activeW5Now=['W5_READY','W5_ACTIVE','W5_T1_DONE','W5_T2_DONE','W5_T3_DONE','W5PREP','W5READY'].includes(r.lifecycle);
    s+=`<defs><marker id="elArrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#34d399"/></marker></defs><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#34d399" stroke-width="3" stroke-dasharray="8 6" marker-end="url(#elArrow)"/><text x="${x2-4}" y="${y2-10}" text-anchor="end" fill="#86efac" font-size="12" font-weight="800">${activeW5Now?'':(completedW3?'W3 tamamlanan hedef':'Beklenen '+(String(r.setup).includes('W2')?'W3':'C')+' bölgesi')}</text>`;
    if(completedW3){
-     s+=`<rect x="${PL+8}" y="${PT+8}" width="270" height="43" rx="8" fill="#08111f" opacity=".92"/><text x="${PL+18}" y="${PT+26}" fill="#7dd3fc" font-size="13" font-weight="900">🌊 W3 TAMAMLANDI · W4 TAKİP</text><text x="${PL+18}" y="${PT+43}" fill="#cbd5e1" font-size="11">W4 geri çekilmesi henüz oluşmadı / teyit edilmedi.</text>`;
+     const f=r.w4_follow||{};
+     if(uvFinite(f.fib236)&&uvFinite(f.fib382)){
+       const y236=y(Number(f.fib236)),y382=y(Number(f.fib382));
+       const zy=Math.min(y236,y382),zh=Math.abs(y382-y236);
+       s+=`<rect x="${PL}" y="${zy}" width="${gW}" height="${Math.max(3,zh)}" fill="#f59e0b" opacity=".10"/>`;
+       s+=`<line x1="${PL}" y1="${y236}" x2="${W-PR}" y2="${y236}" stroke="#fbbf24" opacity=".75" stroke-dasharray="5 5"/><text x="${PL+5}" y="${y236-4}" fill="#fbbf24" font-size="10">W4 Fib 23,6% · ${uvFmt(f.fib236)}</text>`;
+       s+=`<line x1="${PL}" y1="${y382}" x2="${W-PR}" y2="${y382}" stroke="#fbbf24" opacity=".85" stroke-dasharray="5 5"/><text x="${PL+5}" y="${y382-4}" fill="#fbbf24" font-size="10">W4 Fib 38,2% · ${uvFmt(f.fib382)}</text>`;
+     }
+     if(uvFinite(f.fib50)){const yy=y(Number(f.fib50));s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#fb923c" opacity=".70" stroke-dasharray="3 6"/><text x="${PL+5}" y="${yy-4}" fill="#fb923c" font-size="10">W4 Derin 50% · ${uvFmt(f.fib50)}</text>`;}
+     if(uvFinite(f.fib618)){const yy=y(Number(f.fib618));s+=`<line x1="${PL}" y1="${yy}" x2="${W-PR}" y2="${yy}" stroke="#fb7185" opacity=".72" stroke-dasharray="3 6"/><text x="${PL+5}" y="${yy-4}" fill="#fb7185" font-size="10">W4 Maks. 61,8% · ${uvFmt(f.fib618)}</text>`;}
+     const zone=(uvFinite(f.fib236)&&uvFinite(f.fib382))?`${uvFmt(f.fib382)} – ${uvFmt(f.fib236)}`:'hesaplanıyor';
+     const deep=uvFinite(f.fib50)?uvFmt(f.fib50):'—', max=uvFinite(f.fib618)?uvFmt(f.fib618):'—';
+     s+=`<rect x="${PL+8}" y="${PT+8}" width="${mobile?470:410}" height="${mobile?70:60}" rx="8" fill="#08111f" opacity=".94"/><text x="${PL+18}" y="${PT+26}" fill="#7dd3fc" font-size="13" font-weight="900">🌊 W3 TAMAMLANDI · W4 TAKİP</text><text x="${PL+18}" y="${PT+43}" fill="#fde68a" font-size="11" font-weight="800">W4 beklenen bölge: ${zone} (Fib 23,6–38,2)</text><text x="${PL+18}" y="${PT+58}" fill="#cbd5e1" font-size="10">Derin W4: ${deep} · Maks. izleme: ${max}</text>`;
    }
  }
  // Sağ etiketleri çakışmadan yerleştir.
