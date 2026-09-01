@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-31 16:53:15",
+  "version": "2026-09-01 16:57:57",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2549,6 +2549,14 @@
     "KPEKS": {
       "name": "KAPEKS KİMYA SANAYİ A.Ş.",
       "yahoo": "KPEKS.IS"
+    },
+    "BKRGY": {
+      "name": "BAKIRCI GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+      "yahoo": "BKRGY.IS"
+    },
+    "INTET": {
+      "name": "İNTETRA TEKNOLOJİ VE BİLİŞİM HİZMETLERİ A.Ş.",
+      "yahoo": "INTET.IS"
     }
   }
 }
