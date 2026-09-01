@@ -618,6 +618,30 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
     </div>
     <div class="overflow-auto max-h-[650px]"><table id="harmTable"></table></div>
   </div>
+
+  <div class="card p-5">
+    <h3 class="font-black text-xl">🧪 Harmonik Forward Test · D / PRZ Doğrulama</h3>
+    <div class="text-sm muted mt-2">Yalnız <b>🟡 OLUŞUYOR</b> ve <b>🔵 PRZ YAKIN</b> adaylarını, o anda hesaplanan D/PRZ seviyesiyle dondurur. Sonradan D seviyesine ulaşıp ulaşmadığını ve D temasından sonraki 1 / 3 / 5 / 10 / 20 mum performansını ölçer. Geçmiş sonuç yeniden hesaplanarak değiştirilmez.</div>
+    <div class="flex flex-wrap gap-2 mt-3"><span class="chip">D hedefi kayıt anında sabitlenir</span><span class="chip">Maks. D bekleme: 20 mum</span><span class="chip">Bullish: Low ≤ D</span><span class="chip">Bearish: High ≥ D</span><span class="chip">MFE / MAE: D sonrası ilk 20 mum</span></div>
+    <div class="grid grid-cols-4 gap-3 mt-4 grid-settings">
+      <button id="harmFwCaptureBtn" class="btn" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📌 Harmonik Adayları Kaydet</button>
+      <button id="harmFwUpdateBtn" class="btn" style="background:linear-gradient(90deg,#0369a1,#38bdf8);color:white">🔄 Forward Testi Güncelle</button>
+      <button id="harmFwExcelBtn" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Forward Excel</button>
+      <button id="harmFwClearBtn" class="btn" style="background:#3a1720;color:#ff9aa6">🗑️ Harmonik Kayıtları Temizle</button>
+    </div>
+    <div id="harmFwCounts" class="text-xs muted mt-3"></div>
+    <div class="progress mt-4"><div id="harmFwProg"></div></div>
+    <div id="harmFwStatus" class="mt-3 rounded-xl p-3 text-sm warn">Önce Harmonik taramayı çalıştır. OLUŞUYOR / PRZ YAKIN adaylarını burada kaydet.</div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🏁 Harmonik Forward Özet</h3></div>
+    <div class="overflow-auto max-h-[520px]"><table id="harmFwSummaryTable"></table></div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🧾 Harmonik Forward Günlüğü · <span id="harmFwDetailCount">0</span> kayıt</h3></div>
+    <div class="overflow-auto max-h-[700px]"><table id="harmFwDetailTable"></table></div>
+  </div>
 </section>
 
 
@@ -2194,6 +2218,48 @@ async function scanHarmonic(){
 
 
 // ─────────────────────────────────────────────────────────────────────────────
+// HARMONİK FORWARD TEST v1 · D / PRZ hedef doğrulama
+// Projeksiyon anındaki hedefi dondurur; gelecekteki mumlarda D isabeti + tepki ölçer.
+// ─────────────────────────────────────────────────────────────────────────────
+const HARM_FW_KEY="bist_harmonic_forward_v1";
+const HARM_FW_H=[1,3,5,10,20];
+const HARM_FW_WAIT=20;
+let harmFwRecords=[];
+function harmFwLoad(){try{const x=JSON.parse(localStorage.getItem(HARM_FW_KEY)||"[]");harmFwRecords=Array.isArray(x)?x:[]}catch(e){harmFwRecords=[]}}
+function harmFwSave(){localStorage.setItem(HARM_FW_KEY,JSON.stringify(harmFwRecords))}
+function harmFwMedian(a){const z=a.map(Number).filter(Number.isFinite).sort((x,y)=>x-y);if(!z.length)return null;const m=Math.floor(z.length/2);return z.length%2?z[m]:(z[m-1]+z[m])/2}
+function harmFwDate(ts,tf){const d=new Date(Number(ts)*1000);if(!Number.isFinite(d.getTime()))return "—";try{return tf==="1 Saat"||tf==="4 Saat"?new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(d):new Intl.DateTimeFormat("sv-SE",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit"}).format(d)}catch(_){return d.toISOString().slice(0,10)}}
+function harmFwRet(entry,exit,dir){if(!(entry>0)||!(exit>0))return null;return dir==="BEARISH"?100*(entry/exit-1):100*(exit/entry-1)}
+function harmFwCandidateKey(r){return `${r.symbol}|${r.timeframe}|${r.pattern}|${r.direction}`}
+function harmFwCapture(){
+  harmFwLoad();const rows=harmShown.filter(r=>r.status.includes("OLUŞUYOR")||r.status.includes("PRZ"));if(!rows.length){alert("Kaydedilecek OLUŞUYOR / PRZ YAKIN harmonik adayı yok.");return}
+  const now=Date.now();let added=0,skip=0;
+  for(const r of rows){const target=Number(r.prz),price=Number(r.close);if(!(target>0)||!(price>0)){skip++;continue}const key=harmFwCandidateKey(r);const dup=harmFwRecords.some(x=>x.key===key&&x.state==="PENDING"&&Math.abs(Number(x.prz)-target)/target<=.01);if(dup){skip++;continue}
+    harmFwRecords.push({id:`hfw_${now}_${added}_${r.symbol}`,key,captured_at:now,captured_date:new Date(now).toLocaleDateString("sv-SE",{timeZone:"Europe/Istanbul"}),symbol:r.symbol,timeframe:r.timeframe,pattern:r.pattern,direction:r.direction,source_status:r.status,score:Number(r.score),signal_price:price,prz:target,prz_distance:Number(r.distance_pct),x:Number(r.x),a:Number(r.a),b:Number(r.b),c:Number(r.c),b_ratio:Number(r.b_ratio),bc_ratio:Number(r.bc_ratio),ad_ratio:Number(r.ad_ratio),state:"PENDING",touch_at:null,touch_date:null,bars_to_d:null,returns:{},mfe20:null,mae20:null,last_checked_at:null});added++}
+  harmFwSave();renderHarmForward();setStatus("harmFwStatus",`Kaydedildi · ${added} yeni projeksiyon · ${skip} tekrar/geçersiz atlandı`,added?"good":"warn");
+}
+async function harmFwUpdate(){
+  harmFwLoad();if(!harmFwRecords.length){alert("Henüz Harmonik Forward kaydı yok.");return}const btn=$("harmFwUpdateBtn");btn.disabled=true;$("harmFwProg").style.width="0";setStatus("harmFwStatus","Harmonik kayıtlar güncelleniyor…","warn");
+  try{let done=0,changed=0;const groups=new Map();for(const r of harmFwRecords){const k=`${r.symbol}|${r.timeframe}`;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)}const entries=[...groups.entries()];
+    for(const [k,recs] of entries){const [symbol,label]=k.split("|");const tf=harmTfKey(label);try{harmDataCache.delete(`${symbol}|${tf}`);const df=await getHarmDf(symbol,tf);if(!df?.t?.length)throw new Error("veri yok");for(const r of recs){const old=JSON.stringify([r.state,r.touch_at,r.bars_to_d,r.returns,r.mfe20,r.mae20]);let start=df.t.findIndex(t=>Number(t)*1000>Number(r.captured_at));if(start<0){r.last_checked_at=Date.now();continue}let hit=-1;if(r.touch_at){hit=df.t.findIndex(t=>Number(t)===Number(r.touch_at));if(hit<0)hit=df.t.findIndex(t=>Number(t)*1000>=Number(r.touch_at)*1000)}else{const end=Math.min(df.t.length-1,start+HARM_FW_WAIT-1);for(let j=start;j<=end;j++){if(r.direction==="BULLISH"?Number(df.l[j])<=Number(r.prz):Number(df.h[j])>=Number(r.prz)){hit=j;break}}if(hit>=0){r.touch_at=Number(df.t[hit]);r.touch_date=harmFwDate(df.t[hit],r.timeframe);r.bars_to_d=hit-start+1;r.state="TOUCHED"}else if(df.t.length-start>=HARM_FW_WAIT){r.state="D_MISS";r.bars_to_d=HARM_FW_WAIT}}
+        if(hit>=0){for(const h of HARM_FW_H){if(r.returns?.[h]!=null)continue;const j=hit+h;if(j<df.c.length){const v=harmFwRet(Number(r.prz),Number(df.c[j]),r.direction);if(v!=null)r.returns[h]=+v.toFixed(3)}}const end=Math.min(df.c.length-1,hit+20),path=[];for(let j=hit+1;j<=end;j++){const hi=harmFwRet(Number(r.prz),r.direction==="BULLISH"?Number(df.h[j]):Number(df.l[j]),r.direction),lo=harmFwRet(Number(r.prz),r.direction==="BULLISH"?Number(df.l[j]):Number(df.h[j]),r.direction);if(Number.isFinite(hi))path.push(hi);if(Number.isFinite(lo))path.push(lo)}if(path.length){r.mfe20=+Math.max(...path).toFixed(3);r.mae20=+Math.min(...path).toFixed(3)}if(r.returns?.[20]!=null)r.state="EVALUATED"}
+        r.last_checked_at=Date.now();const neu=JSON.stringify([r.state,r.touch_at,r.bars_to_d,r.returns,r.mfe20,r.mae20]);if(old!==neu)changed++}
+      }catch(e){for(const r of recs)r.last_error=(e?.message||String(e)).slice(0,140)}done++;$("harmFwProg").style.width=(100*done/entries.length)+"%";setStatus("harmFwStatus",`${symbol} · ${done}/${entries.length} grup güncellendi`,"warn");if(done%5===0)await sleep(0)}
+    harmFwSave();renderHarmForward();setStatus("harmFwStatus",`Güncelleme tamamlandı · ${changed} kayıt değişti`,"good");
+  }catch(e){setStatus("harmFwStatus","Hata: "+(e?.message||e),"bad")}finally{btn.disabled=false;$("harmFwProg").style.width="100%"}
+}
+function harmFwGroupStats(rows){const reached=rows.filter(r=>r.touch_at),miss=rows.filter(r=>r.state==="D_MISS"),resolved=reached.length+miss.length,bars=reached.map(r=>Number(r.bars_to_d)).filter(Number.isFinite),out={n:rows.length,reached:reached.length,miss:miss.length,pending:rows.length-resolved,hit:resolved?100*reached.length/resolved:null,bars:harmFwMedian(bars)};for(const h of [5,10,20]){const a=reached.map(r=>Number(r.returns?.[h])).filter(Number.isFinite);out[h]={n:a.length,win:a.length?100*a.filter(x=>x>0).length/a.length:null,med:harmFwMedian(a)}}out.mfe=harmFwMedian(reached.map(r=>Number(r.mfe20)).filter(Number.isFinite));out.mae=harmFwMedian(reached.map(r=>Number(r.mae20)).filter(Number.isFinite));return out}
+function renderHarmForward(){
+  harmFwLoad();const groups=new Map();groups.set("TÜMÜ",harmFwRecords);for(const r of harmFwRecords){const k=`${r.pattern} · ${r.timeframe} · ${r.direction}`;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)}const sums=[...groups.entries()].map(([name,rows])=>({name,...harmFwGroupStats(rows)})).sort((a,b)=>a.name==="TÜMÜ"?-1:b.name==="TÜMÜ"?1:b.n-a.n);
+  $("harmFwSummaryTable").innerHTML=`<thead><tr>${["Grup","Kayıt","D Ulaştı","D Miss","Bekliyor","D İsabet %","D'ye Medyan Mum","5B N","5B Kazan %","5B Medyan %","10B N","10B Kazan %","10B Medyan %","20B N","20B Kazan %","20B Medyan %","MFE20 Medyan %","MAE20 Medyan %"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+sums.map(s=>`<tr><td><b>${s.name}</b></td><td>${s.n}</td><td>${s.reached}</td><td>${s.miss}</td><td>${s.pending}</td><td>${s.hit==null?"—":fmt(s.hit,1)}</td><td>${s.bars==null?"—":fmt(s.bars,1)}</td><td>${s[5].n}</td><td>${s[5].win==null?"—":fmt(s[5].win,1)}</td><td>${s[5].med==null?"—":fmt(s[5].med,2)}</td><td>${s[10].n}</td><td>${s[10].win==null?"—":fmt(s[10].win,1)}</td><td>${s[10].med==null?"—":fmt(s[10].med,2)}</td><td>${s[20].n}</td><td>${s[20].win==null?"—":fmt(s[20].win,1)}</td><td>${s[20].med==null?"—":fmt(s[20].med,2)}</td><td>${s.mfe==null?"—":fmt(s.mfe,2)}</td><td>${s.mae==null?"—":fmt(s.mae,2)}</td></tr>`).join("")+"</tbody>";
+  const detail=harmFwRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);$("harmFwDetailCount").textContent=detail.length;$("harmFwDetailTable").innerHTML=`<thead><tr>${["Kayıt Tarihi","Hisse","Periyot","Formasyon","Yön","İlk Durum","Uyum %","Sinyal Fiyat","D / PRZ","Başlangıç Uzak %","Durum","D Temas","D'ye Mum",...HARM_FW_H.map(h=>`${h}B %`),"MFE20 %","MAE20 %"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.pattern}</b></td><td>${r.direction}</td><td>${r.source_status}</td><td>${fmt(r.score,1)}</td><td>${fmt(r.signal_price)}</td><td><b>${fmt(r.prz)}</b></td><td>${fmt(r.prz_distance,2)}</td><td>${r.state==="D_MISS"?"❌ D ULAŞMADI":r.touch_at?(r.state==="EVALUATED"?"✅ TAM ÖLÇÜLDÜ":"🎯 D ULAŞTI"):"⏳ BEKLİYOR"}</td><td>${r.touch_date||"—"}</td><td>${r.bars_to_d??"—"}</td>${HARM_FW_H.map(h=>`<td>${Number.isFinite(Number(r.returns?.[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
+  const reached=harmFwRecords.filter(r=>r.touch_at).length,miss=harmFwRecords.filter(r=>r.state==="D_MISS").length;$("harmFwCounts").textContent=`Toplam ${harmFwRecords.length} projeksiyon · D ulaştı ${reached} · D miss ${miss} · bekleyen ${harmFwRecords.length-reached-miss}`;
+}
+function harmFwClear(){if(!confirm("Yalnız Harmonik Forward kayıtları silinsin mi?"))return;harmFwRecords=[];harmFwSave();renderHarmForward();setStatus("harmFwStatus","Harmonik Forward kayıtları temizlendi.","warn")}
+function harmFwExport(){harmFwLoad();if(!harmFwRecords.length){alert("Dışa aktarılacak Harmonik Forward kaydı yok.");return}const rows=harmFwRecords.map(r=>({KayitTarihi:r.captured_date,Hisse:r.symbol,Periyot:r.timeframe,Formasyon:r.pattern,Yon:r.direction,IlkDurum:r.source_status,Uyum:r.score,SinyalFiyat:r.signal_price,D_PRZ:r.prz,BaslangicUzaklik:r.prz_distance,Durum:r.state,DTemas:r.touch_date,DyeMum:r.bars_to_d,...Object.fromEntries(HARM_FW_H.map(h=>[`${h}Mum_Getiri_%`,r.returns?.[h]??null])),MFE20:r.mfe20??null,MAE20:r.mae20??null}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Harmonik Forward");XLSX.writeFile(wb,`BIST_Harmonik_Forward_${new Date().toISOString().slice(0,10)}.xlsx`)}
+
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 13. MODÜL · XU100 KOMPOZİT / RELATIVE STRENGTH v1.0
 // ─────────────────────────────────────────────────────────────────────────────
 const COMP_TF={
@@ -3412,12 +3478,13 @@ $("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="spe
 $("onlyCore").onchange=renderFusion;
 $("hcBtn").onclick=scanHighConfidence;$("hcExcel").onclick=exportHighConfidence;
 $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$("perfExcelBtn").onclick=perfExport;$("perfClearBtn").onclick=perfClear;$("perfOnlyEvaluated").onchange=renderPerformance;$("perfDetailN").onchange=renderPerformance;
+$("harmFwCaptureBtn").onclick=harmFwCapture;$("harmFwUpdateBtn").onclick=harmFwUpdate;$("harmFwExcelBtn").onclick=harmFwExport;$("harmFwClearBtn").onclick=harmFwClear;
 $("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;$("elQuickFilter").onchange=renderElliott;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
 $("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
-renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
+renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderHarmForward();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
 
 <style>
