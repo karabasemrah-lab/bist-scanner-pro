@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-01 16:57:57",
+  "version": "2026-09-02 16:55:13",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2557,6 +2557,10 @@
     "INTET": {
       "name": "İNTETRA TEKNOLOJİ VE BİLİŞİM HİZMETLERİ A.Ş.",
       "yahoo": "INTET.IS"
+    },
+    "USHOL": {
+      "name": "US YATIRIM HOLDİNG A.Ş.",
+      "yahoo": "USHOL.IS"
     }
   }
 }
