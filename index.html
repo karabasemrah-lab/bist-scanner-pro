@@ -1004,7 +1004,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 
 <section id="structurelab" class="tabpage space-y-4 hidden">
   <div class="card p-5">
-    <h2 class="text-2xl font-black">🧠 Market Structure Decision Engine · Laboratuvar v0.2</h2>
+    <h2 class="text-2xl font-black">🧠 Market Structure Decision Engine · Laboratuvar v0.3</h2>
     <div class="text-sm muted mt-2">İndikatör AL sinyalinden önce fiyat yapısını okur: Günlük yapı → konum → likidite/MSS → 4 saat teyit → katılım/momentum → risk/ödül. Mevcut taramaları değiştirmez.</div>
     <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
       <div><label class="text-xs muted">Minimum Yapısal Güven</label><input id="sdMinScore" class="input mt-1" type="number" value="60" min="0" max="100"></div>
@@ -1012,7 +1012,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <div><label class="text-xs muted">Destek Yakınlığı %</label><input id="sdSupportTol" class="input mt-1" type="number" value="5" min="1" max="15" step="0.5"></div>
       <div><label class="text-xs muted">Minimum R/R</label><input id="sdMinRR" class="input mt-1" type="number" value="1.5" min="0.5" max="5" step="0.25"></div>
     </div>
-    <div class="text-xs muted mt-3">Skor: Yapı 30 · Konum 20 · Likidite/MSS 20 · 4H teyit 15 · Katılım/Momentum 10 · R/R 5. v0.2: Yapısal Güven ile Erkenlik ayrıdır; eski sweep/MSS yaşlandıkça puanı düşer ve ERKEN FIRSAT yalnız taze teyitte verilir.</div>
+    <div class="text-xs muted mt-3">Skor: Yapı 30 · Konum 20 · Likidite/MSS 20 · 4H teyit 15 · Katılım/Momentum 10 · R/R 5. v0.3: Yapısal Güven ile Erkenlik ayrıdır; yakın swing-high engeli ayrıca ölçülür. ERKEN FIRSAT, kırılmamış yakın direnç varsa TEYİT BEKLİYOR; direnç hacim/4H yapı desteğiyle aşılmışsa TETİK HAZIR olarak ayrıştırılır.</div>
     <button id="sdBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#0891b2,#22d3ee);color:#06202a">🧠 Yapısal Karar Taramasını Başlat</button>
     <div id="sdCounts" class="text-xs muted mt-3"></div><div class="progress mt-4"><div id="sdProg"></div></div>
     <div id="sdStatus" class="mt-3 rounded-xl p-3 text-sm warn">Laboratuvar taramasını başlat.</div>
@@ -3154,9 +3154,30 @@ function sdAnalyze(symbol,d,fh){
  else if(S.bull&&emaAligned)stage='YAPI POZİTİF';
  else stage='TEYİT BEKLİYOR';
 
- return{symbol,score,cls,stage,early,structure:S.label,location:loc,sweep:sweep?'✓':'—',mss:mss?'✓':'—',h4:F.label,h4ok:F.bull?'✓':'—',volume:vol,ret5,ret20,ret60,rsi,rr,close,invalidation:lastLow,target:lastHigh,q_structure:qStructure,q_location:qLoc,q_liquidity:qLiq,q_h4:q4,q_participation:qPart,q_rr:qRR,sweep_age:sweepAge,mss_age:mssAge,dist_ema20:distE20,dist_high20:distHigh20,ema_aligned:emaAligned?'✓':'—',ema20_rising:ema20Rising?'✓':'—'}
+ // v0.3 · Yakın swing-high engeli / kırılım katmanı.
+ // Aktif engel: son 120 mumdaki pivot tepelerden fiyatın üzerinde kalan en yakın seviye.
+ // Kırılım: son 5 mum içinde, o mumdan önce oluşmuş son anlamlı pivot tepenin kapanışla aşılması.
+ const recentHighPivots=P.H.filter(z=>z.i<n-1&&z.i>=Math.max(0,n-120));
+ const overhead=recentHighPivots.filter(z=>finite(z.p)&&z.p>close*1.001).sort((a,b)=>a.p-b.p);
+ const obstacle=overhead.length?overhead[0].p:NaN;
+ const obstaclePct=finite(obstacle)&&close>0?100*(obstacle/close-1):NaN;
+ let breakout=false,breakoutLevel=NaN,breakoutAge=null;
+ for(let x=Math.max(1,n-5);x<n;x++){
+   const prevHigh=recentHighPivots.filter(z=>z.i<x).at(-1);
+   if(prevHigh&&finite(prevHigh.p)&&d.c[x]>prevHigh.p&&d.c[x-1]<=prevHigh.p){breakout=true;breakoutLevel=prevHigh.p;breakoutAge=n-1-x;}
+ }
+ const nearObstacle=finite(obstaclePct)&&obstaclePct>=0&&obstaclePct<=5;
+ const breakoutConfirmed=breakout&&F.bull&&emaAligned&&ema20Rising;
+ let newStage=stage;
+ if(stage==='ERKEN FIRSAT'&&nearObstacle&&!breakout)newStage='TEYİT BEKLİYOR';
+ else if((stage==='ERKEN FIRSAT'||stage==='TAZE TREND'||stage==='YAPI POZİTİF')&&breakoutConfirmed&&!extended)newStage='TETİK HAZIR';
+ else if(stage==='GÜÇLÜ TREND'&&breakoutConfirmed&&!extended)newStage='TETİK HAZIR';
+ const obstacleLabel=finite(obstacle)?fmt(obstacle):breakout&&finite(breakoutLevel)?`AŞILDI ${fmt(breakoutLevel)}`:'ÖNÜ AÇIK';
+ const breakoutLabel=breakout?`✓ ${breakoutAge===0?'BUGÜN':breakoutAge+'G'}`:'—';
+
+ return{symbol,score,cls,stage,new_stage:newStage,early,structure:S.label,location:loc,sweep:sweep?'✓':'—',mss:mss?'✓':'—',h4:F.label,h4ok:F.bull?'✓':'—',volume:vol,ret5,ret20,ret60,rsi,rr,close,invalidation:lastLow,target:lastHigh,obstacle,obstacle_label:obstacleLabel,obstacle_pct:obstaclePct,breakout:breakoutLabel,breakout_level:breakoutLevel,breakout_age:breakoutAge,q_structure:qStructure,q_location:qLoc,q_liquidity:qLiq,q_h4:q4,q_participation:qPart,q_rr:qRR,sweep_age:sweepAge,mss_age:mssAge,dist_ema20:distE20,dist_high20:distHigh20,ema_aligned:emaAligned?'✓':'—',ema20_rising:ema20Rising?'✓':'—'}
 }
-function renderSD(){const min=Math.max(0,val('sdMinScore'));sdShown=sdAll.filter(r=>r.score>=min).sort((a,b)=>b.score-a.score||b.early-a.early||b.rr-a.rr);$('sdCount').textContent=sdShown.length;$('sdTable').innerHTML=`<thead><tr>${['Hisse','Yapısal Güven','Erkenlik','Sınıf','Aşama','Günlük Yapı','Konum','Sweep','MSS/BOS','MSS Yaşı','4H Yapı','4H Teyit','EMA Uyum','EMA20 ↑','EMA20 Uzak %','20G %','60G %','Hacim x','5G %','RSI','R/R','Geçersizlik','Yakın Hedef','Yapı /30','Konum /20','Likidite /20','4H /15','Katılım /10','R/R /5'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+sdShown.map(r=>`<tr><td>${link(r.symbol)}</td><td><b>${r.score}/100</b></td><td><b>${r.early}/100</b></td><td><b>${r.cls}</b></td><td><b>${r.stage}</b></td><td>${r.structure}</td><td>${r.location}</td><td>${r.sweep}</td><td>${r.mss}</td><td>${r.mss_age??'—'}</td><td>${r.h4}</td><td>${r.h4ok}</td><td>${r.ema_aligned}</td><td>${r.ema20_rising}</td><td>${fmt(r.dist_ema20,2)}</td><td>${fmt(r.ret20,2)}</td><td>${fmt(r.ret60,2)}</td><td>${fmt(r.volume,2)}</td><td>${fmt(r.ret5,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.rr,2)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.target)}</td><td>${r.q_structure}</td><td>${r.q_location}</td><td>${r.q_liquidity}</td><td>${r.q_h4}</td><td>${r.q_participation}</td><td>${r.q_rr}</td></tr>`).join('')+'</tbody>';smartEnhanceAll()}
+function renderSD(){const min=Math.max(0,val('sdMinScore'));sdShown=sdAll.filter(r=>r.score>=min).sort((a,b)=>b.score-a.score||b.early-a.early||b.rr-a.rr);$('sdCount').textContent=sdShown.length;$('sdTable').innerHTML=`<thead><tr>${['Hisse','Yapısal Güven','Erkenlik','Sınıf','Aşama','Yeni Aşama','Yakın Engel','Engele %','Kırılım','Günlük Yapı','Konum','Sweep','MSS/BOS','MSS Yaşı','4H Yapı','4H Teyit','EMA Uyum','EMA20 ↑','EMA20 Uzak %','20G %','60G %','Hacim x','5G %','RSI','R/R','Geçersizlik','Yakın Hedef','Yapı /30','Konum /20','Likidite /20','4H /15','Katılım /10','R/R /5'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+sdShown.map(r=>`<tr><td>${link(r.symbol)}</td><td><b>${r.score}/100</b></td><td><b>${r.early}/100</b></td><td><b>${r.cls}</b></td><td><b>${r.stage}</b></td><td><b>${r.new_stage||r.stage}</b></td><td>${r.obstacle_label||'—'}</td><td>${finite(r.obstacle_pct)?fmt(r.obstacle_pct,2):'—'}</td><td>${r.breakout||'—'}</td><td>${r.structure}</td><td>${r.location}</td><td>${r.sweep}</td><td>${r.mss}</td><td>${r.mss_age??'—'}</td><td>${r.h4}</td><td>${r.h4ok}</td><td>${r.ema_aligned}</td><td>${r.ema20_rising}</td><td>${fmt(r.dist_ema20,2)}</td><td>${fmt(r.ret20,2)}</td><td>${fmt(r.ret60,2)}</td><td>${fmt(r.volume,2)}</td><td>${fmt(r.ret5,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.rr,2)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.target)}</td><td>${r.q_structure}</td><td>${r.q_location}</td><td>${r.q_liquidity}</td><td>${r.q_h4}</td><td>${r.q_participation}</td><td>${r.q_rr}</td></tr>`).join('')+'</tbody>';smartEnhanceAll()}
 async function scanSD(){const b=$('sdBtn');b.disabled=true;sdAll=[];sdCache.clear();failures=[];$('sdProg').style.width='0';try{const u=await getUniverse(),jobs=u.symbols.slice();$('sdCounts').textContent=`${jobs.length} hisse · Günlük yapı + 4 Saat teyit`;let next=0,done=0;async function run(){while(1){const x=next++;if(x>=jobs.length)return;const sym=jobs[x];try{const [d,h4]=await Promise.all([sdDf(sym,'1d'),sdDf(sym,'4h')]);const r=sdAnalyze(sym,d,h4);if(r)sdAll.push(r)}catch(e){failures.push({symbol:sym,reason:(e?.message||String(e)).slice(0,180)})}done++;$('sdProg').style.width=100*done/jobs.length+'%';setStatus('sdStatus',`${sym} · ${done}/${jobs.length}`,'warn');if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(4,jobs.length||1)},run));renderSD();renderFails();setStatus('sdStatus',`Tarama tamamlandı · ${sdShown.length} aday · ${failures.length} hata`,'good')}catch(e){setStatus('sdStatus','Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}}
 
 // 20. MODÜL · QUANT QUALITY v1.0
