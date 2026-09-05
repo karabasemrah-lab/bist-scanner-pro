@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.1</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{color-scheme:dark}
+  body{background:#07110d;color:#e8fff4;font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif}
+  .card{background:#0d1b15;border:1px solid #214536;border-radius:18px}
+  .muted{color:#91aa9f}.btn{border:1px solid #315e4b;border-radius:12px;padding:.65rem .9rem;font-weight:800}
+  .btn:hover{filter:brightness(1.15)} .btn:disabled{opacity:.5;cursor:not-allowed}
+  .input{background:#0a1712;border:1px solid #315e4b;border-radius:10px;padding:.55rem .7rem;color:#e8fff4}
+  .stat{background:#0a1712;border:1px solid #19392d;border-radius:14px;padding:.8rem}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;white-space:nowrap}
+  th{position:sticky;top:0;background:#10241b;color:#a8e6c7;text-align:left;padding:9px;border-bottom:1px solid #315e4b;z-index:2}
+  td{padding:8px;border-bottom:1px solid #183328}
+  tr:hover td{background:#10241b}
+  .pill{display:inline-block;border-radius:999px;padding:.2rem .55rem;font-weight:900}
+  .a{background:#0b3b28;color:#8df1ba}.b{background:#273a12;color:#d1f28a}.c{background:#493711;color:#f5d278}.d{background:#49221e;color:#ffaaa3}
+  .bar{height:8px;border-radius:999px;background:#10241b;overflow:hidden}.bar>div{height:100%;background:#34d399;width:0}
+</style>
+</head>
+<body>
+<div class="max-w-[1800px] mx-auto p-4 md:p-6 space-y-4">
+  <div class="card p-5">
+    <div class="flex flex-wrap items-center gap-3">
+      <div>
+        <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.1</h1>
+        <div class="muted mt-2">ROIC merkezli şirket kalite motoru + sektör ön görünümü. Teknik taramalardan tamamen bağımsızdır.</div>
+      </div>
+      <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
+      <button id="excelBtn" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5">
+      <div class="stat"><div class="muted text-xs">Şirket</div><div id="n" class="text-2xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">A / A+</div><div id="aN" class="text-2xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Medyan Kalite</div><div id="med" class="text-2xl font-black">—</div></div>
+      <div class="stat"><div class="muted text-xs">Sektör</div><div id="sectorN" class="text-2xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Medyan Veri Kapsaması</div><div id="coverage" class="text-2xl font-black">—</div></div>
+    </div>
+    <div class="bar mt-4"><div id="prog"></div></div>
+    <div id="status" class="text-xs muted mt-2">Hazır. Bu dosya aynı Render servisi altında çalıştırıldığında <b>/api/tradingview</b> yolunu kullanır.</div>
+  </div>
+
+  <div class="card p-5">
+    <div class="flex flex-wrap gap-3 items-center">
+      <div>
+        <h2 class="font-black text-xl">① Şirket Kalite Skoru /100</h2>
+        <div class="text-xs muted mt-1">Eksik veri sıfır puan kazanır; puan 100'e yeniden ölçeklenmez. Böylece veri eksikliği gizlenmez.</div>
+      </div>
+      <select id="sectorFilter" class="input ml-auto"><option value="">Tüm sektörler</option></select>
+      <select id="gradeFilter" class="input">
+        <option value="">Tüm sınıflar</option><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option>
+      </select>
+    </div>
+    <div class="overflow-auto max-h-[760px] mt-4"><table id="companyTable"></table></div>
+  </div>
+
+  <div class="card p-5">
+    <h2 class="font-black text-xl">② Sektör Ön Görünümü</h2>
+    <div class="text-xs muted mt-1">Aşama 2 için temel: sektör medyan kalite, ROIC, büyüme ve lider şirketler. Henüz “rotasyon skoru” değildir.</div>
+    <div class="overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
+  </div>
+
+  <div class="card p-5">
+    <h2 class="font-black text-xl">Puanlama v0.1</h2>
+    <div class="grid md:grid-cols-2 gap-3 text-sm mt-3">
+      <div class="stat">ROIC <b>20</b> · ROE/ROA <b>10</b> · Ciro büyümesi <b>10</b> · FAVÖK büyümesi <b>10</b> · Net kâr büyümesi <b>10</b></div>
+      <div class="stat">FCF <b>7</b> · Faaliyet nakit <b>8</b> · Net Borç/FAVÖK <b>10</b> · Değerleme <b>10</b> · Marj <b>5</b></div>
+    </div>
+    <div class="text-xs muted mt-3">Not: Banka/sigorta gibi finansallar için bu genel sanayi modeli nihai model değildir. Finansal şirketler için ayrı kalite motoru Aşama 1.1'de ayrıştırılacaktır.</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const TV_API="/api/tradingview";
+const TV_BASE=[
+  {left:"is_primary",operation:"equal",right:true},
+  {left:"typespecs",operation:"has",right:["common"]}
+];
+const $=id=>document.getElementById(id);
+const finite=x=>Number.isFinite(Number(x));
+const fnum=x=>finite(x)?Number(x):null;
+const med=a=>{const x=a.filter(finite).map(Number).sort((a,b)=>a-b);if(!x.length)return null;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2};
+const cell=(v,d=1,s="")=>finite(v)?Number(v).toFixed(d)+s:"—";
+let rows=[],sectorRows=[];
+
+async function fetchJSON(url,options={},timeoutMs=45000){
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),timeoutMs);
+  try{
+    const r=await fetch(url,{...options,signal:c.signal});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    return await r.json();
+  }catch(e){
+    if(e?.name==="AbortError") throw new Error(`Ağ zaman aşımı · ${Math.round(timeoutMs/1000)} sn`);
+    throw e;
+  }finally{clearTimeout(t)}
+}
+const COLS=[
+"name","sector","market_cap_basic",
+"return_on_invested_capital_fq","return_on_equity_fq","return_on_assets_fq",
+"total_revenue_yoy_growth_fq","ebitda_yoy_growth_fq","net_income_yoy_growth_fq",
+"free_cash_flow_fq","cash_f_operating_activities_fq","net_debt_to_ebitda_fq",
+"price_earnings_ttm","enterprise_value_ebitda_ttm","price_book_fq",
+"gross_margin_ttm","operating_margin_ttm"
+];
+async function tvScan(){
+  const body=JSON.stringify({
+    symbols:{query:{types:[]},tickers:[]},options:{lang:"tr"},columns:COLS,
+    sort:{sortBy:"market_cap_basic",sortOrder:"desc"},range:[0,2000],filter:TV_BASE
+  });
+  return fetchJSON(TV_API,{method:"POST",headers:{"Content-Type":"application/json"},body},45000);
+}
+function pctRank(a,x,higher=true){
+  const z=a.filter(finite).map(Number).sort((a,b)=>a-b); if(!z.length||!finite(x))return null;
+  let n=0;for(const v of z)if(v<=Number(x))n++;
+  const p=100*n/z.length; return higher?p:100-p;
+}
+function grade(s){return s>=85?"A+":s>=75?"A":s>=62?"B":s>=48?"C":"D"}
+function gcls(g){return g==="A+"||g==="A"?"a":g==="B"?"b":g==="C"?"c":"d"}
+
+function score(raw){
+  const base=(raw.data||[]).map(x=>{
+    const d=x.d||[],o={symbol:String(x.s||"").replace("BIST:","").toUpperCase()};
+    COLS.forEach((c,i)=>o[c]=d[i]);
+    o.sector=String(o.sector||"Diğer"); return o;
+  }).filter(x=>x.symbol);
+  const by={};for(const r of base)(by[r.sector]??=[]).push(r);
+
+  const spec=[
+    ["return_on_invested_capital_fq",20,true,"roic"],
+    ["return_on_equity_fq",6,true,"roe"],["return_on_assets_fq",4,true,"roa"],
+    ["total_revenue_yoy_growth_fq",10,true,"revG"],["ebitda_yoy_growth_fq",10,true,"ebitdaG"],
+    ["net_income_yoy_growth_fq",10,true,"niG"],["free_cash_flow_fq",7,true,"fcf"],
+    ["cash_f_operating_activities_fq",8,true,"ocf"],["net_debt_to_ebitda_fq",10,false,"debt"],
+    ["price_earnings_ttm",4,false,"pe"],["enterprise_value_ebitda_ttm",4,false,"evEbitda"],
+    ["price_book_fq",2,false,"pb"],["gross_margin_ttm",2,true,"gm"],["operating_margin_ttm",3,true,"om"]
+  ];
+  return base.map(r=>{
+    const peers=by[r.sector]||base;let earned=0,coverage=0;
+    for(const [field,w,higher,key] of spec){
+      const v=fnum(r[field]);r[key]=v;if(v===null)continue;
+      let u=peers.map(z=>fnum(z[field])).filter(finite);
+      if(["pe","evEbitda","pb"].includes(key)){
+        if(v<=0){r[key+"Rank"]=0;coverage+=w;continue}
+        u=u.filter(z=>z>0);
+      }
+      const p=pctRank(u,v,higher);r[key+"Rank"]=p;
+      if(finite(p)){earned+=w*Number(p)/100;coverage+=w}
+    }
+    r.score=Math.round(earned);r.coverage=Math.round(coverage);r.grade=grade(r.score);
+    return r;
+  }).sort((a,b)=>b.score-a.score);
+}
+function buildSectors(a){
+  const g={};for(const r of a)(g[r.sector]??=[]).push(r);
+  return Object.entries(g).map(([sector,x])=>({
+    sector,n:x.length,score:med(x.map(r=>r.score)),roic:med(x.map(r=>r.roic)),
+    revG:med(x.map(r=>r.revG)),ebitdaG:med(x.map(r=>r.ebitdaG)),om:med(x.map(r=>r.om)),
+    coverage:med(x.map(r=>r.coverage)),leaders:[...x].sort((a,b)=>b.score-a.score).slice(0,3).map(r=>r.symbol).join(", ")
+  })).sort((a,b)=>(b.score??-1)-(a.score??-1));
+}
+function render(){
+  const sf=$("sectorFilter").value,gf=$("gradeFilter").value;
+  const shown=rows.filter(r=>(!sf||r.sector===sf)&&(!gf||r.grade===gf));
+  $("n").textContent=rows.length;$("aN").textContent=rows.filter(r=>["A+","A"].includes(r.grade)).length;
+  $("med").textContent=finite(med(rows.map(r=>r.score)))?cell(med(rows.map(r=>r.score)),0):"—";
+  $("sectorN").textContent=new Set(rows.map(r=>r.sector)).size;
+  $("coverage").textContent=finite(med(rows.map(r=>r.coverage)))?cell(med(rows.map(r=>r.coverage)),0,"%"):"—";
+
+  $("companyTable").innerHTML=`<thead><tr><th>#</th><th>Hisse</th><th>Kalite</th><th>Sınıf</th><th>Veri</th><th>Sektör</th><th>ROIC</th><th>ROE</th><th>ROA</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Net Kâr Büy.</th><th>FCF</th><th>Faaliyet Nakit</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th><th>Faaliyet Marjı</th></tr></thead><tbody>`+
+  shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.score}</b></td><td><span class="pill ${gcls(r.grade)}">${r.grade}</span></td><td>${r.coverage}%</td><td>${r.sector}</td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.roe,1,"%")}</td><td>${cell(r.roa,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.niG,1,"%")}</td><td>${cell(r.fcf,0)}</td><td>${cell(r.ocf,0)}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td><td>${cell(r.om,1,"%")}</td></tr>`).join("")+`</tbody>`;
+
+  $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Veri</th><th>Liderler</th></tr></thead><tbody>`+
+  sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.sector}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
+}
+async function run(){
+  const b=$("scanBtn"),p=$("prog"),s=$("status");b.disabled=true;p.style.width="12%";s.textContent="Temel veriler alınıyor…";
+  try{
+    const raw=await tvScan();p.style.width="55%";s.textContent="Sektör içi yüzdelikler ve kalite skoru hesaplanıyor…";
+    rows=score(raw);sectorRows=buildSectors(rows);
+    const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option>${x}</option>`).join("");
+    render();p.style.width="100%";
+    s.textContent=`Tamamlandı · ${rows.length} şirket · ${sectorRows.length} sektör · medyan veri kapsaması ${cell(med(rows.map(r=>r.coverage)),0,"%")}`;
+  }catch(e){p.style.width="0%";s.textContent="Tarama başarısız: "+(e?.message||e)}
+  finally{b.disabled=false}
+}
+function excel(){
+  if(!rows.length){alert("Önce taramayı çalıştır.");return}
+  const wb=XLSX.utils.book_new();
+  const a=rows.map(r=>({Hisse:r.symbol,Sektör:r.sector,Kalite:r.score,Sınıf:r.grade,Veri_Kapsama:r.coverage,ROIC:r.roic,ROE:r.roe,ROA:r.roa,Ciro_Büyüme:r.revG,FAVÖK_Büyüme:r.ebitdaG,Net_Kar_Büyüme:r.niG,FCF:r.fcf,Faaliyet_Nakit:r.ocf,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.evEbitda,PD_DD:r.pb,Faaliyet_Marjı:r.om}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a),"Şirket Kalitesi");
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sectorRows),"Sektör Ön Görünüm");
+  XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+$("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;
+</script>
+</body>
+</html>
