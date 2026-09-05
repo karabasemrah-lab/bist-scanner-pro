@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.2</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.3</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -19,7 +19,7 @@
   td{padding:8px;border-bottom:1px solid #183328}
   tr:hover td{background:#10241b}
   .pill{display:inline-block;border-radius:999px;padding:.2rem .55rem;font-weight:900}
-  .a{background:#0b3b28;color:#8df1ba}.b{background:#273a12;color:#d1f28a}.c{background:#493711;color:#f5d278}.d{background:#49221e;color:#ffaaa3}
+  .a{background:#0b3b28;color:#8df1ba}.b{background:#273a12;color:#d1f28a}.c{background:#493711;color:#f5d278}.d{background:#49221e;color:#ffaaa3}.trust-ok{background:#0b3b28;color:#8df1ba}.trust-warn{background:#493711;color:#f5d278}.trust-bad{background:#49221e;color:#ffaaa3}
   .bar{height:8px;border-radius:999px;background:#10241b;overflow:hidden}.bar>div{height:100%;background:#34d399;width:0}
 </style>
 </head>
@@ -29,18 +29,18 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.2</h1>
-        <div class="muted mt-2">ROIC merkezli şirket kalite motoru + sektör ön görünümü. Teknik taramalardan tamamen bağımsızdır.</div>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.3</h1>
+        <div class="muted mt-2">ROIC merkezli şirket kalite motoru + veri güven motoru + sektör ön görünümü. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
       <button id="excelBtn" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
     </div>
-    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-5">
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mt-5">
       <div class="stat"><div class="muted text-xs">Şirket</div><div id="n" class="text-2xl font-black">0</div></div>
       <div class="stat"><div class="muted text-xs">A / A+</div><div id="aN" class="text-2xl font-black">0</div></div>
       <div class="stat"><div class="muted text-xs">Medyan Kalite</div><div id="med" class="text-2xl font-black">—</div></div>
       <div class="stat"><div class="muted text-xs">Sektör</div><div id="sectorN" class="text-2xl font-black">0</div></div>
-      <div class="stat"><div class="muted text-xs">Medyan Veri Güveni</div><div id="coverage" class="text-2xl font-black">—</div></div>
+      <div class="stat"><div class="muted text-xs">Medyan Veri Güveni</div><div id="coverage" class="text-2xl font-black">—</div></div><div class="stat"><div class="muted text-xs">Dikkat / Aykırı</div><div id="riskN" class="text-2xl font-black">0</div></div>
     </div>
     <div class="bar mt-4"><div id="prog"></div></div>
     <div id="status" class="text-xs muted mt-2">Hazır. Bu dosya aynı Render servisi altında çalıştırıldığında <b>/api/tradingview</b> yolunu kullanır.</div>
@@ -50,7 +50,7 @@
     <div class="flex flex-wrap gap-3 items-center">
       <div>
         <h2 class="font-black text-xl">① Şirket Kalite Skoru /100</h2>
-        <div class="text-xs muted mt-1">Eksik, aykırı ve ekonomik olarak anlamsız veriler kalite kontrolünden geçer. Ham büyüme değerleri puanlamada winsorize edilir; veri güveni ayrıca gösterilir.</div>
+        <div class="text-xs muted mt-1">Eksik, aykırı ve düşük baz etkili veriler ayrıca sınıflandırılır. A+ olmak için yüksek kalite skorunun yanında yüksek veri güveni de gerekir.</div>
       </div>
       <select id="sectorFilter" class="input ml-auto"><option value="">Tüm sektörler</option></select>
       <select id="gradeFilter" class="input">
@@ -129,6 +129,60 @@ function isFinancial(r){
   const s=String(r.sector||"").toLowerCase();
   return s.includes("finance")||s.includes("financial")||s.includes("bank")||s.includes("insurance");
 }
+
+function anomalyProfile(r){
+  let penalty=0, flags=[];
+  const add=(p,msg)=>{penalty+=p;flags.push(msg)};
+  const ag=(v,label)=>{
+    if(!finite(v)) return;
+    const a=Math.abs(Number(v));
+    if(a>1000)add(28,`${label} çok aşırı`);
+    else if(a>300)add(18,`${label} aşırı`);
+    else if(a>150)add(8,`${label} yüksek`);
+  };
+  ag(r.revG,"Ciro büy.");
+  ag(r.ebitdaG,"FAVÖK büy.");
+  ag(r.niG,"Net kâr büy.");
+  const am=(v,label)=>{
+    if(!finite(v))return;
+    const a=Math.abs(Number(v));
+    if(a>150)add(22,`${label} aşırı`);
+    else if(a>100)add(14,`${label} çok yüksek`);
+    else if(a>60)add(6,`${label} yüksek`);
+  };
+  am(r.fcfM,"FCF/Satış");
+  am(r.ocfM,"Faaliyet nakit/Satış");
+  if(finite(r.roic) && Math.abs(Number(r.roic))>100)add(10,"ROIC uç");
+  if(finite(r.roe) && Math.abs(Number(r.roe))>120)add(8,"ROE uç");
+  if(finite(r.roa) && Math.abs(Number(r.roa))>70)add(8,"ROA uç");
+  if(finite(r.pe) && Number(r.pe)>100)add(5,"F/K yüksek");
+  if(finite(r.evEbitda) && Number(r.evEbitda)>50)add(5,"FD/FAVÖK yüksek");
+  if(finite(r.pb) && Number(r.pb)>15)add(4,"PD/DD yüksek");
+  return {penalty:Math.min(70,penalty),flags};
+}
+function trustLabel(v){
+  return v>=85?"GÜVENİLİR":v>=65?"DİKKAT":"AYKIRI";
+}
+function trustClass(v){
+  return v>=85?"trust-ok":v>=65?"trust-warn":"trust-bad";
+}
+function constrainedGrade(score,trust){
+  if(!finite(score))return "—";
+  if(score>=85 && trust>=85)return "A+";
+  if(score>=75 && trust>=75)return "A";
+  if(score>=62 && trust>=60)return "B";
+  if(score>=48)return "C";
+  return "D";
+}
+function warnVal(v,type,d=1,s="%"){
+  if(!finite(v))return "—";
+  const n=Number(v), a=Math.abs(n);
+  let warn=false;
+  if(type==="growth") warn=a>150;
+  if(type==="cash") warn=a>60;
+  if(type==="roic") warn=a>100;
+  return `${warn?"⚠ ":""}${n.toFixed(d)}${s}`;
+}
 function score(raw){
   const base=(raw.data||[]).map(x=>{
     const d=x.d||[],o={symbol:String(x.s||"").replace("BIST:","").toUpperCase()};
@@ -177,10 +231,14 @@ function score(raw){
       if(finite(p)){earned+=w*Number(p)/100;coverage+=w;validN++}
     }
     r.rawCoverage=Math.round(coverage);
-    // Güven puanı: kapsama + makul değer kontrolü. Finansallar genel modelden çıkarılır.
-    r.dataTrust=Math.round(coverage);
+    // Veri güveni = veri kapsaması - aykırılık/düşük baz cezası.
+    const ap=anomalyProfile(r);
+    r.anomalyPenalty=ap.penalty;
+    r.dataFlags=ap.flags;
+    r.dataTrust=Math.max(0,Math.round(coverage-ap.penalty));
+    r.trustLabel=r.financial?"AYRI MODEL":trustLabel(r.dataTrust);
     r.score=r.financial?null:Math.round(earned);
-    r.grade=r.financial?"FİNANSAL":grade(r.score);
+    r.grade=r.financial?"FİNANSAL":constrainedGrade(r.score,r.dataTrust);
     return r;
   }).sort((a,b)=>(b.score??-1)-(a.score??-1));
 }
@@ -189,7 +247,7 @@ function buildSectors(a){
   return Object.entries(g).map(([sector,x])=>({
     sector,n:x.length,score:med(x.filter(r=>!r.financial).map(r=>r.score)),roic:med(x.map(r=>r.roic)),
     revG:med(x.map(r=>r.revG)),ebitdaG:med(x.map(r=>r.ebitdaG)),om:med(x.map(r=>r.om)),
-    coverage:med(x.map(r=>r.dataTrust)),leaders:[...x].filter(r=>!r.financial).sort((a,b)=>(b.score??-1)-(a.score??-1)).slice(0,3).map(r=>r.symbol).join(", ")||"Ayrı finansal model"
+    coverage:med(x.map(r=>r.dataTrust)),reliablePct:100*x.filter(r=>!r.financial&&r.dataTrust>=85).length/Math.max(1,x.filter(r=>!r.financial).length),leaders:[...x].filter(r=>!r.financial&&r.dataTrust>=65).sort((a,b)=>(b.score??-1)-(a.score??-1)).slice(0,3).map(r=>r.symbol).join(", ")||"Ayrı finansal model"
   })).sort((a,b)=>(b.score??-1)-(a.score??-1));
 }
 function render(){
@@ -199,12 +257,13 @@ function render(){
   $("med").textContent=finite(med(rows.map(r=>r.score)))?cell(med(rows.map(r=>r.score)),0):"—";
   $("sectorN").textContent=new Set(rows.map(r=>r.sector)).size;
   $("coverage").textContent=finite(med(rows.map(r=>r.dataTrust)))?cell(med(rows.map(r=>r.dataTrust)),0,"%"):"—";
+  $("riskN").textContent=rows.filter(r=>!r.financial && r.dataTrust<85).length;
 
-  $("companyTable").innerHTML=`<thead><tr><th>#</th><th>Hisse</th><th>Kalite</th><th>Sınıf</th><th>Veri</th><th>Sektör</th><th>ROIC</th><th>ROE</th><th>ROA</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Net Kâr Büy.</th><th>FCF/Satış</th><th>Faaliyet Nakit/Satış</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th><th>Faaliyet Marjı</th></tr></thead><tbody>`+
-  shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.financial?"—":r.score}</b></td><td><span class="pill ${r.financial?"c":gcls(r.grade)}">${r.grade}</span></td><td>${r.dataTrust}%</td><td>${r.sector}${r.financial?" · AYRI MODEL":""}</td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.roe,1,"%")}</td><td>${cell(r.roa,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.niG,1,"%")}</td><td>${cell(r.fcfM,1,"%")}</td><td>${cell(r.ocfM,1,"%")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td><td>${cell(r.om,1,"%")}</td></tr>`).join("")+`</tbody>`;
+  $("companyTable").innerHTML=`<thead><tr><th>#</th><th>Hisse</th><th>Kalite</th><th>Sınıf</th><th>Veri Güveni</th><th>Veri Durumu</th><th>Uyarı</th><th>Sektör</th><th>ROIC</th><th>ROE</th><th>ROA</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Net Kâr Büy.</th><th>FCF/Satış</th><th>Faaliyet Nakit/Satış</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th><th>Faaliyet Marjı</th></tr></thead><tbody>`+
+  shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.financial?"—":r.score}</b></td><td><span class="pill ${r.financial?"c":gcls(r.grade)}">${r.grade}</span></td><td>${r.dataTrust}%</td><td><span class="pill ${r.financial?"c":trustClass(r.dataTrust)}">${r.trustLabel}</span></td><td title="${(r.dataFlags||[]).join(" · ")}">${r.financial?"Finansal model bekliyor":((r.dataFlags||[]).length?(r.dataFlags||[]).slice(0,2).join(" · "):"—")}</td><td>${r.sector}${r.financial?" · AYRI MODEL":""}</td><td>${warnVal(r.roic,"roic")}</td><td>${cell(r.roe,1,"%")}</td><td>${cell(r.roa,1,"%")}</td><td>${warnVal(r.revG,"growth")}</td><td>${warnVal(r.ebitdaG,"growth")}</td><td>${warnVal(r.niG,"growth")}</td><td>${warnVal(r.fcfM,"cash")}</td><td>${warnVal(r.ocfM,"cash")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td><td>${cell(r.om,1,"%")}</td></tr>`).join("")+`</tbody>`;
 
-  $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Veri</th><th>Liderler</th></tr></thead><tbody>`+
-  sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.sector}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
+  $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Medyan Güven</th><th>Güvenilir %</th><th>Liderler</th></tr></thead><tbody>`+
+  sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.sector}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
 }
 async function run(){
   const b=$("scanBtn"),p=$("prog"),s=$("status");b.disabled=true;p.style.width="12%";s.textContent="Temel veriler alınıyor…";
@@ -213,14 +272,14 @@ async function run(){
     rows=score(raw);sectorRows=buildSectors(rows);
     const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option>${x}</option>`).join("");
     render();p.style.width="100%";
-    s.textContent=`Tamamlandı · ${rows.length} şirket · ${sectorRows.length} sektör · medyan veri güveni ${cell(med(rows.map(r=>r.dataTrust)),0,"%")}`;
+    s.textContent=`Tamamlandı · ${rows.length} şirket · ${sectorRows.length} sektör · güvenilir ${rows.filter(r=>!r.financial&&r.dataTrust>=85).length} · dikkat/aykırı ${rows.filter(r=>!r.financial&&r.dataTrust<85).length} · medyan veri güveni ${cell(med(rows.map(r=>r.dataTrust)),0,"%")}`;
   }catch(e){p.style.width="0%";s.textContent="Tarama başarısız: "+(e?.message||e)}
   finally{b.disabled=false}
 }
 function excel(){
   if(!rows.length){alert("Önce taramayı çalıştır.");return}
   const wb=XLSX.utils.book_new();
-  const a=rows.map(r=>({Hisse:r.symbol,Sektör:r.sector,Kalite:r.score,Sınıf:r.grade,Veri_Güveni:r.dataTrust,ROIC:r.roic,ROE:r.roe,ROA:r.roa,Ciro_Büyüme:r.revG,FAVÖK_Büyüme:r.ebitdaG,Net_Kar_Büyüme:r.niG,FCF_Satış_Yüzde:r.fcfM,Faaliyet_Nakit_Satış_Yüzde:r.ocfM,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.evEbitda,PD_DD:r.pb,Faaliyet_Marjı:r.om}));
+  const a=rows.map(r=>({Hisse:r.symbol,Sektör:r.sector,Kalite:r.score,Sınıf:r.grade,Veri_Güveni:r.dataTrust,Veri_Durumu:r.trustLabel,Aykırılık_Cezası:r.anomalyPenalty,Uyarılar:(r.dataFlags||[]).join(" | "),ROIC:r.roic,ROE:r.roe,ROA:r.roa,Ciro_Büyüme:r.revG,FAVÖK_Büyüme:r.ebitdaG,Net_Kar_Büyüme:r.niG,FCF_Satış_Yüzde:r.fcfM,Faaliyet_Nakit_Satış_Yüzde:r.ocfM,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.evEbitda,PD_DD:r.pb,Faaliyet_Marjı:r.om}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(a),"Şirket Kalitesi");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sectorRows),"Sektör Ön Görünüm");
   XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
