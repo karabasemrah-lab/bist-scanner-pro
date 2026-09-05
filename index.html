@@ -1020,6 +1020,24 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <div class="card overflow-hidden"><div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
     <h3 class="font-black text-xl">🧠 Yapısal Adaylar · <span id="sdCount">0</span> hisse</h3>
   </div><div class="overflow-auto max-h-[700px]"><table id="sdTable"></table></div></div>
+
+  <div class="card p-5 mt-4">
+    <h3 class="font-black text-xl">🧪 Corwin–Schultz Likidite Laboratuvarı v0.1</h3>
+    <div class="text-sm muted mt-2">Yön sinyali üretmez. Günlük High/Low verisinden Corwin–Schultz spread tahmini ve High–Low volatilite (Sigma proxy) çıkarır; bunları Yapı Laboratuvarı adaylarının tarihsel 5/10/20 günlük sonuçlarıyla karşılaştırır.</div>
+    <div class="grid grid-cols-4 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">Spread Ortalama (Gün)</label><input id="csLen" class="input mt-1" type="number" value="21" min="5" max="63"></div>
+      <div><label class="text-xs muted">Tarihsel Referans (Gün)</label><input id="csHist" class="input mt-1" type="number" value="252" min="60" max="500"></div>
+      <div><label class="text-xs muted">Yüksek Spread Yüzdeliği</label><input id="csHighPct" class="input mt-1" type="number" value="75" min="50" max="95"></div>
+      <div><label class="text-xs muted">Test Edilecek Aday</label><input id="csTopN" class="input mt-1" type="number" value="55" min="5" max="150"></div>
+    </div>
+    <div class="text-xs muted mt-3">v0.1: Standart Corwin–Schultz kapalı formu kullanılır; negatif alfa 0'a kırpılır. Sigma, günlük High–Low aralığından Parkinson tipi volatilite proxy'sidir. Testte her günün yüzdeliği yalnız o güne kadarki geçmişle hesaplanır; ileri 5/10/20G getiriler sadece sonuç ölçümü için kullanılır (look-ahead yok).</div>
+    <button id="csBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#7c3aed,#a78bfa);color:white">🧪 Likidite Laboratuvarını Çalıştır</button>
+    <div id="csCounts" class="text-xs muted mt-3"></div><div class="progress mt-4"><div id="csProg"></div></div>
+    <div id="csStatus" class="mt-3 rounded-xl p-3 text-sm warn">Önce Yapısal Karar taramasını çalıştır; sonra bu test mevcut günlük veriyi yeniden kullanır.</div>
+  </div>
+  <div class="card overflow-hidden mt-4"><div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🧪 Mevcut Likidite Durumu · <span id="csCount">0</span></h3></div><div class="overflow-auto max-h-[560px]"><table id="csTable"></table></div></div>
+  <div class="card overflow-hidden mt-4"><div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">📊 Rejim Backtest Özeti</h3><div class="text-xs muted mt-1">Aynı rejimdeki tarihsel gözlemlerin ileri 5/10/20 günlük performansı.</div></div><div class="overflow-auto max-h-[480px]"><table id="csSummaryTable"></table></div></div>
+
 </section>
 
 <footer class="text-xs muted text-center py-5">
@@ -3180,6 +3198,76 @@ function sdAnalyze(symbol,d,fh){
 function renderSD(){const min=Math.max(0,val('sdMinScore'));sdShown=sdAll.filter(r=>r.score>=min).sort((a,b)=>b.score-a.score||b.early-a.early||b.rr-a.rr);$('sdCount').textContent=sdShown.length;$('sdTable').innerHTML=`<thead><tr>${['Hisse','Yapısal Güven','Erkenlik','Sınıf','Aşama','Yeni Aşama','Yakın Engel','Engele %','Kırılım','Günlük Yapı','Konum','Sweep','MSS/BOS','MSS Yaşı','4H Yapı','4H Teyit','EMA Uyum','EMA20 ↑','EMA20 Uzak %','20G %','60G %','Hacim x','5G %','RSI','R/R','Geçersizlik','Yakın Hedef','Yapı /30','Konum /20','Likidite /20','4H /15','Katılım /10','R/R /5'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+sdShown.map(r=>`<tr><td>${link(r.symbol)}</td><td><b>${r.score}/100</b></td><td><b>${r.early}/100</b></td><td><b>${r.cls}</b></td><td><b>${r.stage}</b></td><td><b>${r.new_stage||r.stage}</b></td><td>${r.obstacle_label||'—'}</td><td>${finite(r.obstacle_pct)?fmt(r.obstacle_pct,2):'—'}</td><td>${r.breakout||'—'}</td><td>${r.structure}</td><td>${r.location}</td><td>${r.sweep}</td><td>${r.mss}</td><td>${r.mss_age??'—'}</td><td>${r.h4}</td><td>${r.h4ok}</td><td>${r.ema_aligned}</td><td>${r.ema20_rising}</td><td>${fmt(r.dist_ema20,2)}</td><td>${fmt(r.ret20,2)}</td><td>${fmt(r.ret60,2)}</td><td>${fmt(r.volume,2)}</td><td>${fmt(r.ret5,2)}</td><td>${fmt(r.rsi,1)}</td><td>${fmt(r.rr,2)}</td><td>${fmt(r.invalidation)}</td><td>${fmt(r.target)}</td><td>${r.q_structure}</td><td>${r.q_location}</td><td>${r.q_liquidity}</td><td>${r.q_h4}</td><td>${r.q_participation}</td><td>${r.q_rr}</td></tr>`).join('')+'</tbody>';smartEnhanceAll()}
 async function scanSD(){const b=$('sdBtn');b.disabled=true;sdAll=[];sdCache.clear();failures=[];$('sdProg').style.width='0';try{const u=await getUniverse(),jobs=u.symbols.slice();$('sdCounts').textContent=`${jobs.length} hisse · Günlük yapı + 4 Saat teyit`;let next=0,done=0;async function run(){while(1){const x=next++;if(x>=jobs.length)return;const sym=jobs[x];try{const [d,h4]=await Promise.all([sdDf(sym,'1d'),sdDf(sym,'4h')]);const r=sdAnalyze(sym,d,h4);if(r)sdAll.push(r)}catch(e){failures.push({symbol:sym,reason:(e?.message||String(e)).slice(0,180)})}done++;$('sdProg').style.width=100*done/jobs.length+'%';setStatus('sdStatus',`${sym} · ${done}/${jobs.length}`,'warn');if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(4,jobs.length||1)},run));renderSD();renderFails();setStatus('sdStatus',`Tarama tamamlandı · ${sdShown.length} aday · ${failures.length} hata`,'good')}catch(e){setStatus('sdStatus','Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}}
 
+// LAB · CORWIN–SCHULTZ LIQUIDITY QUALITY v0.1 -------------------------------
+let csRows=[],csSummary=[];
+function csQuantile(a,q){const v=a.filter(finite).slice().sort((x,y)=>x-y);if(!v.length)return NaN;const pos=(v.length-1)*q,lo=Math.floor(pos),hi=Math.ceil(pos);return lo===hi?v[lo]:v[lo]+(v[hi]-v[lo])*(pos-lo)}
+function csPctRankAt(a,i,win){const x=a[i];if(!finite(x))return NaN;const st=Math.max(0,i-win+1),v=a.slice(st,i+1).filter(finite);if(v.length<Math.min(40,Math.max(20,Math.floor(win*.25))))return NaN;let n=0;for(const z of v)if(z<=x)n++;return 100*n/v.length}
+function csSeries(df,len=21){
+  const n=df?.c?.length||0,raw=Array(n).fill(NaN),sigRaw=Array(n).fill(NaN),den=3-2*Math.sqrt(2);
+  for(let i=1;i<n;i++){
+    const h0=df.h[i-1],l0=df.l[i-1],h1=df.h[i],l1=df.l[i];
+    if([h0,l0,h1,l1].some(x=>!finite(x)||x<=0))continue;
+    const beta=Math.log(h0/l0)**2+Math.log(h1/l1)**2;
+    const hh=Math.max(h0,h1),ll=Math.min(l0,l1),gamma=Math.log(hh/ll)**2;
+    let alpha=(Math.sqrt(2*beta)-Math.sqrt(beta))/den-Math.sqrt(gamma/den);
+    if(!finite(alpha))continue;alpha=Math.max(0,alpha);
+    const ea=Math.exp(alpha),spr=2*(ea-1)/(1+ea);
+    raw[i]=100*spr;
+    sigRaw[i]=100*Math.sqrt(Math.max(0,Math.log(h1/l1)**2/(4*Math.log(2))));
+  }
+  return{raw,sigma_raw:sigRaw,spread:rollingMean(raw,len),sigma:rollingMean(sigRaw,len)}
+}
+function csRegime(spPct,sigPct,spreadSlope,highPct){
+  if(!finite(spPct)||!finite(sigPct))return'⚪ YETERSİZ VERİ';
+  if(spPct>=highPct&&sigPct<50)return'⚠️ SESSİZ KIRILGANLIK';
+  if(spPct>=highPct&&sigPct>=75)return'🔴 STRESLİ / RİSKLİ';
+  if(spPct<50&&sigPct>=75)return'🟠 LİKİT AMA SERT';
+  if(spPct<50&&sigPct<50)return'🟢 SAĞLIKLI / SAKİN';
+  if(spPct>=highPct&&spreadSlope>0)return'🔴 LİKİDİTE BOZULUYOR';
+  if(spPct>=50&&spreadSlope<0)return'🔵 NORMALLEŞİYOR';
+  return'🟡 NÖTR';
+}
+function csAnalyzeHistory(symbol,df,len,hist,highPct){
+  if(!df||df.c.length<Math.max(hist+25,180))return null;
+  const z=csSeries(df,len),n=df.c.length,i=n-1,sp=z.spread[i],sg=z.sigma[i];
+  if(!finite(sp)||!finite(sg))return null;
+  const spPct=csPctRankAt(z.spread,i,hist),sigPct=csPctRankAt(z.sigma,i,hist),slope=i>=5&&finite(z.spread[i-5])?sp-z.spread[i-5]:NaN;
+  const st=Math.max(0,i-hist+1),histSp=z.spread.slice(st,i+1),med=csQuantile(histSp,.5),p75=csQuantile(histSp,.75),p90=csQuantile(histSp,.90);
+  const regime=csRegime(spPct,sigPct,slope,highPct),events=[];
+  for(let t=Math.max(hist-1,len+5);t<n-20;t++){
+    const p1=csPctRankAt(z.spread,t,hist),p2=csPctRankAt(z.sigma,t,hist);if(!finite(p1)||!finite(p2)||!finite(z.spread[t]))continue;
+    const sl=t>=5&&finite(z.spread[t-5])?z.spread[t]-z.spread[t-5]:NaN,rg=csRegime(p1,p2,sl,highPct);
+    const r5=100*(df.c[t+5]/df.c[t]-1),r10=100*(df.c[t+10]/df.c[t]-1),r20=100*(df.c[t+20]/df.c[t]-1);
+    if([r5,r10,r20].every(finite))events.push({regime:rg,r5,r10,r20});
+  }
+  const same=events.filter(e=>e.regime===regime);
+  return{symbol,spread:sp,sigma:sg,sp_pct:spPct,sig_pct:sigPct,slope,median:med,p75,p90,regime,n:same.length,med5:csQuantile(same.map(x=>x.r5),.5),med10:csQuantile(same.map(x=>x.r10),.5),med20:csQuantile(same.map(x=>x.r20),.5),win10:same.length?100*same.filter(x=>x.r10>0).length/same.length:NaN,win20:same.length?100*same.filter(x=>x.r20>0).length/same.length:NaN,events};
+}
+function csRender(){
+  $('csCount').textContent=csRows.length;
+  $('csTable').innerHTML=`<thead><tr>${['Hisse','Yapısal Güven','Yeni Aşama','CS Spread %','Spread %Dil','Spread 5G','Sigma %','Sigma %Dil','Rejim','Medyan %','P75 %','P90 %','Aynı Rejim N','5G Medyan','10G Medyan','20G Medyan','10G Win %','20G Win %'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+csRows.map(r=>`<tr><td>${r.symbol==='XU100'?'<b>XU100</b>':link(r.symbol)}</td><td>${finite(r.sd_score)?'<b>'+r.sd_score+'/100</b>':'—'}</td><td><b>${r.sd_stage||'—'}</b></td><td><b>${fmt(r.spread,3)}</b></td><td>${fmt(r.sp_pct,1)}</td><td>${finite(r.slope)?(r.slope<0?'↓ ':'↑ ')+fmt(Math.abs(r.slope),3):'—'}</td><td>${fmt(r.sigma,3)}</td><td>${fmt(r.sig_pct,1)}</td><td><b>${r.regime}</b></td><td>${fmt(r.median,3)}</td><td>${fmt(r.p75,3)}</td><td>${fmt(r.p90,3)}</td><td>${r.n}</td><td>${fmt(r.med5,2)}</td><td>${fmt(r.med10,2)}</td><td>${fmt(r.med20,2)}</td><td>${fmt(r.win10,1)}</td><td>${fmt(r.win20,1)}</td></tr>`).join('')+'</tbody>';
+  $('csSummaryTable').innerHTML=`<thead><tr>${['Rejim','N','5G Medyan','10G Medyan','20G Medyan','10G Win %','20G Win %'].map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>`+csSummary.map(r=>`<tr><td><b>${r.regime}</b></td><td>${r.n}</td><td>${fmt(r.med5,2)}</td><td>${fmt(r.med10,2)}</td><td>${fmt(r.med20,2)}</td><td>${fmt(r.win10,1)}</td><td>${fmt(r.win20,1)}</td></tr>`).join('')+'</tbody>';smartEnhanceAll();
+}
+async function scanCS(){
+  const b=$('csBtn');b.disabled=true;csRows=[];csSummary=[];$('csProg').style.width='0';
+  try{
+    if(!sdAll.length||!sdCache.size){setStatus('csStatus','Önce 🧠 Yapısal Karar taramasını çalıştır. Corwin–Schultz Lab aynı günlük veriyi yeniden kullanacak.','bad');return}
+    const len=Math.max(5,Math.trunc(val('csLen'))),hist=Math.max(60,Math.trunc(val('csHist'))),highPct=Math.max(50,Math.min(95,val('csHighPct'))),topN=Math.max(5,Math.trunc(val('csTopN')));
+    const base=sdAll.slice().sort((a,b)=>b.score-a.score||b.early-a.early).slice(0,topN),jobs=[{symbol:'XU100',sd:null},...base.map(r=>({symbol:r.symbol,sd:r}))];
+    $('csCounts').textContent=`${base.length} Yapı adayı + XU100 · ekstra 4H isteği yok`;let done=0;const allEvents=[];
+    for(const job of jobs){
+      let df;if(job.symbol==='XU100')df=await yahoo('XU100.IS','3y','1d');else df=sdCache.get(`${job.symbol}|1d`);
+      const r=csAnalyzeHistory(job.symbol,df,len,hist,highPct);if(r){r.sd_score=job.sd?.score;r.sd_stage=job.sd?.new_stage||job.sd?.stage;csRows.push(r);allEvents.push(...r.events)}
+      done++;$('csProg').style.width=100*done/jobs.length+'%';setStatus('csStatus',`${job.symbol} · ${done}/${jobs.length}`,'warn');if(done%8===0)await sleep(0);
+    }
+    csRows.sort((a,b)=>(b.sp_pct||0)-(a.sp_pct||0));
+    const groups=new Map();for(const e of allEvents){if(!groups.has(e.regime))groups.set(e.regime,[]);groups.get(e.regime).push(e)}
+    csSummary=[...groups.entries()].map(([regime,a])=>({regime,n:a.length,med5:csQuantile(a.map(x=>x.r5),.5),med10:csQuantile(a.map(x=>x.r10),.5),med20:csQuantile(a.map(x=>x.r20),.5),win10:100*a.filter(x=>x.r10>0).length/a.length,win20:100*a.filter(x=>x.r20>0).length/a.length})).sort((a,b)=>b.n-a.n);
+    csRender();setStatus('csStatus',`Test tamamlandı · ${csRows.length} mevcut durum · ${allEvents.length} tarihsel gözlem. Önce N ve 10/20G medyan+win oranlarına bak.`,`good`);
+  }catch(e){setStatus('csStatus','Hata: '+(e?.message||e),'bad')}finally{b.disabled=false}
+}
+
+
 // 20. MODÜL · QUANT QUALITY v1.0
 function arrStd(a){const v=a.filter(finite);if(v.length<2)return NaN;const m=mean(v);return Math.sqrt(v.reduce((z,x)=>z+(x-m)**2,0)/(v.length-1))}function cov(a,b){const n=Math.min(a.length,b.length),x=a.slice(-n),y=b.slice(-n),mx=mean(x),my=mean(y);return n>1?x.reduce((z,v,i)=>z+(v-mx)*(y[i]-my),0)/(n-1):NaN}function maxDD(c){let peak=-Infinity,m=0;for(const x of c){peak=Math.max(peak,x);if(peak>0)m=Math.min(m,x/peak-1)}return 100*m}
 function alignReturns(df,bm){const map=new Map();for(let i=1;i<bm.t.length;i++)map.set(bm.t[i],Math.log(bm.c[i]/bm.c[i-1]));const sr=[],br=[];for(let i=1;i<df.t.length;i++){const b=map.get(df.t[i]);if(finite(b)){sr.push(Math.log(df.c[i]/df.c[i-1]));br.push(b)}}return[sr,br]}
@@ -4062,6 +4150,8 @@ function uvDecorateTable(kind,cfg){if(cfg.special)return;const table=document.ge
 function uvDecorateAll(){for(const [k,c] of Object.entries(UV_MODULES))uvDecorateTable(k,c)}
 const uvObs=new MutationObserver(()=>{clearTimeout(window.__uvT);window.__uvT=setTimeout(uvDecorateAll,80)});if(document.body)uvObs.observe(document.body,{childList:true,subtree:true});window.addEventListener('DOMContentLoaded',uvDecorateAll);setTimeout(uvDecorateAll,200);
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementById('uvModal').classList.contains('hidden'))closeUniversalVisual()});
+
+if($('csBtn'))$('csBtn').onclick=scanCS;
 </script>
 
 </body>
