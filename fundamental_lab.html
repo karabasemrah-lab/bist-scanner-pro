@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.5</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.6</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -29,7 +29,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.5</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.6</h1>
         <div class="muted mt-2">Şirket tipi sınıflandırması + sanayi kalite motoru + finansal alt-grup kalite motorları + veri güven motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -83,7 +83,7 @@
       <div class="stat"><div class="muted text-xs">Finansal Alt Grup</div><div id="finGroupN" class="text-xl font-black">0</div></div>
     </div>
     <div class="overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
-    <div class="text-xs muted mt-3">Finansal v0.5: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
+    <div class="text-xs muted mt-3">Finansal v0.6: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
   </div>
 
   <div class="card p-5">
@@ -93,7 +93,7 @@
   </div>
 
   <div class="card p-5">
-    <h2 class="font-black text-xl">Puanlama v0.5 · Sınıflandırılmış Çift Motor + Veri Kalite Katmanı</h2>
+    <h2 class="font-black text-xl">Puanlama v0.6 · Sınıflandırılmış Çift Motor + Veri Kalite Katmanı</h2>
     <div class="grid md:grid-cols-2 gap-3 text-sm mt-3">
       <div class="stat">ROIC <b>20</b> · ROE/ROA <b>10</b> · Ciro büyümesi <b>10</b> · FAVÖK büyümesi <b>10</b> · Net kâr büyümesi <b>10</b></div>
       <div class="stat">FCF <b>7</b> · Faaliyet nakit <b>8</b> · Net Borç/FAVÖK <b>10</b> · Değerleme <b>10</b> · Marj <b>5</b></div>
@@ -155,16 +155,34 @@ function normText(x){
   return String(x||"").toLocaleLowerCase("tr-TR")
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
+// v0.6: Finansal sınıflandırmada "Investment Banks/Brokers" gibi endüstri adlarında
+// geçen "bank" kelimesi artık şirketi yanlışlıkla BANKA yapmaz. Önce BIST sembol
+// sözlükleri, sonra dar endüstri kuralları kullanılır.
+const FIN_GROUPS={
+  BANKA:new Set("AKBNK ALBRK GARAN HALKB ICBCT ISCTR KLNMA QNBTR SKBNK TSKB VAKBN YKBNK".split(" ")),
+  SIGORTA:new Set("AGESA AKGRT ANHYT ANSGR GUSGR TURSG".split(" ")),
+  GYO:new Set("AGYO AKFGY AKMGY AKSGY ALGYO ASGYO ATAGY AVGYO DGGYO EKGYO HLGYO IDGYO ISGYO KLGYO KRGYO KZBGY MRGYO NUGYO OZGYO PAGYO PSGYO RYGYO SEGYO SNGYO SRVGY TRGYO TSGYO VKGYO YGGYO ZRGYO".split(" ")),
+  HOLDING:new Set("AGHOL ALARK DOHOL ECZYT GLYHO GSDHO HEDEF IEYHO IHLAS KCHOL MARKA NTHOL POLHO SAHOL TAVHL TEHOL VERUS".split(" "))
+};
 function financialType(r){
-  const t=normText(`${r.name||""} ${r.sector||""} ${r.industry||""}`);
-  // Öncelik önemli: GYO ve sigorta gibi alt gruplar "Finance" sektöründe olsa bile kendi havuzuna gider.
-  if(/\bgyo\b|gayrimenkul yatirim ortak|real estate investment trust|reit/.test(t)) return "GYO";
-  if(/sigorta|insurance|reasur|reassur/.test(t)) return "SİGORTA";
-  if(/banka|bankac| bank\b|banks\b/.test(t)) return "BANKA";
-  if(/holding|yatirim ortak|investment compan|investment trust|investment manager|menkul deger|securities/.test(t)) return "HOLDİNG / YATIRIM";
-  if(/faktoring|factoring|finansal kiralama|leasing|consumer finance|credit services/.test(t)) return "DİĞER FİNANSAL";
-  const s=normText(r.sector);
-  if(s.includes("finance")||s.includes("financial")) return "DİĞER FİNANSAL";
+  const sym=String(r.symbol||"").toUpperCase();
+  const name=normText(r.name||"");
+  const ind=normText(r.industry||"");
+  const sec=normText(r.sector||"");
+  const t=`${name} ${ind}`;
+
+  if(FIN_GROUPS.BANKA.has(sym)) return "BANKA";
+  if(FIN_GROUPS.SIGORTA.has(sym)) return "SİGORTA";
+  if(FIN_GROUPS.GYO.has(sym)||/gayrimenkul yatirim ortak|real estate investment trust|\breit\b/.test(t)) return "GYO";
+  if(FIN_GROUPS.HOLDING.has(sym)||/holding|yatirim holding/.test(name)) return "HOLDİNG / YATIRIM";
+
+  // Metin tabanlı banka kuralı bilerek dardır: broker/aracı kurum/yatırım bankacılığı
+  // şirketleri BANKA havuzuna taşınmaz.
+  if(/commercial banks|regional banks|major banks|mevduat banka|katilim banka/.test(ind)) return "BANKA";
+  if(/sigorta|insurance|reinsurance|reasur/.test(t)) return "SİGORTA";
+  if(/yatirim ortak|investment compan|investment trust/.test(t)) return "HOLDİNG / YATIRIM";
+  if(/menkul deger|securities|broker|brokerage|investment bank|faktoring|factoring|finansal kiralama|leasing|consumer finance|credit services|asset management/.test(t)) return "DİĞER FİNANSAL";
+  if(sec.includes("finance")||sec.includes("financial")) return "DİĞER FİNANSAL";
   return "";
 }
 function isFinancial(r){ return !!financialType(r); }
@@ -387,7 +405,7 @@ async function run(){
     const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option>${x}</option>`).join("");
     const fts=$("finTypeFilter");fts.innerHTML='<option value="">Tüm finansal gruplar</option>'+[...new Set(financialRows.map(r=>r.finType))].sort().map(x=>`<option>${x}</option>`).join("");
     render();p.style.width="100%";
-    s.textContent=`Tamamlandı · ${rows.length} şirket · ${financialRows.length} finansal · ${sectorRows.length} sektör · sanayi güvenilir ${rows.filter(r=>!r.financial&&r.dataTrust>=85).length} · finansal A/A+ ${financialRows.filter(r=>["A+","A"].includes(r.finGrade)).length} · medyan veri güveni ${cell(med(rows.map(r=>r.dataTrust)),0,"%")}`;
+    s.textContent=`Tamamlandı · ${rows.length} şirket · ${financialRows.length} finansal · ${sectorRows.length} sektör · sanayi güvenilir ${rows.filter(r=>!r.financial&&r.dataTrust>=85).length} · finansal A/A+ ${financialRows.filter(r=>["A+","A"].includes(r.finGrade)).length} · finansal grup ${new Set(financialRows.map(r=>r.finType)).size} · medyan veri güveni ${cell(med(rows.map(r=>r.dataTrust)),0,"%")}`;
   }catch(e){p.style.width="0%";s.textContent="Tarama başarısız: "+(e?.message||e)}
   finally{b.disabled=false}
 }
