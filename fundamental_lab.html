@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.9</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.9.1</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -52,11 +52,12 @@
   }
 
   @media (max-width:768px){
-    #sectorLeadersTable .sticky-c1{min-width:40px}
-    #sectorLeadersTable .sticky-c2{min-width:82px}
-    #sectorLeadersTable .sticky-c3{min-width:72px}
-    #sectorLeadersTable .sticky-c4{min-width:105px}
-    #sectorLeadersTable .sticky-c5{min-width:145px}
+    #sectorLeadersTable .sticky-c1{left:0;min-width:38px;max-width:38px}
+    #sectorLeadersTable .sticky-c2{left:38px;min-width:78px;max-width:78px}
+    #sectorLeadersTable th:nth-child(n+3),
+    #sectorLeadersTable td:nth-child(n+3){position:static!important}
+    #sectorLeadersTable{touch-action:pan-x pan-y}
+    #sectorLeadersTable th,#sectorLeadersTable td{white-space:nowrap}
   }
 </style>
 </head>
@@ -66,7 +67,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.9</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.9.1</h1>
         <div class="muted mt-2">Şirket kalite motorları + veri güven motoru + Aşama 2 Sektör Güç / Rotasyon Motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -121,7 +122,7 @@
       <div class="stat"><div class="muted text-xs">Finansal Alt Grup</div><div id="finGroupN" class="text-xl font-black">0</div></div>
     </div>
     <div class="table-wrap overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
-    <div class="text-xs muted mt-3">Finansal v0.9: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
+    <div class="text-xs muted mt-3">Finansal v0.9.1: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
   </div>
 
   <div class="card p-5" style="border-color:#f59e0b55">
@@ -167,6 +168,7 @@
     </div>
     <div class="table-wrap overflow-auto max-h-[700px] mt-4"><table id="sectorLeadersTable"></table></div>
     <div class="text-xs muted mt-3">Liderlik Skoru = Şirket Kalitesi %45 + Sektör İçi Kalite Sırası %20 + Veri Güveni %15 + Sektör Rotasyon Gücü %20. Finansal şirketler bu aşamada kendi özel motorunda kalır.</div>
+    <div class="text-xs muted mt-2">📱 Mobilde yalnızca <b>#</b> ve <b>Hisse</b> sabit kalır; Liderlik, Sınıf, Sektör ve diğer tüm kolonlar sağa kaydırılabilir.</div>
   </div>
 
   <div class="card p-5">
@@ -598,12 +600,19 @@ function buildSectors(a){
 }
 
 function applyMobileSticky(){
-  for(const id of ["companyTable","financialTable","sectorRotationTable","sectorLeadersTable","sectorTable"]){
+  const stickyLimits={
+    companyTable:5,
+    financialTable:5,
+    sectorRotationTable:5,
+    sectorLeadersTable:2,
+    sectorTable:5
+  };
+  for(const [id,limit] of Object.entries(stickyLimits)){
     const t=$(id); if(!t) continue;
     [...t.querySelectorAll("tr")].forEach(tr=>{
       [...tr.children].forEach((c,i)=>{
         c.classList.remove("sticky-c1","sticky-c2","sticky-c3","sticky-c4","sticky-c5");
-        if(i<5)c.classList.add(`sticky-c${i+1}`);
+        if(i<limit)c.classList.add(`sticky-c${i+1}`);
       });
     });
   }
