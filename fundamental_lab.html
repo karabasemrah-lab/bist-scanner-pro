@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.9.1</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v1.0</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -59,6 +59,15 @@
     #sectorLeadersTable{touch-action:pan-x pan-y}
     #sectorLeadersTable th,#sectorLeadersTable td{white-space:nowrap}
   }
+
+  @media (max-width:768px){
+    #masterConsensusTable .sticky-c1{left:0;min-width:38px;max-width:38px}
+    #masterConsensusTable .sticky-c2{left:38px;min-width:78px;max-width:78px}
+    #masterConsensusTable th:nth-child(n+3),
+    #masterConsensusTable td:nth-child(n+3){position:static!important}
+    #masterConsensusTable{touch-action:pan-x pan-y}
+    #masterConsensusTable th,#masterConsensusTable td{white-space:nowrap}
+  }
 </style>
 </head>
 <body>
@@ -67,7 +76,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.9.1</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v1.0</h1>
         <div class="muted mt-2">Şirket kalite motorları + veri güven motoru + Aşama 2 Sektör Güç / Rotasyon Motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -122,7 +131,7 @@
       <div class="stat"><div class="muted text-xs">Finansal Alt Grup</div><div id="finGroupN" class="text-xl font-black">0</div></div>
     </div>
     <div class="table-wrap overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
-    <div class="text-xs muted mt-3">Finansal v0.9.1: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
+    <div class="text-xs muted mt-3">Finansal v1.0: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
   </div>
 
   <div class="card p-5" style="border-color:#f59e0b55">
@@ -171,8 +180,30 @@
     <div class="text-xs muted mt-2">📱 Mobilde yalnızca <b>#</b> ve <b>Hisse</b> sabit kalır; Liderlik, Sınıf, Sektör ve diğer tüm kolonlar sağa kaydırılabilir.</div>
   </div>
 
+  <div class="card p-5" style="border-color:#a78bfa66">
+    <div class="flex flex-wrap items-center gap-3">
+      <div>
+        <h2 class="font-black text-xl">⑤ Temel + Teknik Master Konsensüs · Aşama 4</h2>
+        <div class="text-xs muted mt-1">Sektör liderliğini hafif teknik teyitle birleştirir. Bu katman henüz Yapı Laboratuvarı/MSS değildir; ana tarayıcıdaki yapı motoruna bağlanmadan önce güvenli ön-elemedir.</div>
+      </div>
+      <select id="masterClassFilter" class="input ml-auto">
+        <option value="">Tüm konsensüs sınıfları</option>
+        <option>A+</option><option>A</option><option>B</option><option>C</option>
+      </select>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+      <div class="stat"><div class="muted text-xs">Konsensüs Adayı</div><div id="masterN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">A+</div><div id="masterAPlusN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">A</div><div id="masterAN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Medyan Konsensüs</div><div id="masterMed" class="text-xl font-black">—</div></div>
+      <div class="stat"><div class="muted text-xs">1 Numaralı Konsensüs</div><div id="masterTop" class="text-lg font-black">—</div></div>
+    </div>
+    <div class="table-wrap overflow-auto max-h-[720px] mt-4"><table id="masterConsensusTable"></table></div>
+    <div class="text-xs muted mt-3">Master Skor = Sektör Liderliği %60 + Teknik Teyit %40. Teknik teyit: EMA20/50/200 trend yapısı, RSI, ADX, hacim oranı, haftalık ve aylık performans. A+ için ayrıca yüksek veri güveni ve teknik skor şartı vardır.</div>
+  </div>
+
   <div class="card p-5">
-    <h2 class="font-black text-xl">⑤ Sektör Ön Görünümü</h2>
+    <h2 class="font-black text-xl">⑥ Sektör Ön Görünümü</h2>
     <div class="text-xs muted mt-1">Aşama 2 için temel: temizlenmiş sektör medyan kalite, ROIC, büyüme ve lider şirketler. Finansallar ayrı izlenir; henüz “rotasyon skoru” değildir.</div>
     <div class="table-wrap overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
   </div>
@@ -199,7 +230,7 @@ const finite=x=>Number.isFinite(Number(x));
 const fnum=x=>finite(x)?Number(x):null;
 const med=a=>{const x=a.filter(finite).map(Number).sort((a,b)=>a-b);if(!x.length)return null;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2};
 const cell=(v,d=1,s="")=>finite(v)?Number(v).toFixed(d)+s:"—";
-let rows=[],sectorRows=[],financialRows=[],sectorRotationRows=[],sectorLeaderRows=[];
+let rows=[],sectorRows=[],financialRows=[],sectorRotationRows=[],sectorLeaderRows=[],masterConsensusRows=[];
 
 async function fetchJSON(url,options={},timeoutMs=45000){
   const c=new AbortController(), t=setTimeout(()=>c.abort(),timeoutMs);
@@ -218,7 +249,8 @@ const COLS=[
 "total_revenue_yoy_growth_fq","ebitda_yoy_growth_fq","net_income_yoy_growth_fq",
 "free_cash_flow_fq","cash_f_operating_activities_fq","total_revenue_fq","net_debt_to_ebitda_fq",
 "price_earnings_ttm","enterprise_value_ebitda_ttm","price_book_fq",
-"gross_margin_ttm","operating_margin_ttm","net_margin_ttm"
+"gross_margin_ttm","operating_margin_ttm","net_margin_ttm",
+"close","EMA20","EMA50","EMA200","RSI","ADX","volume","average_volume_10d_calc","change","Perf.W","Perf.1M"
 ];
 async function tvScan(){
   const body=JSON.stringify({
@@ -590,6 +622,66 @@ function buildSectorLeaders(a, rotations){
   }
   return out.sort((a,b)=>b.leadershipScore-a.leadershipScore || a.sectorRank-b.sectorRank);
 }
+
+function techConfirm(r){
+  const close=fnum(r.close), e20=fnum(r.EMA20), e50=fnum(r.EMA50), e200=fnum(r.EMA200);
+  const rsi=fnum(r.RSI), adx=fnum(r.ADX), vol=fnum(r.volume), av=fnum(r.average_volume_10d_calc);
+  const pw=fnum(r["Perf.W"]), pm=fnum(r["Perf.1M"]);
+  let s=0, w=0, flags=[];
+
+  const add=(ok,pts,max,label)=>{
+    w+=max;
+    if(ok){s+=pts; if(label)flags.push(label)}
+  };
+  add(finite(close)&&finite(e20)&&close>e20,10,10,"F>EMA20");
+  add(finite(close)&&finite(e50)&&close>e50,10,10,"F>EMA50");
+  add(finite(close)&&finite(e200)&&close>e200,10,10,"F>EMA200");
+  add(finite(e20)&&finite(e50)&&finite(e200)&&e20>e50&&e50>e200,10,10,"EMA Dizilim");
+
+  w+=15;
+  if(finite(rsi)){
+    if(rsi>=50&&rsi<=70){s+=15;flags.push("RSI Sağlıklı")}
+    else if(rsi>=45&&rsi<=75)s+=10;
+    else if(rsi>=40&&rsi<=80)s+=5;
+  }
+
+  w+=15;
+  if(finite(adx)){
+    if(adx>=25){s+=15;flags.push("ADX Güçlü")}
+    else if(adx>=20)s+=10;
+    else if(adx>=15)s+=5;
+  }
+
+  w+=10;
+  const vr=finite(vol)&&finite(av)&&av>0?vol/av:null;
+  if(finite(vr)){
+    if(vr>=1.2){s+=10;flags.push("Hacim Teyidi")}
+    else if(vr>=1.0)s+=7;
+    else if(vr>=0.8)s+=4;
+  }
+
+  w+=10;
+  if(finite(pw)){ if(pw>0){s+=10;flags.push("Haftalık +")} else if(pw>-3)s+=4; }
+
+  w+=10;
+  if(finite(pm)){ if(pm>0){s+=10;flags.push("Aylık +")} else if(pm>-5)s+=4; }
+
+  return {score:Math.round(100*s/Math.max(1,w)), volumeRatio:vr, flags};
+}
+function masterGrade(score,tech,trust){
+  if(score>=85 && tech>=70 && trust>=85) return "A+";
+  if(score>=75 && tech>=60 && trust>=75) return "A";
+  if(score>=65 && tech>=50 && trust>=65) return "B";
+  return "C";
+}
+function buildMasterConsensus(leaders){
+  return leaders.map(r=>{
+    const t=techConfirm(r);
+    const master=Math.round(0.60*r.leadershipScore + 0.40*t.score);
+    return {...r,techScore:t.score,techFlags:t.flags,volumeRatio:t.volumeRatio,
+      masterScore:master,masterGrade:masterGrade(master,t.score,r.dataTrust)};
+  }).sort((a,b)=>b.masterScore-a.masterScore || b.techScore-a.techScore);
+}
 function buildSectors(a){
   const g={};for(const r of a)(g[r.sector]??=[]).push(r);
   return Object.entries(g).map(([sector,x])=>({
@@ -605,6 +697,7 @@ function applyMobileSticky(){
     financialTable:5,
     sectorRotationTable:5,
     sectorLeadersTable:2,
+    masterConsensusTable:2,
     sectorTable:5
   };
   for(const [id,limit] of Object.entries(stickyLimits)){
@@ -683,6 +776,27 @@ function render(){
     <td>${cell(r.fcfM,1,"%")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td>
   </tr>`).join("")+`</tbody>`;
 
+
+  const mcf=$("masterClassFilter")?.value||"";
+  const mshow=masterConsensusRows.filter(r=>!mcf||r.masterGrade===mcf);
+  $("masterN").textContent=masterConsensusRows.length;
+  $("masterAPlusN").textContent=masterConsensusRows.filter(r=>r.masterGrade==="A+").length;
+  $("masterAN").textContent=masterConsensusRows.filter(r=>r.masterGrade==="A").length;
+  $("masterMed").textContent=finite(med(masterConsensusRows.map(r=>r.masterScore)))?cell(med(masterConsensusRows.map(r=>r.masterScore)),0):"—";
+  $("masterTop").textContent=masterConsensusRows[0]?.symbol||"—";
+  $("masterConsensusTable").innerHTML=`<thead><tr>
+    <th>#</th><th>Hisse</th><th>Master</th><th>Sınıf</th><th>Teknik</th><th>Liderlik</th><th>Sektör</th><th>Rotasyon</th><th>Kalite</th><th>Veri Güveni</th>
+    <th>Fiyat</th><th>EMA20</th><th>EMA50</th><th>EMA200</th><th>RSI</th><th>ADX</th><th>Hacim / Ort.</th><th>Haftalık</th><th>Aylık</th><th>Teknik Teyitler</th>
+  </tr></thead><tbody>`+
+  mshow.map((r,i)=>`<tr>
+    <td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.masterScore}</b></td><td><span class="pill ${gcls(r.masterGrade)}">${r.masterGrade}</span></td>
+    <td><b>${r.techScore}</b></td><td>${r.leadershipScore} · ${r.leadershipClass}</td><td>${sectorTR(r.sector)}</td><td>${r.rotationScore} · ${r.rotationClass}</td>
+    <td>${r.score} · ${r.grade}</td><td>${cell(r.dataTrust,0,"%")} · ${r.trustLabel}</td>
+    <td>${cell(r.close,2)}</td><td>${cell(r.EMA20,2)}</td><td>${cell(r.EMA50,2)}</td><td>${cell(r.EMA200,2)}</td>
+    <td>${cell(r.RSI,1)}</td><td>${cell(r.ADX,1)}</td><td>${finite(r.volumeRatio)?cell(r.volumeRatio,2,"x"):"—"}</td>
+    <td>${cell(r["Perf.W"],1,"%")}</td><td>${cell(r["Perf.1M"],1,"%")}</td><td>${(r.techFlags||[]).join(" · ")||"—"}</td>
+  </tr>`).join("")+`</tbody>`;
+
   $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Medyan Güven</th><th>Güvenilir %</th><th>Liderler</th></tr></thead><tbody>`+
   sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${sectorTR(r.sector)}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
   applyMobileSticky();
@@ -691,7 +805,7 @@ async function run(){
   const b=$("scanBtn"),p=$("prog"),s=$("status");b.disabled=true;p.style.width="12%";s.textContent="Temel veriler alınıyor…";
   try{
     const raw=await tvScan();p.style.width="55%";s.textContent="Sektör içi yüzdelikler ve kalite skoru hesaplanıyor…";
-    rows=score(raw);financialRows=buildFinancialScores(rows);sectorRows=buildSectors(rows);sectorRotationRows=buildSectorRotation(rows);sectorLeaderRows=buildSectorLeaders(rows,sectorRotationRows);
+    rows=score(raw);financialRows=buildFinancialScores(rows);sectorRows=buildSectors(rows);sectorRotationRows=buildSectorRotation(rows);sectorLeaderRows=buildSectorLeaders(rows,sectorRotationRows);masterConsensusRows=buildMasterConsensus(sectorLeaderRows);
     const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option value="${x}">${sectorTR(x)}</option>`).join("");
 const lsel=$("leaderSectorFilter"); if(lsel) lsel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(sectorLeaderRows.map(r=>r.sector))].sort().map(x=>`<option value="${x}">${sectorTR(x)}</option>`).join("");
     const fts=$("finTypeFilter");fts.innerHTML='<option value="">Tüm finansal gruplar</option>'+[...new Set(financialRows.map(r=>r.finType))].sort().map(x=>`<option>${x}</option>`).join("");
@@ -712,9 +826,11 @@ function excel(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sr),"Sektör Rotasyonu");
   const sl=sectorLeaderRows.map(r=>({Hisse:r.symbol,Sektör:sectorTR(r.sector),Liderlik_Skoru:r.leadershipScore,Liderlik_Sınıfı:r.leadershipClass,Sektör_İçi_Sıra:r.sectorRank,Akran:r.sectorPeerN,Sektör_Rotasyon:r.rotationScore,Sektör_Sınıfı:r.rotationClass,Kalite:r.score,Kalite_Sınıfı:r.grade,Veri_Güveni:r.dataTrust,Veri_Durumu:r.trustLabel,ROIC:r.roic,ROE:r.roe,Ciro_Büyüme:r.revG,Net_Kar_Büyüme:r.niG,Faaliyet_Marjı:r.om,Net_Marj:r.netMargin,FCF_Satış:r.fcfM,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.evEbitda,PD_DD:r.pb}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sl),"Sektör Liderleri");
+  const mc=masterConsensusRows.map(r=>({Hisse:r.symbol,Master_Skor:r.masterScore,Master_Sınıf:r.masterGrade,Teknik_Skor:r.techScore,Liderlik_Skoru:r.leadershipScore,Liderlik_Sınıfı:r.leadershipClass,Sektör:sectorTR(r.sector),Sektör_Rotasyon:r.rotationScore,Sektör_Sınıfı:r.rotationClass,Kalite:r.score,Kalite_Sınıfı:r.grade,Veri_Güveni:r.dataTrust,Fiyat:r.close,EMA20:r.EMA20,EMA50:r.EMA50,EMA200:r.EMA200,RSI:r.RSI,ADX:r.ADX,Hacim_Oranı:r.volumeRatio,Haftalık_Perf:r["Perf.W"],Aylık_Perf:r["Perf.1M"],Teknik_Teyitler:(r.techFlags||[]).join(" | ")}));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mc),"Master Konsensüs");
   XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
-$("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;$("finGradeFilter").onchange=render;$("finTypeFilter").onchange=render;$("sectorRotClassFilter").onchange=render;$("leaderSectorFilter").onchange=render;$("leaderClassFilter").onchange=render;
+$("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;$("finGradeFilter").onchange=render;$("finTypeFilter").onchange=render;$("sectorRotClassFilter").onchange=render;$("leaderSectorFilter").onchange=render;$("leaderClassFilter").onchange=render;$("masterClassFilter").onchange=render;
 </script>
 </body>
 </html>
