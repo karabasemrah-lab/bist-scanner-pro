@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.7</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.8</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -40,6 +40,16 @@
     .mobile-note{font-size:11px;line-height:1.45}
   }
 
+
+  .ticker-chips{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .ticker-chip,.ticker-more{display:inline-block;padding:3px 7px;border-radius:999px;border:1px solid #315e4b;background:#10241b;font-size:11px;line-height:1.1}
+  .ticker-more{background:#2b2b2b;color:#ddd}
+  @media (max-width:768px){
+    #sectorRotationTable .sticky-c2{min-width:150px}
+    #sectorRotationTable .sticky-c3{min-width:70px}
+    #sectorRotationTable .sticky-c4{min-width:78px}
+    #sectorRotationTable .sticky-c5{min-width:180px}
+  }
 </style>
 </head>
 <body>
@@ -48,7 +58,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.7</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.8</h1>
         <div class="muted mt-2">Şirket kalite motorları + veri güven motoru + Aşama 2 Sektör Güç / Rotasyon Motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -103,7 +113,7 @@
       <div class="stat"><div class="muted text-xs">Finansal Alt Grup</div><div id="finGroupN" class="text-xl font-black">0</div></div>
     </div>
     <div class="table-wrap overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
-    <div class="text-xs muted mt-3">Finansal v0.7: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
+    <div class="text-xs muted mt-3">Finansal v0.8: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
   </div>
 
   <div class="card p-5" style="border-color:#f59e0b55">
@@ -404,6 +414,37 @@ function score(raw){
   }).sort((a,b)=>(b.score??-1)-(a.score??-1));
 }
 
+
+const SECTOR_TR = {
+  "Communications":"İletişim",
+  "Health Services":"Sağlık Hizmetleri",
+  "Consumer Non-Durables":"Tüketim Ürünleri",
+  "Electronic Technology":"Elektronik Teknoloji",
+  "Industrial Services":"Endüstriyel Hizmetler",
+  "Consumer Durables":"Dayanıklı Tüketim",
+  "Energy Minerals":"Enerji / Petrol-Gaz",
+  "Technology Services":"Teknoloji Hizmetleri",
+  "Producer Manufacturing":"Üretim Sanayi",
+  "Retail Trade":"Perakende Ticaret",
+  "Distribution Services":"Dağıtım Hizmetleri",
+  "Non-Energy Minerals":"Metal / Madencilik",
+  "Transportation":"Ulaştırma",
+  "Utilities":"Elektrik / Kamu Hizmetleri",
+  "Consumer Services":"Tüketici Hizmetleri",
+  "Process Industries":"Proses Sanayi",
+  "Commercial Services":"Ticari Hizmetler",
+  "Health Technology":"Sağlık Teknolojileri",
+  "Finance":"Finans",
+  "Miscellaneous":"Diğer",
+  "Consumer Cyclicals":"Döngüsel Tüketim"
+};
+function sectorTR(s){ return SECTOR_TR[s] || s || "Diğer"; }
+function tickerChips(list, maxN=5){
+  const a=(list||"").split(",").map(x=>x.trim()).filter(Boolean);
+  const shown=a.slice(0,maxN);
+  const extra=Math.max(0,a.length-shown.length);
+  return `<div class="ticker-chips">${shown.map(x=>`<span class="ticker-chip">${x}</span>`).join("")}${extra?`<span class="ticker-more">+${extra}</span>`:""}</div>`;
+}
 function sectorRotClass(s){
   return s>=75?"LİDER":s>=62?"GÜÇLÜ":s>=45?"NÖTR":"ZAYIF";
 }
@@ -439,7 +480,7 @@ function buildSectorRotation(a){
       pe:med(positivePE),
       ev:med(positiveEV),
       pb:med(positivePB),
-      leaders:[...src].filter(r=>r.dataTrust>=65).sort((p,q)=>(q.score??-1)-(p.score??-1)).slice(0,3).map(r=>r.symbol).join(", ")
+      leaders:[...src].filter(r=>r.dataTrust>=65).sort((p,q)=>(q.score??-1)-(p.score??-1)).slice(0,5).map(r=>r.symbol).join(", ")
     };
   }).filter(r=>r.n>=3);
 
@@ -508,7 +549,7 @@ function render(){
   $("finAN").textContent=financialRows.filter(r=>["A+","A"].includes(r.finGrade)).length;
 
   $("companyTable").innerHTML=`<thead><tr><th>#</th><th>Hisse</th><th>Kalite</th><th>Sınıf</th><th>Veri Güveni</th><th>Veri Durumu</th><th>Uyarı</th><th>Sektör</th><th>ROIC</th><th>ROE</th><th>ROA</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Net Kâr Büy.</th><th>FCF/Satış</th><th>Faaliyet Nakit/Satış</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th><th>Faaliyet Marjı</th></tr></thead><tbody>`+
-  shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.financial?"—":r.score}</b></td><td><span class="pill ${r.financial?"c":gcls(r.grade)}">${r.grade}</span></td><td>${r.dataTrust}%</td><td><span class="pill ${r.financial?"c":trustClass(r.dataTrust)}">${r.trustLabel}</span></td><td title="${(r.dataFlags||[]).join(" · ")}">${r.financial?("Ayrı model: "+r.finType):((r.dataFlags||[]).length?(r.dataFlags||[]).slice(0,2).join(" · "):"—")}</td><td>${r.sector}${r.financial?(" · "+r.finType):""}</td><td>${warnVal(r.roic,"roic")}</td><td>${cell(r.roe,1,"%")}</td><td>${cell(r.roa,1,"%")}</td><td>${warnVal(r.revG,"growth")}</td><td>${warnVal(r.ebitdaG,"growth")}</td><td>${warnVal(r.niG,"growth")}</td><td>${warnVal(r.fcfM,"cash")}</td><td>${warnVal(r.ocfM,"cash")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td><td>${cell(r.om,1,"%")}</td></tr>`).join("")+`</tbody>`;
+  shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.financial?"—":r.score}</b></td><td><span class="pill ${r.financial?"c":gcls(r.grade)}">${r.grade}</span></td><td>${r.dataTrust}%</td><td><span class="pill ${r.financial?"c":trustClass(r.dataTrust)}">${r.trustLabel}</span></td><td title="${(r.dataFlags||[]).join(" · ")}">${r.financial?("Ayrı model: "+r.finType):((r.dataFlags||[]).length?(r.dataFlags||[]).slice(0,2).join(" · "):"—")}</td><td>${sectorTR(r.sector)}${r.financial?(" · "+r.finType):""}</td><td>${warnVal(r.roic,"roic")}</td><td>${cell(r.roe,1,"%")}</td><td>${cell(r.roa,1,"%")}</td><td>${warnVal(r.revG,"growth")}</td><td>${warnVal(r.ebitdaG,"growth")}</td><td>${warnVal(r.niG,"growth")}</td><td>${warnVal(r.fcfM,"cash")}</td><td>${warnVal(r.ocfM,"cash")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.evEbitda,2)}</td><td>${cell(r.pb,2)}</td><td>${cell(r.om,1,"%")}</td></tr>`).join("")+`</tbody>`;
 
 
   const fg=$("finGradeFilter")?.value||"";
@@ -529,21 +570,21 @@ function render(){
   $("rotLeaderN").textContent=sectorRotationRows.filter(r=>r.rotationClass==="LİDER").length;
   $("rotStrongN").textContent=sectorRotationRows.filter(r=>r.rotationClass==="GÜÇLÜ").length;
   $("rotMed").textContent=finite(med(sectorRotationRows.map(r=>r.rotationScore)))?cell(med(sectorRotationRows.map(r=>r.rotationScore)),0):"—";
-  $("rotTop").textContent=sectorRotationRows[0]?.sector||"—";
+  $("rotTop").textContent=sectorTR(sectorRotationRows[0]?.sector)||"—";
   $("sectorRotationTable").innerHTML=`<thead><tr>
-    <th>#</th><th>Sektör</th><th>Rotasyon</th><th>Sınıf</th><th>Şirket</th><th>Güvenilir %</th><th>Medyan Kalite</th>
+    <th>#</th><th>Sektör</th><th>Rotasyon</th><th>Sınıf</th><th>Şirketler (İlk 5)</th><th>Şirket N</th><th>Güvenilir %</th><th>Medyan Kalite</th>
     <th>ROIC</th><th>ROE</th><th>Ciro Büy.</th><th>Net Kâr Büy.</th><th>Faaliyet Marjı</th><th>Net Marj</th>
-    <th>FCF/Satış</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th><th>Liderler</th>
+    <th>FCF/Satış</th><th>Net Borç/FAVÖK</th><th>F/K</th><th>FD/FAVÖK</th><th>PD/DD</th>
   </tr></thead><tbody>`+
   rshow.map((r,i)=>`<tr>
-    <td>${i+1}</td><td><b>${r.sector}</b></td><td><b>${r.rotationScore}</b></td><td><span class="pill ${sectorRotClassCss(r.rotationClass)}">${r.rotationClass}</span></td>
-    <td>${r.n}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${cell(r.quality,0)}</td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.roe,1,"%")}</td>
+    <td>${i+1}</td><td><b>${sectorTR(r.sector)}</b></td><td><b>${r.rotationScore}</b></td><td><span class="pill ${sectorRotClassCss(r.rotationClass)}">${r.rotationClass}</span></td>
+    <td>${tickerChips(r.leaders,5)}</td><td>${r.n}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${cell(r.quality,0)}</td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.roe,1,"%")}</td>
     <td>${warnVal(r.revG,"growth")}</td><td>${warnVal(r.niG,"growth")}</td><td>${cell(r.opMargin,1,"%")}</td><td>${cell(r.netMargin,1,"%")}</td>
-    <td>${cell(r.fcfM,1,"%")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.ev,2)}</td><td>${cell(r.pb,2)}</td><td>${r.leaders}</td>
+    <td>${cell(r.fcfM,1,"%")}</td><td>${cell(r.debt,2)}</td><td>${cell(r.pe,2)}</td><td>${cell(r.ev,2)}</td><td>${cell(r.pb,2)}</td>
   </tr>`).join("")+`</tbody>`;
 
   $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Medyan Güven</th><th>Güvenilir %</th><th>Liderler</th></tr></thead><tbody>`+
-  sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.sector}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
+  sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${sectorTR(r.sector)}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
   applyMobileSticky();
 }
 async function run(){
@@ -551,7 +592,7 @@ async function run(){
   try{
     const raw=await tvScan();p.style.width="55%";s.textContent="Sektör içi yüzdelikler ve kalite skoru hesaplanıyor…";
     rows=score(raw);financialRows=buildFinancialScores(rows);sectorRows=buildSectors(rows);sectorRotationRows=buildSectorRotation(rows);
-    const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option>${x}</option>`).join("");
+    const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option value="${x}">${sectorTR(x)}</option>`).join("");
     const fts=$("finTypeFilter");fts.innerHTML='<option value="">Tüm finansal gruplar</option>'+[...new Set(financialRows.map(r=>r.finType))].sort().map(x=>`<option>${x}</option>`).join("");
     render();p.style.width="100%";
     s.textContent=`Tamamlandı · ${rows.length} şirket · ${financialRows.length} finansal · ${sectorRows.length} sektör · sanayi güvenilir ${rows.filter(r=>!r.financial&&r.dataTrust>=85).length} · finansal A/A+ ${financialRows.filter(r=>["A+","A"].includes(r.finGrade)).length} · finansal grup ${new Set(financialRows.map(r=>r.finType)).size} · medyan veri güveni ${cell(med(rows.map(r=>r.dataTrust)),0,"%")}`;
@@ -566,7 +607,7 @@ function excel(){
   const f=financialRows.map(r=>({Hisse:r.symbol,Sektör:r.sector,Endüstri:r.industry,Finansal_Grup:r.finType,Akran_Sayısı:financialRows.filter(z=>z.finType===r.finType).length,Finansal_Skor:r.finScore,Sınıf:r.finGrade,Veri_Güveni:r.finTrust,Durum:r.finTrustLabel,Uyarılar:(r.finFlags||[]).join(" | "),ROE:r.roe,ROA:r.roa,Gelir_Büyüme:r.revG,Net_Kar_Büyüme:r.niG,F_K:r.pe,PD_DD:r.pb}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(f),"Finansal Kalite");
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sectorRows),"Sektör Ön Görünüm");
-  const sr=sectorRotationRows.map(r=>({Sektör:r.sector,Rotasyon_Skoru:r.rotationScore,Sınıf:r.rotationClass,Şirket:r.n,Güvenilir_Yüzde:r.reliablePct,Medyan_Kalite:r.quality,ROIC:r.roic,ROE:r.roe,Ciro_Büyüme:r.revG,Net_Kar_Büyüme:r.niG,Faaliyet_Marjı:r.opMargin,Net_Marj:r.netMargin,FCF_Satış:r.fcfM,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.ev,PD_DD:r.pb,Liderler:r.leaders}));
+  const sr=sectorRotationRows.map(r=>({Sektör:sectorTR(r.sector),Sektör_Orijinal:r.sector,Rotasyon_Skoru:r.rotationScore,Sınıf:r.rotationClass,Şirket:r.n,Güvenilir_Yüzde:r.reliablePct,Medyan_Kalite:r.quality,ROIC:r.roic,ROE:r.roe,Ciro_Büyüme:r.revG,Net_Kar_Büyüme:r.niG,Faaliyet_Marjı:r.opMargin,Net_Marj:r.netMargin,FCF_Satış:r.fcfM,Net_Borç_FAVÖK:r.debt,F_K:r.pe,FD_FAVÖK:r.ev,PD_DD:r.pb,Liderler:r.leaders}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sr),"Sektör Rotasyonu");
   XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
