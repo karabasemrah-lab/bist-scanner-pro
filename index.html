@@ -116,6 +116,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#f97316" data-tab="momshock">⚡ Momentum Shock</button>
   <button class="tab" style="--ac:#8b5cf6" data-tab="quantquality">📊 Quant Quality</button>
   <button class="tab" style="--ac:#facc15" data-tab="consensus">🏆 Master Konsensüs</button>
+  <button class="tab" style="--ac:#34d399" data-tab="storylab">🧬 Hikâye Radar</button>
   <button class="tab" style="--ac:#0ea5e9" data-tab="elliott">🌊 Elliott Fırsat</button>
   <button class="tab" style="--ac:#22d3ee" data-tab="structurelab">🧠 Yapı Laboratuvarı</button>
   <button class="tab" style="--ac:#ec4899" data-tab="highconfidence">🎯 High-Confidence</button>
@@ -890,6 +891,63 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 
+<!-- HİKÂYE RADAR LABORATUVARI v0.1 · ANA SİSTEMDEN BAĞIMSIZ -->
+<section id="storylab" class="tabpage space-y-4 hidden">
+  <div class="card p-5" style="border-color:#34d39944;box-shadow:0 0 26px -16px #34d39980">
+    <div class="flex flex-wrap items-start gap-3">
+      <div>
+        <h2 class="text-2xl font-black">🧬 Hikâye Radar Laboratuvarı v0.1</h2>
+        <div class="text-sm muted mt-2">Hikâye → bilanço doğrulaması → sektör/değerleme → para akışı → teknik teyit zincirini 100 puan üzerinden test eder. Bu laboratuvar mevcut tarama motorlarını değiştirmez.</div>
+      </div>
+      <span class="chip ml-auto">🧪 LAB · Yerel kayıt · Ek ağ trafiği yok</span>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
+      <div><label class="text-xs muted">Hisse</label><input id="storySymbol" class="input mt-1" placeholder="NETAS" maxlength="12"></div>
+      <div><label class="text-xs muted">Hikâye Türü</label><select id="storyType" class="input mt-1"><option>Yeni İş / Sözleşme</option><option>Yatırım / Kapasite Artışı</option><option>İhracat / Yeni Pazar</option><option>Teşvik / Regülasyon</option><option>Yeni Ürün / Teknoloji</option><option>Satın Alma / Ortaklık</option><option>Borç Azaltma / Finansal Dönüşüm</option><option>Diğer</option></select></div>
+      <div><label class="text-xs muted">Kaynak Tarihi</label><input id="storyDate" class="input mt-1" type="date"></div>
+      <div><label class="text-xs muted">Kaynak</label><select id="storySource" class="input mt-1"><option>KAP</option><option>Faaliyet Raporu</option><option>Finansal Rapor</option><option>Ekonomi Basını / Röportaj</option><option>Diğer</option></select></div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">🚨 KAP / Katalizör</label><input id="storyKap" class="input mt-1" type="number" value="0" min="0" max="20"><div class="text-[11px] muted mt-1">0–20 · ekonomik etki ve ölçek</div></div>
+      <div><label class="text-xs muted">📈 Bilanço Doğrulaması</label><input id="storyBilanco" class="input mt-1" type="number" value="0" min="0" max="25"><div class="text-[11px] muted mt-1">0–25 · ciro/FAVÖK/kâr büyümesi</div></div>
+      <div><label class="text-xs muted">💰 Kârlılık / Nakit</label><input id="storyCash" class="input mt-1" type="number" value="0" min="0" max="15"><div class="text-[11px] muted mt-1">0–15 · marj, nakit akışı, borç</div></div>
+      <div><label class="text-xs muted">🏭 Sektör Gücü</label><input id="storySector" class="input mt-1" type="number" value="0" min="0" max="10"><div class="text-[11px] muted mt-1">0–10 · sektör rüzgârı</div></div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">📊 Değerleme / Rasyolar</label><input id="storyValuation" class="input mt-1" type="number" value="0" min="0" max="10"><div class="text-[11px] muted mt-1">0–10 · sektör/emsal karşılaştırması</div></div>
+      <div><label class="text-xs muted">💵 MFI Para Akışı</label><input id="storyMfi" class="input mt-1" type="number" value="0" min="0" max="10"><div class="text-[11px] muted mt-1">0–10 · mevcut MFI'dan alınabilir</div></div>
+      <div><label class="text-xs muted">⚡ Teknik Teyit</label><input id="storyTech" class="input mt-1" type="number" value="0" min="0" max="10"><div class="text-[11px] muted mt-1">0–10 · Momentum Shock referansı</div></div>
+      <div><label class="text-xs muted">Toplam Hikâye Skoru</label><div id="storyLiveScore" class="input mt-1 font-black text-xl" style="display:flex;align-items:center;justify-content:space-between"><span>0 / 100</span><span class="text-xs muted">ZAYIF</span></div></div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mt-4 grid-settings">
+      <div><label class="text-xs muted">Hikâye Özeti / Neden Önemli?</label><textarea id="storyNote" class="input mt-1" rows="3" placeholder="Örn: Yeni kapasite mevcut üretimin %35'i; son iki çeyrekte FAVÖK marjı da yükseliyor..."></textarea></div>
+      <div><label class="text-xs muted">Ölçülebilir Etki Notu</label><textarea id="storyImpact" class="input mt-1" rows="3" placeholder="Örn: Sözleşme / son 12 aylık satış = %28; yatırımın devreye giriş tarihi... "></textarea></div>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button id="storyPullTech" class="btn" style="background:#123047;color:#7dd3fc">🔄 Mevcut MFI + Momentum'u Getir</button>
+      <button id="storySave" class="btn" style="background:linear-gradient(90deg,#047857,#34d399);color:#04150e">💾 Hikâye Adayını Kaydet</button>
+      <button id="storyReset" class="btn" style="background:#242b38;color:#d7ddea">↺ Formu Temizle</button>
+      <span class="chip">Skor: 80+ A+ · 70–79 A · 60–69 B · 50–59 C · &lt;50 Zayıf</span>
+    </div>
+    <div id="storyStatus" class="mt-4 rounded-xl p-3 text-sm warn">Laboratuvar hazır. İlk adayını puanlayabilirsin.</div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
+      <h3 class="font-black text-xl">🧬 Hikâye Adayları · <span id="storyCount">0</span> kayıt</h3>
+      <button id="storyExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
+      <button id="storyClear" class="btn" style="background:#3a171b;color:#ff9aa6">🗑 Kayıtları Temizle</button>
+    </div>
+    <div class="overflow-auto max-h-[700px]"><table id="storyTable"></table></div>
+  </div>
+</section>
+
+
 <section id="elliott" class="tabpage space-y-4 hidden">
   <div class="card p-5">
     <h2 class="text-2xl font-black">🌊 Elliott Opportunity Engine v1.1 · Görsel Doğrulama</h2>
@@ -1060,6 +1118,8 @@ const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 B�
 
 let elliottAll=[], elliottShown=[], fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], highConfAll=[], highConfShown=[], sdAll=[], sdShown=[], failures=[];
 let refCache=null;
+let storyRecords=[];
+const STORY_KEY="bist_story_radar_v01";
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -3949,6 +4009,37 @@ function renderPerformance(){
 }
 function perfClear(){if(!confirm("Tüm performans kayıtları silinsin mi?"))return;perfRecords=[];perfSave();renderPerformance();setStatus("perfStatus","Performans kayıtları temizlendi.","warn")}
 function perfExport(){perfLoad();if(!perfRecords.length){alert("Dışa aktarılacak performans kaydı yok.");return}const rows=perfRecords.map(r=>({Tarih:r.captured_date,Tarama:r.scanner,Hisse:r.symbol,Yon:r.direction,Periyot:r.timeframe,Etiket:r.tag,Giris:r.entry_price,...Object.fromEntries(PERF_H.map(h=>[`${h}G_Getiri_%`,r.returns?.[h]??null])),MFE20:r.mfe20??null,MAE20:r.mae20??null}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Performans");XLSX.writeFile(wb,`BIST_Tarama_Performans_${new Date().toISOString().slice(0,10)}.xlsx`)}
+
+// ─────────────────────────────────────────────────────────────────────
+// HİKÂYE RADAR LABORATUVARI v0.1
+// Tamamen tarayıcı içi çalışır; yeni ağ isteği üretmez.
+function storyClamp(id,max){const el=$(id);if(!el)return 0;let n=Number(el.value||0);if(!Number.isFinite(n))n=0;n=Math.max(0,Math.min(max,n));el.value=n;return n}
+function storyScore(){return storyClamp("storyKap",20)+storyClamp("storyBilanco",25)+storyClamp("storyCash",15)+storyClamp("storySector",10)+storyClamp("storyValuation",10)+storyClamp("storyMfi",10)+storyClamp("storyTech",10)}
+function storyGrade(s){return s>=80?"A+":s>=70?"A":s>=60?"B":s>=50?"C":"ZAYIF"}
+function storyGradeLabel(s){return s>=80?"🔥 A+ GÜÇLÜ HİKÂYE":s>=70?"🟢 A HİKÂYE":s>=60?"🔵 B İZLE":s>=50?"🟡 C ERKEN/ZAYIF":"⚪ ZAYIF"}
+function storyLive(){const s=storyScore(),g=storyGrade(s),el=$("storyLiveScore");if(el)el.innerHTML=`<span>${s} / 100</span><span class="text-xs">${g}</span>`}
+function storyLoad(){try{storyRecords=JSON.parse(localStorage.getItem(STORY_KEY)||"[]");if(!Array.isArray(storyRecords))storyRecords=[]}catch(e){storyRecords=[]}}
+function storyPersist(){try{localStorage.setItem(STORY_KEY,JSON.stringify(storyRecords))}catch(e){console.warn("Story save failed",e)}}
+function storyFindBest(arr,symbol){symbol=(symbol||"").toUpperCase();return (arr||[]).filter(r=>String(r.symbol||r.ticker||r.name||"").replace(".IS","").toUpperCase()===symbol).sort((a,b)=>Number(b.score||0)-Number(a.score||0))[0]||null}
+function storyPullTechnical(){const sym=String($("storySymbol").value||"").trim().toUpperCase().replace(/^BIST:/,"").replace(/\.IS$/,'');if(!sym){setStatus("storyStatus","Önce hisse kodunu yaz.","warn");return}
+  const m=storyFindBest(mfiShown.length?mfiShown:mfiAll,sym), ms=storyFindBest(msShown.length?msShown:msAll,sym), q=storyFindBest(qqShown.length?qqShown:qqAll,sym);
+  if(m){const raw=Number(m.score||0);$("storyMfi").value=Math.max(0,Math.min(10,Math.round((raw/7)*10)))}
+  if(ms){const raw=Number(ms.score||0);$("storyTech").value=Math.max(0,Math.min(10,Math.round((raw/9)*10)))}
+  storyLive();
+  const parts=[m?`MFI ${m.score??"—"}/7`:"MFI sonucu yok",ms?`Momentum ${ms.score??"—"}/9`:"Momentum sonucu yok",q?`Quant ${q.score??"—"}/10 (referans)`:"Quant sonucu yok"];
+  setStatus("storyStatus",`${sym}: ${parts.join(" · ")}. Quant v0.1 Hikâye Skoruna eklenmez; yalnız referanstır.`,m||ms?"good":"warn")
+}
+function storyResetForm(){["storySymbol","storyNote","storyImpact"].forEach(id=>$(id).value="");["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id).value=0);$("storyDate").value=new Date().toISOString().slice(0,10);storyLive()}
+function storySaveRecord(){const symbol=String($("storySymbol").value||"").trim().toUpperCase().replace(/^BIST:/,"").replace(/\.IS$/,'');if(!symbol){setStatus("storyStatus","Hisse kodu olmadan kayıt yapılamaz.","bad");return}
+  const r={id:Date.now(),symbol,type:$("storyType").value,date:$("storyDate").value||new Date().toISOString().slice(0,10),source:$("storySource").value,kap:storyClamp("storyKap",20),bilanco:storyClamp("storyBilanco",25),cash:storyClamp("storyCash",15),sector:storyClamp("storySector",10),valuation:storyClamp("storyValuation",10),mfi:storyClamp("storyMfi",10),tech:storyClamp("storyTech",10),note:$("storyNote").value.trim(),impact:$("storyImpact").value.trim()};r.score=r.kap+r.bilanco+r.cash+r.sector+r.valuation+r.mfi+r.tech;r.grade=storyGrade(r.score);storyRecords.unshift(r);storyPersist();renderStory();setStatus("storyStatus",`${symbol} kaydedildi · Hikâye Skoru ${r.score}/100 · ${storyGradeLabel(r.score)}`,r.score>=70?"good":r.score>=50?"warn":"bad")}
+function storyDelete(id){storyRecords=storyRecords.filter(r=>r.id!==id);storyPersist();renderStory()}
+function renderStory(){if(!$("storyTable"))return;storyRecords.sort((a,b)=>(b.score||0)-(a.score||0)||(b.id||0)-(a.id||0));$("storyCount").textContent=storyRecords.length;const h=["Hisse","Skor","Sınıf","Tarih","Kaynak","Hikâye Türü","KAP","Bilanço","Kârlılık/Nakit","Sektör","Değerleme","MFI","Teknik","Hikâye Özeti","Etki Notu",""];
+  $("storyTable").innerHTML=`<thead><tr>${h.map((x,i)=>`<th${i===0?' style="left:0;z-index:3"':''}>${x}</th>`).join("")}</tr></thead><tbody>`+storyRecords.map(r=>`<tr><td style="position:sticky;left:0;z-index:2;background:#121620"><b>${link(r.symbol)}</b></td><td><b>${r.score}</b></td><td>${storyGradeLabel(r.score)}</td><td>${r.date||"—"}</td><td>${r.source||"—"}</td><td>${r.type||"—"}</td><td>${r.kap}/20</td><td>${r.bilanco}/25</td><td>${r.cash}/15</td><td>${r.sector}/10</td><td>${r.valuation}/10</td><td>${r.mfi}/10</td><td>${r.tech}/10</td><td title="${String(r.note||"").replace(/"/g,'&quot;')}">${r.note||"—"}</td><td title="${String(r.impact||"").replace(/"/g,'&quot;')}">${r.impact||"—"}</td><td><button class="btn" style="padding:6px 9px;background:#3a171b;color:#ff9aa6" onclick="storyDelete(${r.id})">Sil</button></td></tr>`).join("")+"</tbody>";
+}
+function storyExport(){if(!storyRecords.length){alert("Hikâye Radar'da Excel'e aktarılacak kayıt yok.");return}const rows=storyRecords.map(r=>({Hisse:r.symbol,Hikaye_Skoru:r.score,Sinif:r.grade,Tarih:r.date,Kaynak:r.source,Hikaye_Turu:r.type,KAP_Katalizor_20:r.kap,Bilanco_25:r.bilanco,Karlilik_Nakit_15:r.cash,Sektor_10:r.sector,Degerleme_10:r.valuation,MFI_10:r.mfi,Teknik_10:r.tech,Hikaye_Ozeti:r.note,Olculebilir_Etki:r.impact}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Hikaye Radar");XLSX.writeFile(wb,`BIST_Hikaye_Radar_${new Date().toISOString().slice(0,10)}.xlsx`)}
+function storyClearAll(){if(!storyRecords.length)return;if(!confirm("Hikâye Radar laboratuvarındaki tüm yerel kayıtlar silinsin mi?"))return;storyRecords=[];storyPersist();renderStory();setStatus("storyStatus","Hikâye Radar kayıtları temizlendi.","warn")}
+storyLoad();
+
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");
   document.querySelectorAll(".tabpage").forEach(x=>x.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");
@@ -3963,6 +4054,9 @@ $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;
 $("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("sdBtn").onclick=scanSD;$("sdMinScore").onchange=renderSD;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
+["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id)?.addEventListener("input",storyLive));
+$("storyPullTech").onclick=storyPullTechnical;$("storySave").onclick=storySaveRecord;$("storyReset").onclick=storyResetForm;$("storyExcel").onclick=storyExport;$("storyClear").onclick=storyClearAll;
+if(!$("storyDate").value)$("storyDate").value=new Date().toISOString().slice(0,10);storyLive();renderStory();
 renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderHarmForward();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
 
