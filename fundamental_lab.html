@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v1.0</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v1.1</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -76,7 +76,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v1.0</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v1.1</h1>
         <div class="muted mt-2">Şirket kalite motorları + veri güven motoru + Aşama 2 Sektör Güç / Rotasyon Motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -202,8 +202,44 @@
     <div class="text-xs muted mt-3">Master Skor = Sektör Liderliği %60 + Teknik Teyit %40. Teknik teyit: EMA20/50/200 trend yapısı, RSI, ADX, hacim oranı, haftalık ve aylık performans. A+ için ayrıca yüksek veri güveni ve teknik skor şartı vardır.</div>
   </div>
 
+
+  <div class="card p-5" style="border-color:#22d3ee66">
+    <div class="flex flex-wrap items-center gap-3">
+      <div>
+        <h2 class="font-black text-xl">⑥ Yapısal Zamanlama Konsensüsü · Aşama 5</h2>
+        <div class="text-xs muted mt-1">Master A/A+ adaylarını ana BIST Scanner'daki Market Structure Decision Engine v0.4 mantığıyla süzer: günlük yapı → konum → likidite/MSS → 4H teyit → katılım/momentum → R/R.</div>
+      </div>
+      <select id="timingClassFilter" class="input ml-auto">
+        <option value="">Tüm nihai sınıflar</option>
+        <option>A+</option><option>A</option><option>B</option><option>C</option>
+      </select>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
+      <div class="stat"><div class="muted text-xs">Taranacak Master A/A+</div><div id="timingCandidateN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">TETİK HAZIR</div><div id="timingTriggerN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">ERKEN FIRSAT</div><div id="timingEarlyN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Nihai A/A+</div><div id="timingTopN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">1 Numaralı Nihai Aday</div><div id="timingTop" class="text-lg font-black">—</div></div>
+    </div>
+
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+      <div><label class="text-xs muted">Minimum Yapısal Güven</label><input id="timingMinStructure" class="input mt-1" type="number" value="60" min="0" max="100"></div>
+      <div><label class="text-xs muted">Pivot Pencere</label><input id="timingPivot" class="input mt-1" type="number" value="3" min="2" max="10"></div>
+      <div><label class="text-xs muted">Destek Yakınlığı %</label><input id="timingSupportTol" class="input mt-1" type="number" value="5" min="1" max="15" step="0.5"></div>
+      <div><label class="text-xs muted">Minimum R/R</label><input id="timingMinRR" class="input mt-1" type="number" value="1.5" min="0.5" max="5" step="0.25"></div>
+    </div>
+
+    <button id="timingBtn" class="btn w-full mt-4" style="background:linear-gradient(90deg,#0891b2,#22d3ee);color:#06202a">🧠 Master A/A+ → Yapısal Zamanlama Taraması</button>
+    <div class="progress mt-4"><div id="timingProg"></div></div>
+    <div id="timingStatus" class="mt-3 rounded-xl p-3 text-sm warn">Önce temel taramayı çalıştır; sonra Master A/A+ adaylarını yapısal zamanlamadan geçir.</div>
+
+    <div class="table-wrap overflow-auto max-h-[760px] mt-4"><table id="timingTable"></table></div>
+    <div class="text-xs muted mt-3"><b>Nihai Skor = Master %45 + Yapısal Güven %55.</b> A+ yalnızca güçlü yapısal zamanlama ile oluşur. Master skoru değiştirilmez; Aşama 5 ayrı bir karar katmanıdır. Ana tarayıcıdaki Yapı Laboratuvarı varsayılanları korunur.</div>
+  </div>
+
   <div class="card p-5">
-    <h2 class="font-black text-xl">⑥ Sektör Ön Görünümü</h2>
+    <h2 class="font-black text-xl">⑦ Sektör Ön Görünümü</h2>
     <div class="text-xs muted mt-1">Aşama 2 için temel: temizlenmiş sektör medyan kalite, ROIC, büyüme ve lider şirketler. Finansallar ayrı izlenir; henüz “rotasyon skoru” değildir.</div>
     <div class="table-wrap overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
   </div>
@@ -230,7 +266,7 @@ const finite=x=>Number.isFinite(Number(x));
 const fnum=x=>finite(x)?Number(x):null;
 const med=a=>{const x=a.filter(finite).map(Number).sort((a,b)=>a-b);if(!x.length)return null;const m=Math.floor(x.length/2);return x.length%2?x[m]:(x[m-1]+x[m])/2};
 const cell=(v,d=1,s="")=>finite(v)?Number(v).toFixed(d)+s:"—";
-let rows=[],sectorRows=[],financialRows=[],sectorRotationRows=[],sectorLeaderRows=[],masterConsensusRows=[];
+let rows=[],sectorRows=[],financialRows=[],sectorRotationRows=[],sectorLeaderRows=[],masterConsensusRows=[],timingRows=[];
 
 async function fetchJSON(url,options={},timeoutMs=45000){
   const c=new AbortController(), t=setTimeout(()=>c.abort(),timeoutMs);
@@ -698,6 +734,7 @@ function applyMobileSticky(){
     sectorRotationTable:5,
     sectorLeadersTable:2,
     masterConsensusTable:2,
+    timingTable:2,
     sectorTable:5
   };
   for(const [id,limit] of Object.entries(stickyLimits)){
@@ -710,6 +747,150 @@ function applyMobileSticky(){
     });
   }
 }
+
+// AŞAMA 5 · YAPISAL ZAMANLAMA KONSENSÜSÜ
+// Ana BIST Scanner Market Structure Decision Engine v0.4'ün karar mantığı korunmuştur.
+const timingCache=new Map();
+const timingYahooCache=new Map();
+const timingFinite=x=>Number.isFinite(Number(x));
+const timingVal=id=>Number($(id)?.value||0);
+const timingFmt=(x,d=2)=>timingFinite(x)?Number(x).toFixed(d):"—";
+const timingMean=a=>{const x=a.filter(timingFinite).map(Number);return x.length?x.reduce((s,v)=>s+v,0)/x.length:NaN};
+
+function timingRollingMean(a,n){
+  const out=Array(a.length).fill(NaN),q=[];let sum=0;
+  for(let i=0;i<a.length;i++){const x=a[i];q.push(x);if(timingFinite(x))sum+=x;
+    if(q.length>n){const y=q.shift();if(timingFinite(y))sum-=y}
+    if(q.length===n&&q.every(timingFinite))out[i]=sum/n;
+  } return out;
+}
+function timingEMA(a,span){
+  const alpha=2/(span+1),o=Array(a.length).fill(NaN);let prev=NaN;
+  a.forEach((x,i)=>{if(!timingFinite(x))return;if(!timingFinite(prev))prev=x;else prev=alpha*x+(1-alpha)*prev;o[i]=prev});return o;
+}
+function timingRSI(c,n=14){
+  const o=Array(c.length).fill(NaN),g=Array(c.length).fill(0),l=Array(c.length).fill(0);
+  for(let i=1;i<c.length;i++){const d=c[i]-c[i-1];g[i]=Math.max(d,0);l[i]=Math.max(-d,0)}
+  if(c.length<=n)return o;let ag=0,al=0;
+  for(let i=1;i<=n;i++){ag+=g[i];al+=l[i]}ag/=n;al/=n;o[n]=al===0?100:100-(100/(1+ag/al));
+  for(let i=n+1;i<c.length;i++){ag=(ag*(n-1)+g[i])/n;al=(al*(n-1)+l[i])/n;o[i]=al===0?100:100-(100/(1+ag/al))}
+  return o;
+}
+function timingPivots(df,w){
+  const H=[],L=[];
+  for(let i=w;i<df.c.length-w;i++){let hi=true,lo=true;
+    for(let k=1;k<=w;k++){if(df.h[i]<=df.h[i-k]||df.h[i]<df.h[i+k])hi=false;if(df.l[i]>=df.l[i-k]||df.l[i]>df.l[i+k])lo=false}
+    if(hi)H.push({i,p:df.h[i]});if(lo)L.push({i,p:df.l[i]});
+  } return {H,L};
+}
+function timingStructure(df,w){
+  const p=timingPivots(df,w),H=p.H.slice(-3),L=p.L.slice(-3);
+  if(H.length<2||L.length<2)return{bull:false,score:0,label:"BELİRSİZ",p:{H,L}};
+  const hh=H.at(-1).p>H.at(-2).p,hl=L.at(-1).p>L.at(-2).p;
+  return{bull:hh&&hl,score:hh&&hl?30:(hh||hl?15:0),label:hh&&hl?"HH–HL":hh?"HH / HL eksik":hl?"HL / HH eksik":"LH–LL",p:{H,L}};
+}
+async function timingYahoo(symbol,range="2y",interval="1d"){
+  const key=`${symbol}|${range}|${interval}`;if(timingYahooCache.has(key))return timingYahooCache.get(key);
+  const p=(async()=>{
+    const j=await fetchJSON(`/api/yahoo?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}&interval=${encodeURIComponent(interval)}`,{},32000);
+    const r=j?.chart?.result?.[0];if(!r)throw new Error("Yahoo veri yok");
+    const q=r.indicators?.quote?.[0]||{},ts=r.timestamp||[],df={t:[],o:[],h:[],l:[],c:[],v:[]};
+    for(let i=0;i<ts.length;i++){const a=[q.open?.[i],q.high?.[i],q.low?.[i],q.close?.[i]];
+      if(a.every(x=>x!==null&&x!==undefined&&timingFinite(x))){df.t.push(ts[i]);df.o.push(Number(a[0]));df.h.push(Number(a[1]));df.l.push(Number(a[2]));df.c.push(Number(a[3]));df.v.push(Number(q.volume?.[i]||0))}
+    } return df;
+  })();
+  timingYahooCache.set(key,p);try{return await p}catch(e){timingYahooCache.delete(key);throw e}
+}
+function timingIstParts(ts){
+  const parts=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date(ts*1000)),o={};
+  for(const p of parts)o[p.type]=p.value;return{date:`${o.year}-${o.month}-${o.day}`,hour:Number(o.hour),minute:Number(o.minute||0)};
+}
+function timingResample4h(df){
+  const groups=new Map();
+  for(let i=0;i<df.t.length;i++){const p=timingIstParts(df.t[i]);if(p.hour<10||p.hour>17)continue;const block=p.hour<14?"A":"B",key=p.date+"|"+block;(groups.get(key)||groups.set(key,[]).get(key)).push(i)}
+  const out={t:[],o:[],h:[],l:[],c:[],v:[]};
+  for(const [key,idx] of groups){idx.sort((a,b)=>df.t[a]-df.t[b]);const [date,block]=key.split("|"),hh=block==="A"?14:18,mm=block==="A"?0:15,closeTs=Math.floor(new Date(`${date}T${String(hh).padStart(2,"0")}:${String(mm).padStart(2,"0")}:00+03:00`).getTime()/1000);if(closeTs>Math.floor(Date.now()/1000))continue;
+    out.t.push(closeTs);out.o.push(df.o[idx[0]]);out.h.push(Math.max(...idx.map(i=>df.h[i])));out.l.push(Math.min(...idx.map(i=>df.l[i])));out.c.push(df.c[idx.at(-1)]);out.v.push(idx.reduce((s,i)=>s+(df.v[i]||0),0));
+  } return out;
+}
+async function timingDf(symbol,tf){
+  const k=`${symbol}|${tf}`;if(timingCache.has(k))return timingCache.get(k);
+  const d=tf==="4h"?timingResample4h(await timingYahoo(symbol+".IS","365d","1h")):await timingYahoo(symbol+".IS","3y","1d");
+  timingCache.set(k,d);return d;
+}
+function timingAnalyze(symbol,d,fh){
+  const w=Math.max(2,Math.trunc(timingVal("timingPivot"))),tol=Math.max(1,timingVal("timingSupportTol"))/100,minRR=Math.max(.5,timingVal("timingMinRR"));
+  if(!d||!fh||d.c.length<120||fh.c.length<120)return null;
+  const n=d.c.length,i=n-1,S=timingStructure(d,w),F=timingStructure(fh,w),e20=timingEMA(d.c,20),e50=timingEMA(d.c,50),rv=timingRollingMean(d.v,20),r=timingRSI(d.c,14);
+  const lastLow=S.p.L.at(-1)?.p,lastHigh=S.p.H.at(-1)?.p;if(!timingFinite(lastLow)||!timingFinite(lastHigh))return null;
+  const close=d.c[i],ema20=e20[i],ema50=e50[i],ema20Prev=i>=5?e20[i-5]:NaN;
+  const emaAligned=timingFinite(ema20)&&timingFinite(ema50)&&ema20>=ema50,aboveE50=timingFinite(ema50)&&close>=ema50,ema20Rising=timingFinite(ema20)&&timingFinite(ema20Prev)&&ema20>ema20Prev;
+  const trendPos=timingFinite(ema20)&&timingFinite(ema50)&&close>=ema20&&emaAligned,distE20=timingFinite(ema20)&&ema20>0?100*(close/ema20-1):NaN;
+  const ret20=i>=20?100*(close/d.c[i-20]-1):NaN,ret60=i>=60?100*(close/d.c[i-60]-1):NaN;
+
+  let qStructure=S.score;if(S.bull&&!emaAligned)qStructure=Math.min(qStructure,18);if(S.bull&&!aboveE50)qStructure=Math.min(qStructure,12);if(S.bull&&!ema20Rising)qStructure=Math.max(0,qStructure-6);if(!S.bull&&emaAligned&&aboveE50)qStructure=Math.max(qStructure,10);
+  const distSupport=100*(close-lastLow)/lastLow;let qLoc=0,loc="NÖTR";
+  if(distSupport>=0&&distSupport<=tol*100&&aboveE50){qLoc=20;loc="Yapısal destek / HL yakın"}else if(emaAligned&&aboveE50&&distSupport<=tol*200){qLoc=12;loc="Trend içi geri çekilme"}else if(trendPos){qLoc=7;loc="Trend üstü fakat destekten uzak"}else if(!aboveE50){qLoc=0;loc="EMA50 altı / yapı teyitsiz"}
+
+  let sweep=false,mss=false,sweepAge=null,mssAge=null;const P=timingPivots(d,w);
+  for(let x=Math.max(w,n-45);x<n;x++){const pl=P.L.filter(z=>z.i<x).at(-1);if(!pl)continue;if(d.l[x]<pl.p&&d.c[x]>pl.p){sweep=true;sweepAge=n-1-x;const ph=P.H.filter(z=>z.i<x).at(-1);if(ph){for(let j=x+1;j<n;j++)if(d.c[j]>ph.p){mss=true;mssAge=n-1-j;break}}}}
+  let qLiq=0;if(mss){qLiq=mssAge<=5?20:mssAge<=10?16:mssAge<=20?10:5}else if(sweep){qLiq=sweepAge<=5?10:sweepAge<=10?7:3}if(!aboveE50)qLiq=Math.min(qLiq,8);
+  const q4=F.bull?15:(F.score>0?7:0),vol=timingFinite(rv[i])&&rv[i]>0?d.v[i]/rv[i]:NaN,ret5=i>=5?100*(close/d.c[i-5]-1):NaN,rsi=timingFinite(r[i])?r[i]:NaN;
+  let qPart=0;if(timingFinite(vol)&&vol>=1)qPart+=4;if(timingFinite(ret5)&&ret5>0)qPart+=3;if(timingFinite(rsi)&&rsi>=50&&rsi<=75)qPart+=3;
+  const risk=Math.max(close-lastLow,1e-9),reward=Math.max(lastHigh-close,0),rr=reward/risk,qRR=rr>=minRR?5:rr>=1?3:0;
+  const score=Math.round(Math.min(100,qStructure+qLoc+qLiq+q4+qPart+qRR));
+  let early=0;if(mss&&mssAge<=5)early+=30;else if(mss&&mssAge<=10)early+=20;if(sweep&&sweepAge<=10)early+=15;if(F.bull)early+=20;if(timingFinite(distE20)&&distE20>=-3&&distE20<=5)early+=20;if(timingFinite(ret20)&&ret20>=-5&&ret20<=12)early+=15;early=Math.min(100,early);
+
+  const healthy=S.bull&&emaAligned&&aboveE50&&ema20Rising,extended=(timingFinite(distE20)&&distE20>10)||(timingFinite(ret20)&&ret20>25)||(timingFinite(ret60)&&ret60>45);
+  let stage="GÖZLEM";
+  if(!S.bull&&!emaAligned)stage="YAPI ZAYIF";else if(!aboveE50)stage="TEYİT BEKLİYOR";else if(sweep&&!mss)stage="TEYİT BEKLİYOR";else if(healthy&&mss&&F.bull&&mssAge<=10&&early>=65&&!extended)stage="ERKEN FIRSAT";else if(healthy&&F.bull&&extended)stage="İLERLEMİŞ / UZAMIŞ";else if(healthy&&F.bull&&timingFinite(ret20)&&ret20<20&&timingFinite(distE20)&&distE20<=7)stage="TAZE TREND";else if(healthy&&F.bull)stage="GÜÇLÜ TREND";else if(S.bull&&emaAligned)stage="YAPI POZİTİF";else stage="TEYİT BEKLİYOR";
+
+  const recent=P.H.filter(z=>z.i<n-1&&z.i>=Math.max(0,n-120)),overhead=recent.filter(z=>timingFinite(z.p)&&z.p>close*1.001).sort((a,b)=>a.p-b.p),obstacle=overhead.length?overhead[0].p:NaN,obstaclePct=timingFinite(obstacle)&&close>0?100*(obstacle/close-1):NaN;
+  let breakout=false,breakoutAge=null;
+  for(let x=Math.max(1,n-5);x<n;x++){const prev=recent.filter(z=>z.i<x).at(-1);if(prev&&timingFinite(prev.p)&&d.c[x]>prev.p&&d.c[x-1]<=prev.p){breakout=true;breakoutAge=n-1-x}}
+  const nearObstacle=timingFinite(obstaclePct)&&obstaclePct>=0&&obstaclePct<=5,breakoutConfirmed=breakout&&F.bull&&emaAligned&&ema20Rising;
+  let newStage=stage;if(stage==="ERKEN FIRSAT"&&nearObstacle&&!breakout)newStage="TEYİT BEKLİYOR";else if((stage==="ERKEN FIRSAT"||stage==="TAZE TREND"||stage==="YAPI POZİTİF")&&breakoutConfirmed&&!extended)newStage="TETİK HAZIR";else if(stage==="GÜÇLÜ TREND"&&breakoutConfirmed&&!extended)newStage="TETİK HAZIR";
+
+  return{symbol,structureScore:score,early,stage,newStage,structure:S.label,location:loc,sweep:sweep?"✓":"—",mss:mss?"✓":"—",mssAge,h4:F.label,h4ok:F.bull?"✓":"—",volume:vol,rsi,rr,close,distE20,ret20,ret60,obstaclePct,breakout:breakout?`✓ ${breakoutAge===0?"BUGÜN":breakoutAge+"G"}`:"—"};
+}
+function timingGrade(finalScore,structureScore,newStage,masterGrade){
+  if(finalScore>=82&&structureScore>=75&&["TETİK HAZIR","ERKEN FIRSAT","TAZE TREND"].includes(newStage)&&masterGrade==="A+")return"A+";
+  if(finalScore>=74&&structureScore>=65&&["TETİK HAZIR","ERKEN FIRSAT","TAZE TREND","GÜÇLÜ TREND"].includes(newStage))return"A";
+  if(finalScore>=64&&structureScore>=60&&newStage!=="YAPI ZAYIF")return"B";
+  return"C";
+}
+function renderTiming(){
+  const filter=$("timingClassFilter")?.value||"",minS=Math.max(0,timingVal("timingMinStructure"));
+  const shown=timingRows.filter(r=>r.structureScore>=minS&&(!filter||r.finalGrade===filter)).sort((a,b)=>b.finalScore-a.finalScore||b.structureScore-a.structureScore);
+  $("timingCandidateN").textContent=masterConsensusRows.filter(r=>["A+","A"].includes(r.masterGrade)).length;
+  $("timingTriggerN").textContent=timingRows.filter(r=>r.newStage==="TETİK HAZIR").length;
+  $("timingEarlyN").textContent=timingRows.filter(r=>r.newStage==="ERKEN FIRSAT").length;
+  $("timingTopN").textContent=timingRows.filter(r=>["A+","A"].includes(r.finalGrade)).length;
+  $("timingTop").textContent=shown[0]?.symbol||"—";
+  $("timingTable").innerHTML=`<thead><tr>${["#","Hisse","Nihai Skor","Nihai Sınıf","Master","Master Sınıf","Yapısal Güven","Erkenlik","Yeni Aşama","Günlük Yapı","Konum","Sweep","MSS/BOS","MSS Yaşı","4H Yapı","4H Teyit","Hacim x","RSI","R/R","EMA20 Uzak %","20G %","60G %","Engele %","Kırılım","Sektör"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+    shown.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.symbol}</b></td><td><b>${r.finalScore}</b></td><td><span class="pill ${gcls(r.finalGrade)}">${r.finalGrade}</span></td><td>${r.masterScore}</td><td>${r.masterGrade}</td><td><b>${r.structureScore}</b></td><td>${r.early}</td><td><b>${r.newStage}</b></td><td>${r.structure}</td><td>${r.location}</td><td>${r.sweep}</td><td>${r.mss}</td><td>${r.mssAge??"—"}</td><td>${r.h4}</td><td>${r.h4ok}</td><td>${timingFmt(r.volume,2)}</td><td>${timingFmt(r.rsi,1)}</td><td>${timingFmt(r.rr,2)}</td><td>${timingFmt(r.distE20,2)}</td><td>${timingFmt(r.ret20,2)}</td><td>${timingFmt(r.ret60,2)}</td><td>${timingFmt(r.obstaclePct,2)}</td><td>${r.breakout}</td><td>${sectorTR(r.sector)}</td></tr>`).join("")+`</tbody>`;
+  applyMobileSticky();
+}
+async function runTiming(){
+  if(!masterConsensusRows.length){alert("Önce Temel Analiz Taramasını çalıştır.");return}
+  const candidates=masterConsensusRows.filter(r=>["A+","A"].includes(r.masterGrade));
+  if(!candidates.length){timingRows=[];renderTiming();$("timingStatus").textContent="Master A/A+ adayı yok.";return}
+  const b=$("timingBtn"),p=$("timingProg"),s=$("timingStatus");b.disabled=true;timingRows=[];timingCache.clear();timingYahooCache.clear();p.style.width="0%";
+  let next=0,done=0,errors=0;
+  try{
+    s.textContent=`${candidates.length} Master A/A+ adayı yapısal zamanlamadan geçiriliyor…`;
+    async function worker(){
+      while(true){const k=next++;if(k>=candidates.length)return;const m=candidates[k];
+        try{const [d,h4]=await Promise.all([timingDf(m.symbol,"1d"),timingDf(m.symbol,"4h")]);const z=timingAnalyze(m.symbol,d,h4);if(z){const finalScore=Math.round(.45*m.masterScore+.55*z.structureScore),finalGrade=timingGrade(finalScore,z.structureScore,z.newStage,m.masterGrade);timingRows.push({...m,...z,finalScore,finalGrade})}}
+        catch(e){errors++}
+        done++;p.style.width=(100*done/candidates.length)+"%";s.textContent=`${done}/${candidates.length} · sonuç ${timingRows.length} · hata ${errors}`;if(done%3===0){renderTiming();await new Promise(r=>setTimeout(r,0))}
+      }
+    }
+    await Promise.all(Array.from({length:Math.min(4,candidates.length)},worker));renderTiming();
+    s.textContent=`Tamamlandı · ${candidates.length} Master A/A+ → ${timingRows.length} yapısal sonuç · Nihai A/A+ ${timingRows.filter(r=>["A+","A"].includes(r.finalGrade)).length} · hata ${errors}`;
+  }finally{b.disabled=false}
+}
+
 function render(){
   const sf=$("sectorFilter").value,gf=$("gradeFilter").value;
   const shown=rows.filter(r=>(!sf||r.sector===sf)&&(!gf||r.grade===gf));
@@ -799,13 +980,14 @@ function render(){
 
   $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Medyan Güven</th><th>Güvenilir %</th><th>Liderler</th></tr></thead><tbody>`+
   sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${sectorTR(r.sector)}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
+  renderTiming();
   applyMobileSticky();
 }
 async function run(){
   const b=$("scanBtn"),p=$("prog"),s=$("status");b.disabled=true;p.style.width="12%";s.textContent="Temel veriler alınıyor…";
   try{
     const raw=await tvScan();p.style.width="55%";s.textContent="Sektör içi yüzdelikler ve kalite skoru hesaplanıyor…";
-    rows=score(raw);financialRows=buildFinancialScores(rows);sectorRows=buildSectors(rows);sectorRotationRows=buildSectorRotation(rows);sectorLeaderRows=buildSectorLeaders(rows,sectorRotationRows);masterConsensusRows=buildMasterConsensus(sectorLeaderRows);
+    rows=score(raw);financialRows=buildFinancialScores(rows);sectorRows=buildSectors(rows);sectorRotationRows=buildSectorRotation(rows);sectorLeaderRows=buildSectorLeaders(rows,sectorRotationRows);masterConsensusRows=buildMasterConsensus(sectorLeaderRows);timingRows=[];
     const sel=$("sectorFilter");sel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(rows.map(r=>r.sector))].sort().map(x=>`<option value="${x}">${sectorTR(x)}</option>`).join("");
 const lsel=$("leaderSectorFilter"); if(lsel) lsel.innerHTML='<option value="">Tüm sektörler</option>'+[...new Set(sectorLeaderRows.map(r=>r.sector))].sort().map(x=>`<option value="${x}">${sectorTR(x)}</option>`).join("");
     const fts=$("finTypeFilter");fts.innerHTML='<option value="">Tüm finansal gruplar</option>'+[...new Set(financialRows.map(r=>r.finType))].sort().map(x=>`<option>${x}</option>`).join("");
@@ -828,9 +1010,13 @@ function excel(){
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(sl),"Sektör Liderleri");
   const mc=masterConsensusRows.map(r=>({Hisse:r.symbol,Master_Skor:r.masterScore,Master_Sınıf:r.masterGrade,Teknik_Skor:r.techScore,Liderlik_Skoru:r.leadershipScore,Liderlik_Sınıfı:r.leadershipClass,Sektör:sectorTR(r.sector),Sektör_Rotasyon:r.rotationScore,Sektör_Sınıfı:r.rotationClass,Kalite:r.score,Kalite_Sınıfı:r.grade,Veri_Güveni:r.dataTrust,Fiyat:r.close,EMA20:r.EMA20,EMA50:r.EMA50,EMA200:r.EMA200,RSI:r.RSI,ADX:r.ADX,Hacim_Oranı:r.volumeRatio,Haftalık_Perf:r["Perf.W"],Aylık_Perf:r["Perf.1M"],Teknik_Teyitler:(r.techFlags||[]).join(" | ")}));
   XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(mc),"Master Konsensüs");
+  if(timingRows.length){
+    const tz=timingRows.map(r=>({Hisse:r.symbol,Nihai_Skor:r.finalScore,Nihai_Sınıf:r.finalGrade,Master_Skor:r.masterScore,Master_Sınıf:r.masterGrade,Yapısal_Güven:r.structureScore,Erkenlik:r.early,Yeni_Aşama:r.newStage,Günlük_Yapı:r.structure,Konum:r.location,Sweep:r.sweep,MSS_BOS:r.mss,MSS_Yaşı:r.mssAge,H4_Yapı:r.h4,H4_Teyit:r.h4ok,Hacim_Oranı:r.volume,RSI:r.rsi,R_R:r.rr,EMA20_Uzak_Yüzde:r.distE20,Getiri_20G:r.ret20,Getiri_60G:r.ret60,Engele_Yüzde:r.obstaclePct,Kırılım:r.breakout,Sektör:sectorTR(r.sector)}));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tz),"Yapısal Zamanlama");
+  }
   XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
-$("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;$("finGradeFilter").onchange=render;$("finTypeFilter").onchange=render;$("sectorRotClassFilter").onchange=render;$("leaderSectorFilter").onchange=render;$("leaderClassFilter").onchange=render;$("masterClassFilter").onchange=render;
+$("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;$("finGradeFilter").onchange=render;$("finTypeFilter").onchange=render;$("sectorRotClassFilter").onchange=render;$("leaderSectorFilter").onchange=render;$("leaderClassFilter").onchange=render;$("masterClassFilter").onchange=render;$("timingBtn").onclick=runTiming;$("timingClassFilter").onchange=renderTiming;$("timingMinStructure").onchange=renderTiming;
 </script>
 </body>
 </html>
