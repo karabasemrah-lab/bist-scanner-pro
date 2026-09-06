@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.6</title>
+<title>BIST Scanner Pro · Temel Analiz Laboratuvarı v0.6.1</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
@@ -21,6 +21,25 @@
   .pill{display:inline-block;border-radius:999px;padding:.2rem .55rem;font-weight:900}
   .a{background:#0b3b28;color:#8df1ba}.b{background:#273a12;color:#d1f28a}.c{background:#493711;color:#f5d278}.d{background:#49221e;color:#ffaaa3}.trust-ok{background:#0b3b28;color:#8df1ba}.trust-warn{background:#493711;color:#f5d278}.trust-bad{background:#49221e;color:#ffaaa3}
   .bar{height:8px;border-radius:999px;background:#10241b;overflow:hidden}.bar>div{height:100%;background:#34d399;width:0}
+
+  /* v0.6.1 · Mobil okunabilirlik katmanı */
+  .table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}
+  .sticky-c1,.sticky-c2,.sticky-c3,.sticky-c4,.sticky-c5{position:sticky;z-index:1;background:#0d1b15}
+  th.sticky-c1,th.sticky-c2,th.sticky-c3,th.sticky-c4,th.sticky-c5{z-index:4;background:#10241b}
+  @media (max-width:768px){
+    body{font-size:14px}
+    .card{border-radius:16px}
+    table{font-size:11px;min-width:max-content}
+    th,td{padding:8px 7px}
+    .table-wrap{max-width:100%;border-radius:12px}
+    .sticky-c1{left:0;min-width:42px}
+    .sticky-c2{left:42px;min-width:86px}
+    .sticky-c3{left:128px;min-width:72px}
+    .sticky-c4{left:200px;min-width:72px}
+    .sticky-c5{left:272px;min-width:88px}
+    .mobile-note{font-size:11px;line-height:1.45}
+  }
+
 </style>
 </head>
 <body>
@@ -29,7 +48,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.6</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v0.6.1</h1>
         <div class="muted mt-2">Şirket tipi sınıflandırması + sanayi kalite motoru + finansal alt-grup kalite motorları + veri güven motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -53,13 +72,14 @@
       <div>
         <h2 class="font-black text-xl">① Şirket Kalite Skoru /100</h2>
         <div class="text-xs muted mt-1">Eksik, aykırı ve düşük baz etkili veriler ayrıca sınıflandırılır. A+ olmak için yüksek kalite skorunun yanında yüksek veri güveni de gerekir.</div>
+        <div class="text-xs muted mt-2 mobile-note">📱 Mobilde ilk 5 kritik sütun sabit kalır; ayrıntı metrikleri için tabloyu sağa kaydır.</div>
       </div>
       <select id="sectorFilter" class="input ml-auto"><option value="">Tüm sektörler</option></select>
       <select id="gradeFilter" class="input">
         <option value="">Tüm sınıflar</option><option>A+</option><option>A</option><option>B</option><option>C</option><option>D</option><option>FİNANSAL</option>
       </select>
     </div>
-    <div class="overflow-auto max-h-[760px] mt-4"><table id="companyTable"></table></div>
+    <div class="table-wrap overflow-auto max-h-[760px] mt-4"><table id="companyTable"></table></div>
   </div>
 
   <div class="card p-5" style="border-color:#3b82f655">
@@ -82,14 +102,14 @@
       <div class="stat"><div class="muted text-xs">Medyan ROA</div><div id="finRoa" class="text-xl font-black">—</div></div>
       <div class="stat"><div class="muted text-xs">Finansal Alt Grup</div><div id="finGroupN" class="text-xl font-black">0</div></div>
     </div>
-    <div class="overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
-    <div class="text-xs muted mt-3">Finansal v0.6: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
+    <div class="table-wrap overflow-auto max-h-[620px] mt-4"><table id="financialTable"></table></div>
+    <div class="text-xs muted mt-3">Finansal v0.6.1: aynı temel metrikler kullanılır fakat percentile artık Banka, Sigorta, GYO, Holding/Yatırım ve Diğer Finansal grupların kendi içinde hesaplanır. Tam banka motorunda NIM, sermaye yeterliliği, takipteki kredi ve maliyet/gelir gibi özel kalemler veri kaynağı doğrulandıktan sonra eklenecek.</div>
   </div>
 
   <div class="card p-5">
     <h2 class="font-black text-xl">③ Sektör Ön Görünümü</h2>
     <div class="text-xs muted mt-1">Aşama 2 için temel: temizlenmiş sektör medyan kalite, ROIC, büyüme ve lider şirketler. Finansallar ayrı izlenir; henüz “rotasyon skoru” değildir.</div>
-    <div class="overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
+    <div class="table-wrap overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
   </div>
 
   <div class="card p-5">
@@ -368,6 +388,18 @@ function buildSectors(a){
     coverage:med(x.map(r=>r.dataTrust)),reliablePct:100*x.filter(r=>!r.financial&&r.dataTrust>=85).length/Math.max(1,x.filter(r=>!r.financial).length),leaders:[...x].filter(r=>!r.financial&&r.dataTrust>=65).sort((a,b)=>(b.score??-1)-(a.score??-1)).slice(0,3).map(r=>r.symbol).join(", ")||"Ayrı finansal model"
   })).sort((a,b)=>(b.score??-1)-(a.score??-1));
 }
+
+function applyMobileSticky(){
+  for(const id of ["companyTable","financialTable","sectorTable"]){
+    const t=$(id); if(!t) continue;
+    [...t.querySelectorAll("tr")].forEach(tr=>{
+      [...tr.children].forEach((c,i)=>{
+        c.classList.remove("sticky-c1","sticky-c2","sticky-c3","sticky-c4","sticky-c5");
+        if(i<5)c.classList.add(`sticky-c${i+1}`);
+      });
+    });
+  }
+}
 function render(){
   const sf=$("sectorFilter").value,gf=$("gradeFilter").value;
   const shown=rows.filter(r=>(!sf||r.sector===sf)&&(!gf||r.grade===gf));
@@ -396,6 +428,7 @@ function render(){
 
   $("sectorTable").innerHTML=`<thead><tr><th>#</th><th>Sektör</th><th>Şirket</th><th>Medyan Kalite</th><th>Medyan ROIC</th><th>Ciro Büy.</th><th>FAVÖK Büy.</th><th>Faaliyet Marjı</th><th>Medyan Güven</th><th>Güvenilir %</th><th>Liderler</th></tr></thead><tbody>`+
   sectorRows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.sector}</b></td><td>${r.n}</td><td><b>${cell(r.score,0)}</b></td><td>${cell(r.roic,1,"%")}</td><td>${cell(r.revG,1,"%")}</td><td>${cell(r.ebitdaG,1,"%")}</td><td>${cell(r.om,1,"%")}</td><td>${cell(r.coverage,0,"%")}</td><td>${cell(r.reliablePct,0,"%")}</td><td>${r.leaders}</td></tr>`).join("")+`</tbody>`;
+  applyMobileSticky();
 }
 async function run(){
   const b=$("scanBtn"),p=$("prog"),s=$("status");b.disabled=true;p.style.width="12%";s.textContent="Temel veriler alınıyor…";
