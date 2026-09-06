@@ -68,6 +68,14 @@
     #masterConsensusTable{touch-action:pan-x pan-y}
     #masterConsensusTable th,#masterConsensusTable td{white-space:nowrap}
   }
+
+  /* v1.2 global mobile table rule: only column 1 fixed */
+  .table-wrap{touch-action:pan-x pan-y}
+  table th,table td{white-space:nowrap}
+  @media (max-width:768px){
+    table .sticky-c1{left:0!important;min-width:42px!important;max-width:none!important;position:sticky!important}
+    table th:nth-child(n+2),table td:nth-child(n+2){position:static!important}
+  }
 </style>
 </head>
 <body>
@@ -76,7 +84,7 @@
     <div class="flex flex-wrap items-center gap-3">
       <div>
         <div class="text-xs font-black tracking-[.2em] text-emerald-300">BIST SCANNER PRO · BAĞIMSIZ MODÜL</div>
-        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v1.1</h1>
+        <h1 class="text-2xl md:text-3xl font-black mt-1">🏦 Temel Analiz Laboratuvarı v1.2</h1>
         <div class="muted mt-2">Şirket kalite motorları + veri güven motoru + Aşama 2 Sektör Güç / Rotasyon Motoru. Teknik taramalardan tamamen bağımsızdır.</div>
       </div>
       <button id="scanBtn" class="btn ml-auto" style="background:#103d2b;color:#9df1c5">▶ Temel Taramayı Başlat</button>
@@ -238,8 +246,26 @@
     <div class="text-xs muted mt-3"><b>Nihai Skor = Master %45 + Yapısal Güven %55.</b> A+ yalnızca güçlü yapısal zamanlama ile oluşur. Master skoru değiştirilmez; Aşama 5 ayrı bir karar katmanıdır. Ana tarayıcıdaki Yapı Laboratuvarı varsayılanları korunur.</div>
   </div>
 
+  <div class="card p-5" id="forwardTrackerCard">
+    <div class="flex flex-wrap items-center gap-3">
+      <div>
+        <h2 class="font-black text-xl">⑦ Nihai A/A+ İleri Performans Takibi</h2>
+        <div class="text-xs muted mt-1">Aşama 5'te Nihai A/A+ olan adayları ilk görüldüğü fiyatla cihazda saklar. Sonraki yapısal taramalarda fiyatı güncelleyerek ileri getiriyi ölçer; geçmiş kayıt yeni taramada silinmez.</div>
+      </div>
+      <button id="trackerClearBtn" class="btn ml-auto" style="background:#3a1f1f;color:#f3b3b3">Takip Geçmişini Temizle</button>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+      <div class="stat"><div class="muted text-xs">Takipte</div><div id="trackerN" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Pozitif</div><div id="trackerPos" class="text-xl font-black">0</div></div>
+      <div class="stat"><div class="muted text-xs">Medyan İleri Getiri</div><div id="trackerMed" class="text-xl font-black">—</div></div>
+      <div class="stat"><div class="muted text-xs">En İyi</div><div id="trackerBest" class="text-lg font-black">—</div></div>
+    </div>
+    <div class="table-wrap overflow-auto max-h-[620px] mt-4"><table id="trackerTable"></table></div>
+    <div class="text-xs muted mt-3">Bu bölüm backtest değildir; bugünden itibaren gerçek ileri gözlem kaydıdır. Tarayıcı/site verileri temizlenirse cihazdaki yerel takip geçmişi de silinebilir.</div>
+  </div>
+
   <div class="card p-5">
-    <h2 class="font-black text-xl">⑦ Sektör Ön Görünümü</h2>
+    <h2 class="font-black text-xl">⑧ Sektör Ön Görünümü</h2>
     <div class="text-xs muted mt-1">Aşama 2 için temel: temizlenmiş sektör medyan kalite, ROIC, büyüme ve lider şirketler. Finansallar ayrı izlenir; henüz “rotasyon skoru” değildir.</div>
     <div class="table-wrap overflow-auto max-h-[540px] mt-4"><table id="sectorTable"></table></div>
   </div>
@@ -728,21 +754,15 @@ function buildSectors(a){
 }
 
 function applyMobileSticky(){
-  const stickyLimits={
-    companyTable:5,
-    financialTable:5,
-    sectorRotationTable:5,
-    sectorLeadersTable:2,
-    masterConsensusTable:2,
-    timingTable:2,
-    sectorTable:5
-  };
-  for(const [id,limit] of Object.entries(stickyLimits)){
+  // v1.2: TÜM sonuç tablolarında yalnızca ilk sütun sabit.
+  // Diğer bütün sütunlar yatay kaydırılır; mobilde ekranı kapatmaz.
+  const ids=["companyTable","financialTable","sectorRotationTable","sectorLeadersTable","masterConsensusTable","timingTable","trackerTable","sectorTable"];
+  for(const id of ids){
     const t=$(id); if(!t) continue;
     [...t.querySelectorAll("tr")].forEach(tr=>{
       [...tr.children].forEach((c,i)=>{
         c.classList.remove("sticky-c1","sticky-c2","sticky-c3","sticky-c4","sticky-c5");
-        if(i<limit)c.classList.add(`sticky-c${i+1}`);
+        if(i===0)c.classList.add("sticky-c1");
       });
     });
   }
@@ -859,6 +879,33 @@ function timingGrade(finalScore,structureScore,newStage,masterGrade){
   if(finalScore>=64&&structureScore>=60&&newStage!=="YAPI ZAYIF")return"B";
   return"C";
 }
+const TRACKER_KEY="bistFundamentalFinalTrackerV12";
+function loadTracker(){try{return JSON.parse(localStorage.getItem(TRACKER_KEY)||"[]")||[]}catch(e){return[]}}
+function saveTracker(x){try{localStorage.setItem(TRACKER_KEY,JSON.stringify(x))}catch(e){}}
+function updateForwardTracker(){
+  const now=new Date().toISOString(), day=now.slice(0,10), db=loadTracker();
+  const by=Object.fromEntries(db.map(x=>[x.symbol,x]));
+  for(const r of timingRows.filter(r=>["A+","A"].includes(r.finalGrade))){
+    if(!timingFinite(r.close)||r.close<=0)continue;
+    let x=by[r.symbol];
+    if(!x){x=by[r.symbol]={symbol:r.symbol,firstDate:day,firstPrice:Number(r.close),firstGrade:r.finalGrade,firstScore:r.finalScore,sector:sectorTR(r.sector),latestDate:day,latestPrice:Number(r.close),latestGrade:r.finalGrade,latestScore:r.finalScore,scans:1,maxPrice:Number(r.close),minPrice:Number(r.close)};db.push(x)}
+    else if(x.latestDate!==day){x.scans=(x.scans||1)+1;x.latestDate=day;x.latestPrice=Number(r.close);x.latestGrade=r.finalGrade;x.latestScore=r.finalScore;x.maxPrice=Math.max(Number(x.maxPrice||x.firstPrice),Number(r.close));x.minPrice=Math.min(Number(x.minPrice||x.firstPrice),Number(r.close))}
+    else{x.latestPrice=Number(r.close);x.latestGrade=r.finalGrade;x.latestScore=r.finalScore;x.maxPrice=Math.max(Number(x.maxPrice||x.firstPrice),Number(r.close));x.minPrice=Math.min(Number(x.minPrice||x.firstPrice),Number(r.close))}
+  }
+  saveTracker(db);renderTracker();
+}
+function renderTracker(){
+  const db=loadTracker().map(x=>({...x,ret:(timingFinite(x.firstPrice)&&timingFinite(x.latestPrice)&&Number(x.firstPrice)>0)?100*(Number(x.latestPrice)/Number(x.firstPrice)-1):NaN})).sort((a,b)=>(b.ret??-999)-(a.ret??-999));
+  if($("trackerN"))$("trackerN").textContent=db.length;
+  if($("trackerPos"))$("trackerPos").textContent=db.filter(x=>timingFinite(x.ret)&&x.ret>0).length;
+  const rs=db.map(x=>x.ret).filter(timingFinite);if($("trackerMed"))$("trackerMed").textContent=rs.length?timingFmt(med(rs),2)+"%":"—";
+  if($("trackerBest"))$("trackerBest").textContent=db.length?`${db[0].symbol} ${timingFmt(db[0].ret,2)}%`:"—";
+  const t=$("trackerTable");if(!t)return;
+  t.innerHTML=`<thead><tr>${["#","Hisse","İlk Tarih","İlk Fiyat","İlk Sınıf","İlk Skor","Son Tarih","Son Fiyat","Son Sınıf","Son Skor","İleri Getiri %","Gözlem","Maks. Fiyat","Min. Fiyat","Sektör"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+    db.map((x,i)=>`<tr><td>${i+1}</td><td><b>${x.symbol}</b></td><td>${x.firstDate}</td><td>${timingFmt(x.firstPrice,2)}</td><td><span class="pill ${gcls(x.firstGrade)}">${x.firstGrade}</span></td><td>${x.firstScore}</td><td>${x.latestDate}</td><td>${timingFmt(x.latestPrice,2)}</td><td><span class="pill ${gcls(x.latestGrade)}">${x.latestGrade}</span></td><td>${x.latestScore}</td><td><b>${timingFmt(x.ret,2)}%</b></td><td>${x.scans||1}</td><td>${timingFmt(x.maxPrice,2)}</td><td>${timingFmt(x.minPrice,2)}</td><td>${x.sector||"—"}</td></tr>`).join("")+`</tbody>`;
+  applyMobileSticky();
+}
+
 function renderTiming(){
   const filter=$("timingClassFilter")?.value||"",minS=Math.max(0,timingVal("timingMinStructure"));
   const shown=timingRows.filter(r=>r.structureScore>=minS&&(!filter||r.finalGrade===filter)).sort((a,b)=>b.finalScore-a.finalScore||b.structureScore-a.structureScore);
@@ -886,7 +933,7 @@ async function runTiming(){
         done++;p.style.width=(100*done/candidates.length)+"%";s.textContent=`${done}/${candidates.length} · sonuç ${timingRows.length} · hata ${errors}`;if(done%3===0){renderTiming();await new Promise(r=>setTimeout(r,0))}
       }
     }
-    await Promise.all(Array.from({length:Math.min(4,candidates.length)},worker));renderTiming();
+    await Promise.all(Array.from({length:Math.min(4,candidates.length)},worker));renderTiming();updateForwardTracker();
     s.textContent=`Tamamlandı · ${candidates.length} Master A/A+ → ${timingRows.length} yapısal sonuç · Nihai A/A+ ${timingRows.filter(r=>["A+","A"].includes(r.finalGrade)).length} · hata ${errors}`;
   }finally{b.disabled=false}
 }
@@ -1014,9 +1061,12 @@ function excel(){
     const tz=timingRows.map(r=>({Hisse:r.symbol,Nihai_Skor:r.finalScore,Nihai_Sınıf:r.finalGrade,Master_Skor:r.masterScore,Master_Sınıf:r.masterGrade,Yapısal_Güven:r.structureScore,Erkenlik:r.early,Yeni_Aşama:r.newStage,Günlük_Yapı:r.structure,Konum:r.location,Sweep:r.sweep,MSS_BOS:r.mss,MSS_Yaşı:r.mssAge,H4_Yapı:r.h4,H4_Teyit:r.h4ok,Hacim_Oranı:r.volume,RSI:r.rsi,R_R:r.rr,EMA20_Uzak_Yüzde:r.distE20,Getiri_20G:r.ret20,Getiri_60G:r.ret60,Engele_Yüzde:r.obstaclePct,Kırılım:r.breakout,Sektör:sectorTR(r.sector)}));
     XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tz),"Yapısal Zamanlama");
   }
+  const tr=loadTracker().map(x=>({Hisse:x.symbol,İlk_Tarih:x.firstDate,İlk_Fiyat:x.firstPrice,İlk_Sınıf:x.firstGrade,İlk_Skor:x.firstScore,Son_Tarih:x.latestDate,Son_Fiyat:x.latestPrice,Son_Sınıf:x.latestGrade,Son_Skor:x.latestScore,İleri_Getiri_Yüzde:(Number(x.firstPrice)>0?100*(Number(x.latestPrice)/Number(x.firstPrice)-1):null),Gözlem:x.scans,Maks_Fiyat:x.maxPrice,Min_Fiyat:x.minPrice,Sektör:x.sector}));
+  if(tr.length)XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(tr),"İleri Performans");
   XLSX.writeFile(wb,`BIST_Temel_Analiz_Lab_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 $("scanBtn").onclick=run;$("excelBtn").onclick=excel;$("sectorFilter").onchange=render;$("gradeFilter").onchange=render;$("finGradeFilter").onchange=render;$("finTypeFilter").onchange=render;$("sectorRotClassFilter").onchange=render;$("leaderSectorFilter").onchange=render;$("leaderClassFilter").onchange=render;$("masterClassFilter").onchange=render;$("timingBtn").onclick=runTiming;$("timingClassFilter").onchange=renderTiming;$("timingMinStructure").onchange=renderTiming;
+$("trackerClearBtn").onclick=()=>{if(confirm("İleri performans takip geçmişi temizlensin mi?")){localStorage.removeItem(TRACKER_KEY);renderTracker()}};renderTracker();
 </script>
 </body>
 </html>
