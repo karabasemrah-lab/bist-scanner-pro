@@ -26,6 +26,7 @@ KAP_COMPANIES_URL = KAP_BASE + "/tr/api/company/items/IGS/A"
 KAP_DISCLOSURES_URL = KAP_BASE + "/tr/api/disclosure/members/byCriteria"
 KAP_DETAIL_URL = KAP_BASE + "/tr/api/notification/attachment-detail/{index}"
 KAP_COMPANY_LIST_PAGE = KAP_BASE + "/tr/bist-sirketler"
+JINA_READER_BASE = "https://r.jina.ai/http://www.kap.org.tr"
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -960,6 +961,63 @@ def _summary_values_from_text(text: str, headers, *labels):
             return vals
     return []
 
+def _kap_summary_rendered_text(url: str, symbol: str):
+    """KAP özet finansal sayfasının gerçekten render edilmiş metnini getir.
+
+    KAP'ın doğrudan HTML cevabı bazı istemcilere yalnız uygulama kabuğu döndürüyor.
+    Önce resmi KAP HTML'ini dener; finansal işaretler yoksa yalnız public KAP URL'ini
+    Jina Reader üzerinden metne çeviren düşük frekanslı fallback'i kullanır.
+    Dönen verinin kaynağı yine KAP sayfasıdır; proxy yalnız render/okuma katmanıdır.
+    """
+    attempts = []
+
+    # 1) Resmi KAP doğrudan HTML
+    try:
+        r = SESSION.get(url, timeout=20, headers={
+            "Referer": KAP_BASE + "/tr/",
+            "Accept": "text/html,application/xhtml+xml",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/149 Safari/537.36",
+        })
+        r.raise_for_status()
+        direct_visible = _html_visible_text(r.text)
+        direct_norm = _norm_fin_label(direct_visible)
+        direct_ok = (
+            "finansal durum tablosu" in direct_norm
+            and ("hasilat" in direct_norm or "toplam varliklar" in direct_norm)
+            and bool(re.search(r"20\\d{2}/(?:03|06|09|12)", direct_visible))
+        )
+        attempts.append({"mode":"kap_direct","status":r.status_code,"bytes":len(r.content),"ok":bool(direct_ok)})
+        if direct_ok:
+            return direct_visible, "kap_direct", attempts
+    except Exception as exc:
+        attempts.append({"mode":"kap_direct","ok":False,"error":str(exc)[:220]})
+
+    # 2) Public KAP sayfasını render edilmiş metin olarak oku.
+    #    Sadece direct KAP dinamik kabuk döndürdüğünde çalışır ve sonuç uzun süre cache'lenir.
+    try:
+        path = re.sub(r"^https?://(?:www\\.)?kap\\.org\\.tr", "", url, flags=re.I)
+        reader_url = JINA_READER_BASE + path
+        rr = SESSION.get(reader_url, timeout=30, headers={
+            "Accept": "text/plain,text/markdown,*/*",
+            "User-Agent": "BIST-Scanner-Pro/1.0 (+public-KAP-reader)",
+        })
+        rr.raise_for_status()
+        txt = html_lib.unescape(rr.text or "")
+        norm = _norm_fin_label(txt)
+        ok = (
+            "finansal durum tablosu" in norm
+            and ("hasilat" in norm or "toplam varliklar" in norm)
+            and bool(re.search(r"20\\d{2}/(?:03|06|09|12)", txt))
+        )
+        attempts.append({"mode":"kap_via_reader","status":rr.status_code,"bytes":len(rr.content),"ok":bool(ok)})
+        if ok:
+            return txt, "kap_via_reader", attempts
+    except Exception as exc:
+        attempts.append({"mode":"kap_via_reader","ok":False,"error":str(exc)[:220]})
+
+    return "", "unavailable", attempts
+
+
 def _kap_summary_financial_snapshot(symbol: str, company: dict):
     page_id = _kap_financial_page_id(company, symbol)
     if not page_id:
@@ -968,42 +1026,50 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold()
                   .replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
     url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}"
-    key = f"kap:finsummary:v036:{symbol}:{page_id}"
+    key = f"kap:finsummary:v037:{symbol}:{page_id}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
 
-    r = SESSION.get(url, timeout=20, headers={"Referer": KAP_BASE + "/tr/", "Accept": "text/html,application/xhtml+xml"})
-    r.raise_for_status()
-    parser = _SimpleHtmlTableParser(); parser.feed(r.text)
-    rows = parser.rows
-    headers = _summary_headers(rows)
-    parser_mode = "html_table"
+    rendered_text, fetch_mode, fetch_attempts = _kap_summary_rendered_text(url, symbol)
+    parser_mode = fetch_mode
 
-    rev = _summary_row(rows, "Hasılat")
-    op = _summary_row(rows, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
-    net = _summary_row(rows, "Net Dönem Kârı (Zararı)", "Net Dönem Karı (Zararı)")
-    assets = _summary_row(rows, "Toplam Varlıklar")
-    liab = _summary_row(rows, "Toplam Yükümlülükler")
-    cash = _summary_row(rows, "Nakit ve Nakit Benzerleri")
+    # Direct HTML yolu gerçekten veri içeriyorsa klasik tablo parser'ı da kullanılabilir.
+    # Render edilmiş metin yolunda doğrudan satır/metin ayrıştırması yapılır.
+    rows = []
+    headers = []
+    rev = op = net = assets = liab = cash = []
 
-    # KAP arayüzü bazı sürümlerde tabloyu <tr>/<td> yerine div/span yapısıyla render ediyor.
-    # Bu durumda görünür metin üzerinden aynı finansal satırları yakala.
-    if not headers or not any((rev, op, net, assets, liab)):
-        visible = _html_visible_text(r.text)
-        text_headers = _period_headers_from_text(visible)
-        if text_headers:
-            headers = text_headers
-            rev = _summary_values_from_text(visible, headers, "Hasılat")
-            op = _summary_values_from_text(visible, headers, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
-            net = _summary_values_from_text(visible, headers, "Net Dönem Kârı (Zararı)", "Net Dönem Karı (Zararı)")
-            assets = _summary_values_from_text(visible, headers, "Toplam Varlıklar")
-            liab = _summary_values_from_text(visible, headers, "Toplam Yükümlülükler")
-            cash = _summary_values_from_text(visible, headers, "Nakit ve Nakit Benzerleri")
-            parser_mode = "visible_text"
+    if rendered_text:
+        headers = _period_headers_from_text(rendered_text)
+        rev = _summary_values_from_text(rendered_text, headers, "Hasılat")
+        op = _summary_values_from_text(rendered_text, headers, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
+        net = _summary_values_from_text(rendered_text, headers, "Net Dönem Kârı (Zararı)", "Net Dönem Karı (Zararı)")
+        assets = _summary_values_from_text(rendered_text, headers, "Toplam Varlıklar")
+        liab = _summary_values_from_text(rendered_text, headers, "Toplam Yükümlülükler")
+        cash = _summary_values_from_text(rendered_text, headers, "Nakit ve Nakit Benzerleri")
+
+    # Bazı reader cevaplarında tablo satırları tek satırda Markdown pipe biçimindedir.
+    # İlk yöntem eksik kaldıysa pipe satırlarını doğrudan hücrelere ayır.
+    if rendered_text and (not headers or not any((rev, op, net, assets, liab))):
+        md_rows=[]
+        for ln in rendered_text.splitlines():
+            if "|" not in ln: continue
+            cells=[c.strip() for c in ln.strip().strip("|").split("|")]
+            if cells: md_rows.append(cells)
+        md_headers=_summary_headers(md_rows)
+        if md_headers:
+            headers=md_headers
+            rev=_summary_row(md_rows,"Hasılat")
+            op=_summary_row(md_rows,"Esas Faaliyet Kârı (Zararı)","Esas Faaliyet Karı (Zararı)")
+            net=_summary_row(md_rows,"Net Dönem Kârı (Zararı)","Net Dönem Karı (Zararı)")
+            assets=_summary_row(md_rows,"Toplam Varlıklar")
+            liab=_summary_row(md_rows,"Toplam Yükümlülükler")
+            cash=_summary_row(md_rows,"Nakit ve Nakit Benzerleri")
+            parser_mode = fetch_mode + "+markdown_table"
 
     n = max(len(headers), len(rev), len(op), len(net), len(assets), len(liab))
     if n == 0:
-        snap={"available":False,"reason":"KAP Özet Finansal Bilgiler tablosu ayrıştırılamadı.","source":"kap_summary","kap_url":url,"parser_mode":parser_mode,"html_bytes":len(r.text)}
+        snap={"available":False,"reason":"KAP Özet Finansal Bilgiler verisi okunamadı.","source":"kap_summary","kap_url":url,"parser_mode":parser_mode,"fetch_attempts":fetch_attempts}
         _cache_json_set(key, 60*60, snap); return snap
 
     # Sağdaki sütun en güncel dönemdir. Özet sayfa geçmiş yıllarda yalnız yıllık sütunlar
@@ -1053,7 +1119,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     def r2(x): return None if x is None else round(x,2)
     snap={
       "available": any(v is not None for v in (rev_cur,op_cur,net_cur,assets_cur)),
-      "source":"kap_summary","parser_mode":parser_mode,"page_id":page_id,"comparison_period": headers[prev_i] if prev_i is not None else None,
+      "source":"kap_summary","parser_mode":parser_mode,"page_id":page_id,"fetch_attempts":fetch_attempts,"comparison_period": headers[prev_i] if prev_i is not None else None,
       "period":cur_period,"scores":{"bilanco":bilanco_score,"cash":cash_score},
       "metrics":{
         "revenue":{"current":rev_cur,"previous":rev_prev,"growth_pct":r2(rev_g)},
@@ -1067,13 +1133,13 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
       },
       "score_breakdown":{"revenue":s_rev,"operating_profit":s_op,"net_profit":s_net,"margin":s_margin,"cash_level":s_cash_level,"leverage":s_lev},
       "kap_url":url,
-      "note":"Özet finansal sayfa kullanıldı. Aynı dönem geçen yıl sütunu yoksa büyüme puanı sınırlı tutulur; OCF uydurulmaz."
+      "note":"KAP Özet Finansal Bilgiler sayfası kullanıldı. Direct KAP dinamik kabuk döndürürse yalnız render/okuma için public text-reader fallback kullanılır. Aynı dönem geçen yıl yoksa büyüme puanı sınırlı tutulur; OCF uydurulmaz."
     }
     _cache_json_set(key,_FIN_TTL,snap); return snap
 
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.6: doğru KAP şirket sayfa ID eşlemesi + özet finansal parser; FR sayfası son çare."""
+    """v0.3.7: doğru KAP page-id + render edilmiş özet finansal metin; FR son çare."""
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -1240,7 +1306,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v036:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v037:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
