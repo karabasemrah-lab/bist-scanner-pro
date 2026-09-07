@@ -1252,6 +1252,44 @@ def story_api():
         return jsonify({"error": f"Hikâye motoru hatası: {exc}"}), 500
 
 
+
+@app.get("/api/story-debug")
+def story_debug_api():
+    """Geçici teşhis ucu: KAP finansal sayfasının Render'da nasıl geldiğini gösterir."""
+    symbol = _story_symbol(request.args.get("symbol", ""))
+    if not symbol:
+        return jsonify({"error": "geçerli symbol gerekli"}), 400
+    try:
+        company = _kap_find_company(symbol)
+        if not company:
+            return jsonify({"error": f"{symbol} KAP şirket listesinde bulunamadı"}), 404
+        oid = str(company.get("mkkMemberOid") or "")
+        page_id = _kap_financial_page_id(company, symbol)
+        slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold().replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
+        url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}" if page_id else None
+        result = {"symbol":symbol,"company":company.get("kapMemberTitle"),"oid":oid,"page_id":page_id,"financial_url":url,"company_keys":sorted(str(k) for k in company.keys())}
+        if not url:
+            result["error"] = "Finansal sayfa kimliği bulunamadı"
+            return jsonify(result), 200
+        r = SESSION.get(url, timeout=20, headers={"Referer":KAP_BASE+"/tr/","Accept":"text/html,application/xhtml+xml"})
+        result.update({"http_status":r.status_code,"content_type":r.headers.get("Content-Type"),"html_bytes":len(r.content),"final_url":r.url})
+        r.raise_for_status()
+        parser=_SimpleHtmlTableParser(); parser.feed(r.text); rows=parser.rows
+        visible=_html_visible_text(r.text); headers=_summary_headers(rows); text_headers=_period_headers_from_text(visible)
+        labels=["Hasılat","Esas Faaliyet Kârı","Esas Faaliyet Karı","Net Dönem Kârı","Net Dönem Karı","Toplam Varlıklar","Toplam Yükümlülükler","Nakit ve Nakit Benzerleri"]
+        visible_lines=[ln.strip() for ln in visible.splitlines() if ln.strip()]; evidence=[]
+        for i,ln in enumerate(visible_lines):
+            nln=_norm_fin_label(ln)
+            if any(_norm_fin_label(label) in nln for label in labels): evidence.extend(visible_lines[max(0,i-1):min(len(visible_lines),i+5)])
+            if len(evidence)>=40: break
+        low_html=r.text.casefold()
+        result.update({"table_row_count":len(rows),"table_headers":headers,"text_period_headers":text_headers,"marker_hits":{"hasilat":"hasılat" in r.text.casefold() or "hasilat" in _norm_fin_label(visible),"finansal_durum":"finansal durum tablosu" in _norm_fin_label(visible),"ifrs_revenue":"ifrs-full_revenue" in low_html,"next_data":"__next_data__" in low_html,"script_json":"application/json" in low_html},"sample_rows":rows[:20],"financial_evidence":evidence[:40],"visible_prefix":visible[:5000]})
+        return jsonify(result), 200
+    except requests.RequestException as exc:
+        return jsonify({"symbol":symbol,"error":f"KAP bağlantı hatası: {exc}"}), 502
+    except Exception as exc:
+        return jsonify({"symbol":symbol,"error":f"Story debug hatası: {exc}"}), 500
+
 @app.get("/api/metrics")
 def metrics():
     with _metrics_lock:
