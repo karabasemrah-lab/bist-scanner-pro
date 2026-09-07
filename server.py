@@ -10,6 +10,7 @@ import time
 import threading
 import re
 import html as html_lib
+from html.parser import HTMLParser
 from collections import OrderedDict, defaultdict
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -320,12 +321,12 @@ def yahoo_proxy():
 
 
 # ---------------------------------------------------------------------
-# Hikâye Radar v0.2 · KAP katalizör katmanı
+# Hikâye Radar v0.3 · KAP katalizör + finansal doğrulama katmanı
 # ---------------------------------------------------------------------
 # Bu katman KAP'ın herkese açık web uçlarını yalnızca düşük yoğunlukta kullanır.
 # Şirket listesi 24 saat, hisse bazlı hikâye sonucu 6 saat cache'lenir.
-# Finansal tablo büyüme/marj puanı bu sürümde bilinçli olarak otomatik verilmez;
-# yalnız gerçekten ölçülebilir KAP katalizörleri puanlanır.
+# KAP katalizörünün yanında en son finansal rapordaki cari/önceki dönem
+# karşılaştırmalarından bilanço (0-25) ve kârlılık/nakit (0-15) puanı üretir.
 
 _STORY_LOOKBACK_DAYS = int(os.environ.get("STORY_LOOKBACK_DAYS", "180"))
 _STORY_TTL = int(os.environ.get("STORY_CACHE_SECONDS", str(6 * 60 * 60)))
@@ -527,6 +528,293 @@ def _extract_materiality(text: str) -> str:
             break
     return " · ".join(pieces)
 
+
+
+# ---------------------------------------------------------------------
+# Hikâye Radar v0.3 · finansal rapor ayrıştırma / puanlama
+# ---------------------------------------------------------------------
+_FIN_TTL = int(os.environ.get("STORY_FIN_CACHE_SECONDS", str(12 * 60 * 60)))
+
+class _KapTableParser(HTMLParser):
+    """KAP disclosureBody içindeki tabloları bağımlılık eklemeden satır/hücrelere ayırır."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows = []
+        self._row = None
+        self._cell = None
+        self._cell_depth = 0
+
+    def handle_starttag(self, tag, attrs):
+        tag = tag.lower()
+        if tag == "tr":
+            self._row = []
+        elif tag in ("td", "th") and self._row is not None:
+            self._cell = []
+            self._cell_depth = 1
+        elif self._cell is not None:
+            self._cell_depth += 1
+
+    def handle_endtag(self, tag):
+        tag = tag.lower()
+        if tag in ("td", "th") and self._cell is not None:
+            txt = re.sub(r"\s+", " ", " ".join(self._cell)).strip()
+            self._row.append(txt)
+            self._cell = None
+            self._cell_depth = 0
+        elif tag == "tr" and self._row is not None:
+            if self._row:
+                self.rows.append(self._row)
+            self._row = None
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            t = str(data or "").strip()
+            if t:
+                self._cell.append(t)
+
+
+def _kap_detail_json(index):
+    if not index:
+        return {}
+    key = f"kap:detailjson:{index}"
+    cached = _cache_json_get(key)
+    if cached is not None:
+        return cached
+    url = KAP_DETAIL_URL.format(index=index)
+    r = SESSION.get(url, timeout=20, headers=_kap_headers(KAP_BASE + f"/tr/Bildirim/{index}"))
+    r.raise_for_status()
+    j = r.json()
+    item = j[0] if isinstance(j, list) and j else (j if isinstance(j, dict) else {})
+    # Finansal rapor gövdeleri büyük olabilir. Ham gövdeyi genel RAM cache'e yığmak yerine
+    # bu fonksiyonu yalnız finansal snapshot oluşturulurken kullanıyoruz.
+    return item
+
+
+def _tr_number(v):
+    s = html_lib.unescape(str(v or "")).strip()
+    if not s or s in ("-", "—"):
+        return None
+    s = s.replace("\xa0", " ").replace(" ", "")
+    # Hücre yalnız sayı olmalı; tarih, yüzde veya açıklama metnini alma.
+    if not re.fullmatch(r"[-+]?\(?\d{1,3}(?:\.\d{3})*(?:,\d+)?\)?|[-+]?\(?\d+(?:,\d+)?\)?", s):
+        return None
+    neg_paren = s.startswith("(") and s.endswith(")")
+    s = s.strip("()")
+    if "." in s and "," in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "." in s:
+        # KAP TL tablolarında nokta çoğunlukla binlik ayırıcıdır.
+        parts = s.split(".")
+        s = "".join(parts) if all(len(x) == 3 for x in parts[1:]) else s
+    elif "," in s:
+        s = s.replace(",", ".")
+    try:
+        x = float(s)
+        return -x if neg_paren else x
+    except Exception:
+        return None
+
+
+def _row_numbers(row):
+    vals = []
+    for c in row:
+        x = _tr_number(c)
+        if x is not None:
+            vals.append(x)
+    return vals
+
+
+def _find_fin_row(rows, taxonomy=None, label=None, prefer_values=2):
+    candidates = []
+    for row in rows:
+        joined = " | ".join(row)
+        low = joined.casefold()
+        ok = False
+        if taxonomy and taxonomy.casefold() in low:
+            ok = True
+        if label and label.casefold() in low:
+            ok = True
+        if not ok:
+            continue
+        nums = _row_numbers(row)
+        if len(nums) >= prefer_values:
+            candidates.append((len(nums), row, nums))
+    if not candidates:
+        return None
+    # Gelir tablosunda 4 karşılaştırmalı değer olan satırı; bilanço/nakitte en dolu satırı tercih et.
+    candidates.sort(key=lambda x: x[0], reverse=True)
+    nums = candidates[0][2]
+    return nums[-prefer_values:]
+
+
+def _pct_change(cur, prev):
+    if cur is None or prev is None or abs(prev) < 1e-9:
+        return None
+    return (cur / prev - 1.0) * 100.0
+
+
+def _safe_ratio(a, b):
+    if a is None or b is None or abs(b) < 1e-9:
+        return None
+    return a / b
+
+
+def _score_growth(g, cuts=(5, 15, 30), pts=(2, 4, 6, 8)):
+    if g is None or g <= 0:
+        return 0
+    if g >= cuts[2]: return pts[3]
+    if g >= cuts[1]: return pts[2]
+    if g >= cuts[0]: return pts[1]
+    return pts[0]
+
+
+def _score_profit(cur, prev, max_pts):
+    if cur is None or prev is None:
+        return 0
+    if cur > 0 and prev <= 0:
+        return max_pts
+    if cur <= 0:
+        return 0
+    if prev <= 0:
+        return max(1, max_pts - 1)
+    g = _pct_change(cur, prev)
+    if g is None: return 0
+    if g >= 30: return max_pts
+    if g >= 10: return max(1, max_pts - 2)
+    if g > 0: return max(1, max_pts - 4)
+    return 1
+
+
+def _latest_financial_disclosure(disclosures):
+    fr = []
+    for d in disclosures:
+        blob = " ".join(str(d.get(k) or "") for k in ("subject", "summary", "disclosureType", "disclosureCategory")).casefold()
+        if "finansal rapor" in blob or str(d.get("disclosureType") or "").upper() == "FR":
+            dt = _parse_publish_date(d.get("publishDate"))
+            fr.append((dt or datetime.min.replace(tzinfo=ZoneInfo("Europe/Istanbul")), d))
+    fr.sort(key=lambda x: x[0], reverse=True)
+    return fr[0][1] if fr else None
+
+
+def _financial_snapshot(symbol: str, disclosures: list):
+    fr = _latest_financial_disclosure(disclosures)
+    if not fr:
+        return {"available": False, "reason": "Son dönemde Finansal Rapor bildirimi bulunamadı."}
+    idx = fr.get("disclosureIndex")
+    key = f"kap:fin:v03:{symbol}:{idx}"
+    cached = _cache_json_get(key)
+    if cached is not None:
+        return cached
+
+    item = _kap_detail_json(idx)
+    body = item.get("disclosureBody") or []
+    if isinstance(body, str):
+        body = [body]
+    parser = _KapTableParser()
+    for part in body:
+        try:
+            parser.feed(str(part or ""))
+        except Exception:
+            pass
+    rows = parser.rows
+
+    # Gelir tablosu: son 4 sayının ilk ikisi cari ve aynı dönem geçen yıldır.
+    rev4 = _find_fin_row(rows, taxonomy="ifrs-full_Revenue", label="Hasılat", prefer_values=4)
+    op4 = _find_fin_row(rows, label="Esas Faaliyet Kârı (Zararı)", prefer_values=4)
+    if op4 is None:
+        op4 = _find_fin_row(rows, label="Esas Faaliyet Karı (Zararı)", prefer_values=4)
+    net4 = _find_fin_row(rows, taxonomy="ifrs-full_ProfitLoss", prefer_values=4)
+
+    # Nakit akışında ve bilançoda iki ana karşılaştırma sütunu bulunur.
+    ocf2 = _find_fin_row(rows, taxonomy="ifrs-full_CashFlowsFromUsedInOperatingActivities", prefer_values=2)
+    assets2 = _find_fin_row(rows, taxonomy="ifrs-full_Assets", label="TOPLAM VARLIKLAR", prefer_values=2)
+    liab2 = _find_fin_row(rows, taxonomy="ifrs-full_Liabilities", label="TOPLAM YÜKÜMLÜLÜKLER", prefer_values=2)
+    cash2 = _find_fin_row(rows, taxonomy="ifrs-full_CashAndCashEquivalents", prefer_values=2)
+
+    def first2(v):
+        return (v[0], v[1]) if v and len(v) >= 2 else (None, None)
+    rev_cur, rev_prev = first2(rev4)
+    op_cur, op_prev = first2(op4)
+    net_cur, net_prev = first2(net4)
+    ocf_cur, ocf_prev = first2(ocf2)
+    assets_cur, assets_prev = first2(assets2)
+    liab_cur, liab_prev = first2(liab2)
+    cash_cur, cash_prev = first2(cash2)
+
+    rev_g = _pct_change(rev_cur, rev_prev)
+    op_g = _pct_change(op_cur, op_prev)
+    net_g = _pct_change(net_cur, net_prev)
+    ocf_g = _pct_change(ocf_cur, ocf_prev)
+    margin_cur = (_safe_ratio(op_cur, rev_cur) or 0) * 100 if op_cur is not None and rev_cur else None
+    margin_prev = (_safe_ratio(op_prev, rev_prev) or 0) * 100 if op_prev is not None and rev_prev else None
+    margin_delta = (margin_cur - margin_prev) if margin_cur is not None and margin_prev is not None else None
+
+    # Bilanço 0-25: satış 8 + esas faaliyet 7 + net kâr 6 + faaliyet marjı 4.
+    s_rev = _score_growth(rev_g)
+    s_op = _score_profit(op_cur, op_prev, 7)
+    s_net = _score_profit(net_cur, net_prev, 6)
+    if margin_delta is None:
+        s_margin = 0
+    elif margin_delta >= 3: s_margin = 4
+    elif margin_delta >= 1: s_margin = 3
+    elif margin_delta > 0: s_margin = 2
+    elif margin_cur is not None and margin_cur > 0: s_margin = 1
+    else: s_margin = 0
+    bilanço_score = min(25, s_rev + s_op + s_net + s_margin)
+
+    # Kârlılık/Nakit 0-15: OCF seviyesi 5 + OCF yönü 4 + kârın nakde dönüşümü 3 + yükümlülük/varlık yönü 3.
+    s_ocf_level = 5 if ocf_cur is not None and ocf_cur > 0 else 0
+    if ocf_cur is not None and ocf_prev is not None and ocf_cur > 0 and ocf_prev <= 0:
+        s_ocf_growth = 4
+    elif ocf_g is not None and ocf_g >= 25: s_ocf_growth = 4
+    elif ocf_g is not None and ocf_g >= 5: s_ocf_growth = 3
+    elif ocf_g is not None and ocf_g > 0: s_ocf_growth = 2
+    else: s_ocf_growth = 0
+    conv = _safe_ratio(ocf_cur, net_cur) if net_cur is not None and net_cur > 0 else None
+    if conv is not None and conv >= 1: s_conv = 3
+    elif conv is not None and conv >= .5: s_conv = 2
+    elif conv is not None and conv > 0: s_conv = 1
+    else: s_conv = 0
+    lev_cur = _safe_ratio(liab_cur, assets_cur)
+    lev_prev = _safe_ratio(liab_prev, assets_prev)
+    if lev_cur is not None and lev_prev is not None:
+        improvement = (lev_prev - lev_cur) * 100
+        if improvement >= 3: s_lev = 3
+        elif improvement > 0: s_lev = 2
+        elif lev_cur < .5: s_lev = 1
+        else: s_lev = 0
+    else:
+        s_lev = 0
+    cash_score = min(15, s_ocf_level + s_ocf_growth + s_conv + s_lev)
+
+    def r2(x): return None if x is None else round(x, 2)
+    snap = {
+        "available": any(v is not None for v in (rev_cur, op_cur, net_cur, ocf_cur)),
+        "disclosure_index": idx,
+        "publish_date": fr.get("publishDate"),
+        "year": fr.get("year"),
+        "period": fr.get("period"),
+        "scores": {"bilanco": bilanço_score, "cash": cash_score},
+        "metrics": {
+            "revenue": {"current": rev_cur, "previous": rev_prev, "growth_pct": r2(rev_g)},
+            "operating_profit": {"current": op_cur, "previous": op_prev, "growth_pct": r2(op_g)},
+            "net_profit": {"current": net_cur, "previous": net_prev, "growth_pct": r2(net_g)},
+            "operating_margin_pct": {"current": r2(margin_cur), "previous": r2(margin_prev), "delta_pp": r2(margin_delta)},
+            "operating_cash_flow": {"current": ocf_cur, "previous": ocf_prev, "growth_pct": r2(ocf_g)},
+            "cash": {"current": cash_cur, "previous": cash_prev},
+            "liabilities_to_assets": {"current": r2(lev_cur), "previous": r2(lev_prev)},
+            "cash_conversion": r2(conv),
+        },
+        "score_breakdown": {
+            "revenue": s_rev, "operating_profit": s_op, "net_profit": s_net, "margin": s_margin,
+            "ocf_level": s_ocf_level, "ocf_growth": s_ocf_growth, "cash_conversion": s_conv, "leverage": s_lev,
+        },
+        "kap_url": KAP_BASE + f"/tr/Bildirim/{idx}",
+    }
+    _cache_json_set(key, _FIN_TTL, snap)
+    return snap
+
+
 def _build_story_payload(symbol: str):
     company = _kap_find_company(symbol)
     if not company:
@@ -535,6 +823,7 @@ def _build_story_payload(symbol: str):
     if not oid:
         raise RuntimeError(f"{symbol} için KAP şirket OID bilgisi bulunamadı")
     disclosures = _kap_disclosures(symbol, oid, _STORY_LOOKBACK_DAYS)
+    financial = _financial_snapshot(symbol, disclosures)
     now = datetime.now(ZoneInfo("Europe/Istanbul"))
 
     candidates = []
@@ -574,13 +863,14 @@ def _build_story_payload(symbol: str):
     if not best:
         return {
             "symbol": symbol,
-            "scores": {"kap": 0},
+            "scores": {"kap": 0, "bilanco": (financial.get("scores") or {}).get("bilanco", 0), "cash": (financial.get("scores") or {}).get("cash", 0)},
             "story_type": "Diğer",
             "source": "KAP",
             "source_date": now.date().isoformat(),
             "summary": f"Son {_STORY_LOOKBACK_DAYS} günde otomatik sözlükte güçlü katalizör eşleşmesi bulunamadı.",
             "impact": "Ölçülebilir hikâye etkisi bulunamadı; bu sonuç 'hikâye yok' anlamına gelmez.",
-            "explanation": f"{symbol}: {len(disclosures)} KAP bildirimi incelendi; güçlü katalizör eşleşmesi yok. Bilanço/kârlılık puanı bu backend sürümünde otomatik verilmez.",
+            "explanation": f"{symbol}: {len(disclosures)} KAP bildirimi incelendi; güçlü katalizör eşleşmesi yok. Finansal doğrulama: Bilanço {(financial.get('scores') or {}).get('bilanco', 0)}/25 · Kârlılık/Nakit {(financial.get('scores') or {}).get('cash', 0)}/15.",
+            "financials": financial,
             "meta": {"disclosure_count": len(disclosures), "candidate_count": 0, "lookback_days": _STORY_LOOKBACK_DAYS, "company": company.get("kapMemberTitle")},
         }
 
@@ -596,11 +886,11 @@ def _build_story_payload(symbol: str):
     explanation = (
         f"{symbol}: son {_STORY_LOOKBACK_DAYS} günde {len(disclosures)} bildirim incelendi; "
         f"{len(candidates)} katalizör adayı bulundu. En güçlü aday: {title} · KAP skoru {best['score']}/20 · "
-        f"eşleşmeler: {evidence}.{neg_note} Bilanço ve nakit puanları bilinçli olarak değiştirilmedi."
+        f"eşleşmeler: {evidence}.{neg_note} Finansal doğrulama: Bilanço {(financial.get('scores') or {}).get('bilanco', 0)}/25 · Kârlılık/Nakit {(financial.get('scores') or {}).get('cash', 0)}/15."
     )
     return {
         "symbol": symbol,
-        "scores": {"kap": best["score"]},
+        "scores": {"kap": best["score"], "bilanco": (financial.get("scores") or {}).get("bilanco", 0), "cash": (financial.get("scores") or {}).get("cash", 0)},
         "story_type": best["type"],
         "source": "KAP",
         "source_date": date_iso,
@@ -608,6 +898,7 @@ def _build_story_payload(symbol: str):
         "impact": impact[:1000],
         "explanation": explanation[:1800],
         "kap_url": KAP_BASE + f"/tr/Bildirim/{d.get('disclosureIndex')}",
+        "financials": financial,
         "meta": {
             "company": company.get("kapMemberTitle"),
             "disclosure_count": len(disclosures),
@@ -628,7 +919,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v02:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v03:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
@@ -693,7 +984,7 @@ if __name__ == "__main__":
     print("BIST Scanner HTML - bandwidth optimized proxy")
     print("Yahoo: compact JSON + gzip + cache")
     print("TradingView: gzip + short cache")
-    print("Story Radar: /api/story?symbol=NETAS")
+    print("Story Radar v0.3: /api/story?symbol=NETAS")
     print("Metrics: /api/metrics")
     print()
 
