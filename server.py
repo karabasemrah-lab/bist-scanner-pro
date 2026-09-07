@@ -713,26 +713,65 @@ def _kap_financial_disclosures(symbol: str, oid: str, days: int = 365):
 
 
 def _latest_financial_disclosure(disclosures):
-    """Sorumluluk/Faaliyet raporunu değil, gerçek Finansal Rapor satırını seç."""
-    exact = []
-    fallback = []
+    """Gerçek finansal tablo gövdesini seç.
+
+    KAP'ın FR sorgusu aynı paket içindeki Sorumluluk Beyanı ve Faaliyet Raporu
+    kayıtlarını da döndürebiliyor. Bu nedenle metadata/subject alanına tek başına
+    güvenmiyoruz. En yeni adaylardan detay gövdesini açıp IFRS/KAP finansal tablo
+    taxonomy işaretlerini doğruluyoruz.
+    """
+    ranked = []
     for d in disclosures:
         subject = str(d.get("subject") or "").strip()
         summary = str(d.get("summary") or "").strip()
-        dtype = str(d.get("disclosureType") or "").upper().strip()
         blob = f"{subject} {summary}".casefold()
-        # Bunlar FR arama sonucunda görünse bile finansal tablo gövdesi değildir.
-        if any(x in blob for x in ("sorumluluk beyan", "faaliyet raporu", "sürdürülebilirlik")):
-            continue
-        dt = _parse_publish_date(d.get("publishDate")) or datetime.min.replace(tzinfo=ZoneInfo("Europe/Istanbul"))
+        dt = _parse_publish_date(d.get("publishDate")) or datetime.min.replace(
+            tzinfo=ZoneInfo("Europe/Istanbul")
+        )
+        # Öncelik yalnız sıralama içindir; son karar detay gövdesinden verilir.
+        pri = 0
         if subject.casefold() == "finansal rapor":
-            exact.append((dt, d))
-        elif "finansal rapor" in subject.casefold() or dtype == "FR":
-            fallback.append((dt, d))
-    pool = exact or fallback
-    pool.sort(key=lambda x: x[0], reverse=True)
-    return pool[0][1] if pool else None
+            pri = 3
+        elif "finansal rapor" in blob:
+            pri = 2
+        if any(x in blob for x in ("sorumluluk beyan", "faaliyet raporu", "sürdürülebilirlik")):
+            pri = -1
+        ranked.append((dt, pri, d))
 
+    ranked.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+    # En yeni FR paketlerinden gerçek tablo gövdesini doğrula. 12 aday bir yıllık
+    # 3/6/9/12 aylık paketleri fazlasıyla kapsar ve gereksiz KAP trafiğini sınırlar.
+    for _dt, _pri, d in ranked[:12]:
+        idx = d.get("disclosureIndex")
+        if not idx:
+            continue
+        try:
+            item = _kap_detail_json(idx)
+        except Exception:
+            continue
+        body = item.get("disclosureBody") or ""
+        if isinstance(body, list):
+            body = " ".join(str(x or "") for x in body)
+        body_s = str(body or "")
+        low = body_s.casefold()
+
+        # Gerçek KAP finansal tablo bildiriminde taxonomy kodları bulunur.
+        taxonomy_hits = sum(marker.casefold() in low for marker in (
+            "kap-fr_StatementOfFinancialPositionBalanceSheetAbstract",
+            "ifrs-full_Revenue",
+            "ifrs-full_Assets",
+            "ifrs-full_ProfitLoss",
+            "ifrs-full_CashFlowsFromUsedInOperatingActivities",
+        ))
+        if taxonomy_hits >= 2:
+            # Detayı ikinci kez indirmemek için kısa süreli cache'e koy.
+            _cache_json_set(f"kap:selectedfin:v032:{idx}", _FIN_TTL, {
+                "verified": True, "taxonomy_hits": taxonomy_hits
+            })
+            return d
+
+    return None
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None):
     # Finansal raporu katalizör/ÖDA listesinden seçme. KAP'ta FR sınıfını ayrı sorgula.
@@ -741,7 +780,7 @@ def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None):
     if not fr:
         return {"available": False, "reason": "Son dönemde Finansal Rapor bildirimi bulunamadı."}
     idx = fr.get("disclosureIndex")
-    key = f"kap:fin:v031:{symbol}:{idx}"
+    key = f"kap:fin:v032:{symbol}:{idx}"
     cached = _cache_json_get(key)
     if cached is not None:
         return cached
@@ -959,7 +998,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v031:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v032:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
@@ -1024,7 +1063,7 @@ if __name__ == "__main__":
     print("BIST Scanner HTML - bandwidth optimized proxy")
     print("Yahoo: compact JSON + gzip + cache")
     print("TradingView: gzip + short cache")
-    print("Story Radar v0.3.1: /api/story?symbol=NETAS")
+    print("Story Radar v0.3.2: /api/story?symbol=NETAS")
     print("Metrics: /api/metrics")
     print()
 
