@@ -984,7 +984,7 @@ def _kap_summary_rendered_text(url: str, symbol: str):
         direct_ok = (
             "finansal durum tablosu" in direct_norm
             and ("hasilat" in direct_norm or "toplam varliklar" in direct_norm)
-            and bool(re.search(r"20\\d{2}/(?:03|06|09|12)", direct_visible))
+            and bool(re.search(r"20\d{2}/(?:03|06|09|12)", direct_visible))
         )
         attempts.append({"mode":"kap_direct","status":r.status_code,"bytes":len(r.content),"ok":bool(direct_ok)})
         if direct_ok:
@@ -1007,7 +1007,7 @@ def _kap_summary_rendered_text(url: str, symbol: str):
         ok = (
             "finansal durum tablosu" in norm
             and ("hasilat" in norm or "toplam varliklar" in norm)
-            and bool(re.search(r"20\\d{2}/(?:03|06|09|12)", txt))
+            and bool(re.search(r"20\d{2}/(?:03|06|09|12)", txt))
         )
         attempts.append({"mode":"kap_via_reader","status":rr.status_code,"bytes":len(rr.content),"ok":bool(ok)})
         if ok:
@@ -1026,7 +1026,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold()
                   .replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
     url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}"
-    key = f"kap:finsummary:v037:{symbol}:{page_id}"
+    key = f"kap:finsummary:v038:{symbol}:{page_id}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
 
@@ -1139,7 +1139,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
 
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.7: doğru KAP page-id + render edilmiş özet finansal metin; FR son çare."""
+    """v0.3.8: doğru KAP page-id + render edilmiş özet finansal metin; FR son çare."""
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -1306,7 +1306,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v037:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v038:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
