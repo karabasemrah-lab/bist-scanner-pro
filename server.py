@@ -1138,8 +1138,180 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     _cache_json_set(key,_FIN_TTL,snap); return snap
 
 
+
+
+# ---------------------------------------------------------------------
+# Hikâye Radar v0.4 · doğrulanmış Yahoo Fundamentals finansal motoru
+# ---------------------------------------------------------------------
+def _series_map(series: dict, key: str):
+    out = {}
+    for item in (series.get(key) or []):
+        if not isinstance(item, dict):
+            continue
+        d = str(item.get("date") or "").strip()
+        raw = item.get("raw")
+        if not d or raw is None:
+            continue
+        try:
+            out[d] = float(raw)
+        except Exception:
+            continue
+    return out
+
+
+def _same_quarter_prev_year(date_s: str):
+    try:
+        y, m, d = date_s.split("-")
+        return f"{int(y)-1:04d}-{m}-{d}"
+    except Exception:
+        return None
+
+
+def _latest_quarter_anchor(series: dict):
+    # Akış kalemlerinden hasılatı ana dönem kabul et; yoksa mevcut serilerin en yeni tarihini kullan.
+    preferred = [
+        "quarterlyTotalRevenue",
+        "quarterlyOperatingIncome",
+        "quarterlyNetIncome",
+        "quarterlyOperatingCashFlow",
+    ]
+    for k in preferred:
+        m = _series_map(series, k)
+        if m:
+            return max(m.keys())
+    dates = []
+    for k, vals in (series or {}).items():
+        if not k.startswith("quarterly"):
+            continue
+        dates.extend(_series_map(series, k).keys())
+    return max(dates) if dates else None
+
+
+def _yf_financial_snapshot(symbol: str):
+    probe = _yf_fundamentals_probe(symbol)
+    if not probe.get("available"):
+        return {
+            "available": False,
+            "source": "yahoo_fundamentals",
+            "reason": probe.get("error") or "Yahoo Fundamentals finansal veri döndürmedi.",
+        }
+
+    series = probe.get("series") or {}
+    cur_date = _latest_quarter_anchor(series)
+    if not cur_date:
+        return {"available": False, "source": "yahoo_fundamentals", "reason": "Çeyreklik dönem bulunamadı."}
+    prev_date = _same_quarter_prev_year(cur_date)
+
+    maps = {
+        "revenue": _series_map(series, "quarterlyTotalRevenue"),
+        "operating_profit": _series_map(series, "quarterlyOperatingIncome"),
+        "net_profit": _series_map(series, "quarterlyNetIncome"),
+        "operating_cash_flow": _series_map(series, "quarterlyOperatingCashFlow"),
+        "assets": _series_map(series, "quarterlyTotalAssets"),
+        "liabilities": _series_map(series, "quarterlyTotalLiabilitiesNetMinorityInterest"),
+        "cash": _series_map(series, "quarterlyCashCashEquivalentsAndShortTermInvestments"),
+    }
+
+    def pair(name):
+        m = maps[name]
+        return m.get(cur_date), (m.get(prev_date) if prev_date else None)
+
+    rev_cur, rev_prev = pair("revenue")
+    op_cur, op_prev = pair("operating_profit")
+    net_cur, net_prev = pair("net_profit")
+    ocf_cur, ocf_prev = pair("operating_cash_flow")
+    assets_cur, assets_prev = pair("assets")
+    liab_cur, liab_prev = pair("liabilities")
+    cash_cur, cash_prev = pair("cash")
+
+    rev_g = _pct_change(rev_cur, rev_prev)
+    op_g = _pct_change(op_cur, op_prev)
+    net_g = _pct_change(net_cur, net_prev)
+    ocf_g = _pct_change(ocf_cur, ocf_prev)
+
+    margin_cur = (_safe_ratio(op_cur, rev_cur) * 100) if _safe_ratio(op_cur, rev_cur) is not None else None
+    margin_prev = (_safe_ratio(op_prev, rev_prev) * 100) if _safe_ratio(op_prev, rev_prev) is not None else None
+    margin_delta = (margin_cur - margin_prev) if margin_cur is not None and margin_prev is not None else None
+
+    s_rev = _score_growth(rev_g)
+    s_op = _score_profit(op_cur, op_prev, 7)
+    s_net = _score_profit(net_cur, net_prev, 6)
+    s_margin = (
+        4 if margin_delta is not None and margin_delta >= 3 else
+        3 if margin_delta is not None and margin_delta >= 1 else
+        2 if margin_delta is not None and margin_delta > 0 else
+        1 if margin_cur is not None and margin_cur > 0 else 0
+    )
+    bilanco_score = min(25, s_rev + s_op + s_net + s_margin)
+
+    s_ocf_level = 5 if ocf_cur is not None and ocf_cur > 0 else 0
+    if ocf_cur is not None and ocf_prev is not None and ocf_cur > 0 and ocf_prev <= 0:
+        s_ocf_growth = 4
+    elif ocf_g is not None and ocf_g >= 25:
+        s_ocf_growth = 4
+    elif ocf_g is not None and ocf_g >= 5:
+        s_ocf_growth = 3
+    elif ocf_g is not None and ocf_g > 0:
+        s_ocf_growth = 2
+    else:
+        s_ocf_growth = 0
+
+    conv = _safe_ratio(ocf_cur, net_cur) if net_cur is not None and net_cur > 0 else None
+    s_conv = 3 if conv is not None and conv >= 1 else 2 if conv is not None and conv >= .5 else 1 if conv is not None and conv > 0 else 0
+
+    lev_cur = _safe_ratio(liab_cur, assets_cur)
+    lev_prev = _safe_ratio(liab_prev, assets_prev)
+    if lev_cur is not None and lev_prev is not None:
+        improvement = (lev_prev - lev_cur) * 100
+        s_lev = 3 if improvement >= 3 else 2 if improvement > 0 else 1 if lev_cur < .5 else 0
+    else:
+        s_lev = 0
+    cash_score = min(15, s_ocf_level + s_ocf_growth + s_conv + s_lev)
+
+    def r2(x):
+        return None if x is None else round(x, 2)
+
+    return {
+        "available": any(v is not None for v in (rev_cur, op_cur, net_cur, ocf_cur, assets_cur)),
+        "source": "yahoo_fundamentals",
+        "period_type": "quarterly_yoy",
+        "period": cur_date,
+        "comparison_period": prev_date,
+        "currency": "TRY",
+        "scores": {"bilanco": bilanco_score, "cash": cash_score},
+        "metrics": {
+            "revenue": {"current": rev_cur, "previous": rev_prev, "growth_pct": r2(rev_g)},
+            "operating_profit": {"current": op_cur, "previous": op_prev, "growth_pct": r2(op_g)},
+            "net_profit": {"current": net_cur, "previous": net_prev, "growth_pct": r2(net_g)},
+            "operating_margin_pct": {"current": r2(margin_cur), "previous": r2(margin_prev), "delta_pp": r2(margin_delta)},
+            "operating_cash_flow": {"current": ocf_cur, "previous": ocf_prev, "growth_pct": r2(ocf_g)},
+            "cash": {"current": cash_cur, "previous": cash_prev},
+            "liabilities_to_assets": {"current": r2(lev_cur), "previous": r2(lev_prev)},
+            "cash_conversion": r2(conv),
+        },
+        "score_breakdown": {
+            "revenue": s_rev,
+            "operating_profit": s_op,
+            "net_profit": s_net,
+            "margin": s_margin,
+            "ocf_level": s_ocf_level,
+            "ocf_growth": s_ocf_growth,
+            "cash_conversion": s_conv,
+            "leverage": s_lev,
+        },
+        "note": "Finansal doğrulama Yahoo Fundamentals çeyreklik serilerinden aynı çeyrek geçen yıl (YoY) karşılaştırmasıyla hesaplandı. KAP katalizör motoru bağımsız ve değişmeden korunur.",
+    }
+
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.8: doğru KAP page-id + render edilmiş özet finansal metin; FR son çare."""
+    """v0.4: doğrulanmış Yahoo Fundamentals ana finansal kaynak; KAP parser yedek."""
+    try:
+        yf_snap = _yf_financial_snapshot(symbol)
+        if yf_snap.get("available"):
+            return yf_snap
+        yahoo_error = yf_snap.get("reason") or "Yahoo Fundamentals veri yok"
+    except Exception as exc:
+        yahoo_error = str(exc)
+
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -1156,7 +1328,7 @@ def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, 
     financial_disclosures = _kap_financial_disclosures(symbol, oid or "", 365) if oid else disclosures
     fr = _latest_financial_disclosure(financial_disclosures)
     if not fr:
-        return {"available": False, "reason": f"Özet finansal başarısız: {summary_error}; Finansal Rapor bildirimi ayrıştırılamadı."}
+        return {"available": False, "reason": f"Yahoo finansal başarısız: {yahoo_error}; KAP özet finansal başarısız: {summary_error}; Finansal Rapor bildirimi ayrıştırılamadı."}
     idx = fr.get("disclosureIndex")
     key = f"kap:fin:v035:{symbol}:{idx}"
     cached = _cache_json_get(key)
@@ -1306,7 +1478,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v038:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v040:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
