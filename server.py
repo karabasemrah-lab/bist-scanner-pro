@@ -873,6 +873,78 @@ def _summary_headers(rows):
     return best
 
 
+
+
+def _html_visible_text(raw_html: str) -> str:
+    """KAP sayfasını tablo etiketi olmasa da satır benzeri metne çevirir."""
+    x = str(raw_html or "")
+    # Satır/blok sınırlarını koru; KAP bazı sürümlerde veriyi div tabanlı render ediyor.
+    x = re.sub(r"(?i)<br\s*/?>|</(?:tr|td|th|div|p|li|section|article|h[1-6])>", "\n", x)
+    x = re.sub(r"(?is)<script[^>]*>.*?</script>|<style[^>]*>.*?</style>", " ", x)
+    x = re.sub(r"(?s)<[^>]+>", " ", x)
+    x = html_lib.unescape(x).replace("\xa0", " ")
+    x = re.sub(r"[ \t\r\f\v]+", " ", x)
+    x = re.sub(r"\n+", "\n", x)
+    return x.strip()
+
+
+def _period_headers_from_text(text: str):
+    """Özet finansal sayfadaki dönem sütunlarını soldan sağa çıkar."""
+    t = str(text or "")
+    # Öncelikle Finansal Durum Tablosu başlığının yakınını kullan.
+    low = _norm_fin_label(t)
+    pos = low.find("finansal durum tablosu")
+    chunk = t[:2500] if pos < 0 else t[max(0, pos-300):pos+2500]
+    vals = re.findall(r"20\d{2}/(?:03|06|09|12)", chunk)
+    out=[]
+    for v in vals:
+        if v not in out:
+            out.append(v)
+    return out[:8]
+
+
+def _summary_values_from_text(text: str, headers, *labels):
+    """Etiketin hemen ardından gelen dönem değerlerini DOM yapısından bağımsız okur."""
+    if not text or not headers:
+        return []
+    norm_text = _norm_fin_label(text)
+    best_pos = None
+    best_label = None
+    for label in labels:
+        nlab = _norm_fin_label(label)
+        pos = norm_text.find(nlab)
+        if pos >= 0 and (best_pos is None or pos < best_pos):
+            best_pos, best_label = pos, nlab
+    if best_pos is None:
+        return []
+
+    # Normalleştirilmiş metindeki indeks ham metinle birebir değildir. Satır bazlı arama daha güvenilir.
+    lines = [re.sub(r"\s+", " ", ln).strip() for ln in str(text).splitlines() if ln.strip()]
+    wanted = [_norm_fin_label(x) for x in labels]
+    for i, line in enumerate(lines):
+        nline = _norm_fin_label(line)
+        if not any(w == nline or nline.startswith(w + " ") or w in nline for w in wanted):
+            continue
+        chunk = " ".join(lines[i:i+10])
+        # Etiketten önceki sayıları almamak için label sonrasını kes.
+        cut = 0
+        for lab in labels:
+            m = re.search(re.escape(lab), chunk, flags=re.I)
+            if m:
+                cut = max(cut, m.end())
+        tail = chunk[cut:] if cut else chunk
+        nums = re.findall(r"(?<![\d/])[-+]?\(?\d{1,3}(?:\.\d{3})+(?:,\d+)?\)?|(?<![\d/])[-+]?\(?\d+(?:,\d+)?\)?", tail)
+        vals=[]
+        for tok in nums:
+            v=_tr_number(tok)
+            if v is not None:
+                vals.append(v)
+            if len(vals) >= len(headers):
+                return vals
+        if vals:
+            return vals
+    return []
+
 def _kap_summary_financial_snapshot(symbol: str, company: dict):
     page_id = _kap_financial_page_id(company, symbol)
     if not page_id:
@@ -881,7 +953,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold()
                   .replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
     url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}"
-    key = f"kap:finsummary:v033:{symbol}:{page_id}"
+    key = f"kap:finsummary:v035:{symbol}:{page_id}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
 
@@ -890,6 +962,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     parser = _SimpleHtmlTableParser(); parser.feed(r.text)
     rows = parser.rows
     headers = _summary_headers(rows)
+    parser_mode = "html_table"
 
     rev = _summary_row(rows, "Hasılat")
     op = _summary_row(rows, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
@@ -898,9 +971,24 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     liab = _summary_row(rows, "Toplam Yükümlülükler")
     cash = _summary_row(rows, "Nakit ve Nakit Benzerleri")
 
+    # KAP arayüzü bazı sürümlerde tabloyu <tr>/<td> yerine div/span yapısıyla render ediyor.
+    # Bu durumda görünür metin üzerinden aynı finansal satırları yakala.
+    if not headers or not any((rev, op, net, assets, liab)):
+        visible = _html_visible_text(r.text)
+        text_headers = _period_headers_from_text(visible)
+        if text_headers:
+            headers = text_headers
+            rev = _summary_values_from_text(visible, headers, "Hasılat")
+            op = _summary_values_from_text(visible, headers, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
+            net = _summary_values_from_text(visible, headers, "Net Dönem Kârı (Zararı)", "Net Dönem Karı (Zararı)")
+            assets = _summary_values_from_text(visible, headers, "Toplam Varlıklar")
+            liab = _summary_values_from_text(visible, headers, "Toplam Yükümlülükler")
+            cash = _summary_values_from_text(visible, headers, "Nakit ve Nakit Benzerleri")
+            parser_mode = "visible_text"
+
     n = max(len(headers), len(rev), len(op), len(net), len(assets), len(liab))
     if n == 0:
-        snap={"available":False,"reason":"KAP Özet Finansal Bilgiler tablosu ayrıştırılamadı.","source":"kap_summary","kap_url":url}
+        snap={"available":False,"reason":"KAP Özet Finansal Bilgiler tablosu ayrıştırılamadı.","source":"kap_summary","kap_url":url,"parser_mode":parser_mode,"html_bytes":len(r.text)}
         _cache_json_set(key, 60*60, snap); return snap
 
     # Sağdaki sütun en güncel dönemdir. Özet sayfa geçmiş yıllarda yalnız yıllık sütunlar
@@ -950,7 +1038,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     def r2(x): return None if x is None else round(x,2)
     snap={
       "available": any(v is not None for v in (rev_cur,op_cur,net_cur,assets_cur)),
-      "source":"kap_summary","comparison_period": headers[prev_i] if prev_i is not None else None,
+      "source":"kap_summary","parser_mode":parser_mode,"page_id":page_id,"comparison_period": headers[prev_i] if prev_i is not None else None,
       "period":cur_period,"scores":{"bilanco":bilanco_score,"cash":cash_score},
       "metrics":{
         "revenue":{"current":rev_cur,"previous":rev_prev,"growth_pct":r2(rev_g)},
@@ -970,7 +1058,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
 
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.4: KAP özet sayfa + gerçek Bildirim HTML finansal tablo doğrulaması."""
+    """v0.3.5: KAP özet sayfa tablo + görünür metin fallback; FR sayfası son çare."""
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -989,10 +1077,10 @@ def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, 
     if not fr:
         return {"available": False, "reason": f"Özet finansal başarısız: {summary_error}; Finansal Rapor bildirimi ayrıştırılamadı."}
     idx = fr.get("disclosureIndex")
-    key = f"kap:fin:v034:{symbol}:{idx}"
+    key = f"kap:fin:v035:{symbol}:{idx}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
-    # v0.3.4: finansal tabloyu öncelikle gerçek KAP Bildirim HTML sayfasından oku.
+    # v0.3.5: finansal tabloyu öncelikle gerçek KAP Bildirim HTML sayfasından oku.
     rows = _kap_public_financial_rows(idx)
     if not rows:
         # Eski attachment-detail yapısı uyumluysa son çare olarak onu da dene.
@@ -1137,7 +1225,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v034:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v035:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
