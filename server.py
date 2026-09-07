@@ -778,42 +778,57 @@ def _latest_financial_disclosure(disclosures):
     return None
 
 def _kap_financial_page_id(company: dict, symbol: str):
-    """KAP şirketinin sayısal web sayfası kimliğini mümkün olduğunca sağlam bul."""
-    for k in ("kapMemberId", "memberId", "companyId", "id", "kapId", "kapCompanyId"):
-        v = str(company.get(k) or "").strip()
-        if v.isdigit():
-            return v
+    """KAP şirket finansal sayfasının gerçek numeric ID'sini bul.
 
-    # Bazı KAP şirket-listesi sürümleri doğrudan URL/path döndürüyor.
+    KAP şirket API nesnesindeki sayısal alanlar (id/memberId vb.) web sayfası ID'si
+    değildir; NETAS örneğinde yanlışlıkla 1626 seçiliyordu. Bu yüzden önce BIST
+    şirketleri HTML'indeki sembolle aynı <a> etiketi üzerinden /sirket-bilgileri/ozet/<id>
+    veya /sirket-finansal-bilgileri/<id> bağlantısını kesin eşleştiriyoruz.
+    """
+    symbol_u = (symbol or "").strip().upper()
+    if not symbol_u:
+        return None
+
+    try:
+        key = "kap:bist-company-list-page:v036"
+        cached = _cache_json_get(key)
+        page = str((cached or {}).get("html") or "")
+        if not page:
+            r = SESSION.get(KAP_COMPANY_LIST_PAGE, timeout=18, headers={
+                "Referer": KAP_BASE + "/tr/",
+                "Accept": "text/html,application/xhtml+xml",
+            })
+            r.raise_for_status()
+            page = r.text
+            _cache_json_set(key, _KAP_COMPANY_TTL, {"html": page[:2000000]})
+
+        # 1) En güvenli yol: href ile anchor metnini birlikte eşleştir.
+        anchor_pat = re.compile(
+            r'<a[^>]+href=["\'](?P<href>[^"\']*(?:sirket-bilgileri/ozet|sirket-finansal-bilgileri)/(?P<id>\d+)[^"\']*)["\'][^>]*>(?P<text>[\s\S]*?)</a>',
+            re.I,
+        )
+        for m in anchor_pat.finditer(page):
+            text = _strip_html(m.group("text")).upper()
+            # Anchor yalnız sembol veya sembol + şirket adı olabilir.
+            if re.search(rf'(^|[^A-Z0-9]){re.escape(symbol_u)}([^A-Z0-9]|$)', text):
+                return m.group("id")
+
+        # 2) KAP bazen sembolü ayrı hücrede, linki hemen yan hücrede render eder.
+        # Sembolün çok yakınındaki linkleri ara ama yalnız sembolden SONRAKİ kısmı kullan.
+        for sm in re.finditer(rf'(^|[^A-Z0-9]){re.escape(symbol_u)}([^A-Z0-9]|$)', page.upper()):
+            chunk = page[sm.start():sm.start()+1800]
+            m = re.search(r'/(?:tr/)?(?:sirket-bilgileri/ozet|sirket-finansal-bilgileri)/(\d+)-[^"\'<> ]+', chunk, re.I)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+
+    # Son çare: şirket nesnesinin doğrudan verdiği URL/path varsa onu kullan.
     for k in ("url", "link", "path", "companyUrl", "memberUrl"):
         v = str(company.get(k) or "")
         m = re.search(r"/(?:sirket-finansal-bilgileri|sirket-bilgileri/ozet)/(\d+)(?:-|/|$)", v, re.I)
         if m:
             return m.group(1)
-
-    # Son çare: BIST şirketleri sayfasında sembolün yakınındaki şirket linkini ara.
-    # Bu yalnız cache miss'te çalışır; yoğun tarama yapılmaz.
-    try:
-        key = "kap:bist-company-list-page"
-        cached = _cache_json_get(key)
-        page = str((cached or {}).get("html") or "")
-        if not page:
-            r = SESSION.get(KAP_COMPANY_LIST_PAGE, timeout=18, headers={
-                "Referer": KAP_BASE + "/tr/", "Accept": "text/html,application/xhtml+xml"
-            })
-            r.raise_for_status()
-            page = r.text
-            _cache_json_set(key, _KAP_COMPANY_TTL, {"html": page[:1500000]})
-        # Önce sembol çevresindeki 3000 karakteri dene.
-        pos = page.upper().find(symbol.upper())
-        chunks = [page[max(0, pos-3000):pos+3000]] if pos >= 0 else []
-        chunks.append(page)
-        for chunk in chunks:
-            m = re.search(r"/(?:tr/)?(?:sirket-finansal-bilgileri|sirket-bilgileri/ozet)/(\d+)-[^\"'<> ]+", chunk, re.I)
-            if m:
-                return m.group(1)
-    except Exception:
-        pass
     return None
 
 
@@ -953,7 +968,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
     slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold()
                   .replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
     url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}"
-    key = f"kap:finsummary:v035:{symbol}:{page_id}"
+    key = f"kap:finsummary:v036:{symbol}:{page_id}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
 
@@ -1058,7 +1073,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
 
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.5: KAP özet sayfa tablo + görünür metin fallback; FR sayfası son çare."""
+    """v0.3.6: doğru KAP şirket sayfa ID eşlemesi + özet finansal parser; FR sayfası son çare."""
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -1225,7 +1240,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v035:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v036:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
@@ -1328,7 +1343,7 @@ if __name__ == "__main__":
     print("BIST Scanner HTML - bandwidth optimized proxy")
     print("Yahoo: compact JSON + gzip + cache")
     print("TradingView: gzip + short cache")
-    print("Story Radar v0.3.3: /api/story?symbol=NETAS")
+    print("Story Radar v0.3.6: /api/story?symbol=NETAS")
     print("Metrics: /api/metrics")
     print()
 
