@@ -891,15 +891,15 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 </section>
 
 
-<!-- HİKÂYE RADAR LABORATUVARI v0.1 · ANA SİSTEMDEN BAĞIMSIZ -->
+<!-- HİKÂYE RADAR LABORATUVARI v0.2 · OTOMATİK MOTOR HAZIRLIK KATMANI -->
 <section id="storylab" class="tabpage space-y-4 hidden">
   <div class="card p-5" style="border-color:#34d39944;box-shadow:0 0 26px -16px #34d39980">
     <div class="flex flex-wrap items-start gap-3">
       <div>
-        <h2 class="text-2xl font-black">🧬 Hikâye Radar Laboratuvarı v0.1</h2>
-        <div class="text-sm muted mt-2">Hikâye → bilanço doğrulaması → sektör/değerleme → para akışı → teknik teyit zincirini 100 puan üzerinden test eder. Bu laboratuvar mevcut tarama motorlarını değiştirmez.</div>
+        <h2 class="text-2xl font-black">🧬 Hikâye Radar Laboratuvarı v0.2</h2>
+        <div class="text-sm muted mt-2">Hikâye → bilanço doğrulaması → sektör/değerleme → para akışı → teknik teyit zincirini 100 puan üzerinden test eder. v0.2 tek-hisse otomatik veri motoruna hazırdır; mevcut tarama motorlarını değiştirmez.</div>
       </div>
-      <span class="chip ml-auto">🧪 LAB · Yerel kayıt · Ek ağ trafiği yok</span>
+      <span class="chip ml-auto">🧪 LAB v0.2 · Tek-hisse otomasyon · Cache uyumlu</span>
     </div>
 
     <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
@@ -928,13 +928,20 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <div><label class="text-xs muted">Ölçülebilir Etki Notu</label><textarea id="storyImpact" class="input mt-1" rows="3" placeholder="Örn: Sözleşme / son 12 aylık satış = %28; yatırımın devreye giriş tarihi... "></textarea></div>
     </div>
 
+    <div class="grid grid-cols-3 gap-3 mt-4 grid-settings">
+      <div><label class="text-xs muted">Otomatik Veri Modu</label><select id="storyAutoMode" class="input mt-1"><option value="cache">Cache / Backend (önerilen)</option><option value="tech">Yalnız mevcut teknik sonuçlar</option></select></div>
+      <div><label class="text-xs muted">Otomatik Veri Yaşı</label><div id="storyAutoAge" class="input mt-1">Henüz veri yok</div></div>
+      <div><label class="text-xs muted">Otomatik Motor</label><button id="storyAuto" class="btn w-full mt-1" style="background:linear-gradient(90deg,#0f766e,#22c55e);color:white">🤖 Otomatik Hikâye Analizi</button></div>
+    </div>
+    <div id="storyAutoSummary" class="mt-3 rounded-xl p-3 text-xs" style="background:#0d1820;border:1px solid #244152;color:#b7d7e8">Backend bağlandığında KAP/bilanço/sektör/değerleme puanları burada otomatik açıklanır. Endpoint: <b>/api/story?symbol=HISSE</b></div>
+
     <div class="flex flex-wrap gap-2 mt-4">
       <button id="storyPullTech" class="btn" style="background:#123047;color:#7dd3fc">🔄 Mevcut MFI + Momentum'u Getir</button>
       <button id="storySave" class="btn" style="background:linear-gradient(90deg,#047857,#34d399);color:#04150e">💾 Hikâye Adayını Kaydet</button>
       <button id="storyReset" class="btn" style="background:#242b38;color:#d7ddea">↺ Formu Temizle</button>
       <span class="chip">Skor: 80+ A+ · 70–79 A · 60–69 B · 50–59 C · &lt;50 Zayıf</span>
     </div>
-    <div id="storyStatus" class="mt-4 rounded-xl p-3 text-sm warn">Laboratuvar hazır. İlk adayını puanlayabilirsin.</div>
+    <div id="storyStatus" class="mt-4 rounded-xl p-3 text-sm warn">v0.2 hazır. Hisse kodunu yazıp Otomatik Hikâye Analizi ile başla.</div>
   </div>
 
   <div class="card overflow-hidden">
@@ -1120,6 +1127,7 @@ let elliottAll=[], elliottShown=[], fusionAll=[], fusionShown=[], contAll=[], co
 let refCache=null;
 let storyRecords=[];
 const STORY_KEY="bist_story_radar_v01";
+const STORY_AUTO_KEY="bist_story_radar_auto_v02";
 
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
@@ -4011,8 +4019,8 @@ function perfClear(){if(!confirm("Tüm performans kayıtları silinsin mi?"))ret
 function perfExport(){perfLoad();if(!perfRecords.length){alert("Dışa aktarılacak performans kaydı yok.");return}const rows=perfRecords.map(r=>({Tarih:r.captured_date,Tarama:r.scanner,Hisse:r.symbol,Yon:r.direction,Periyot:r.timeframe,Etiket:r.tag,Giris:r.entry_price,...Object.fromEntries(PERF_H.map(h=>[`${h}G_Getiri_%`,r.returns?.[h]??null])),MFE20:r.mfe20??null,MAE20:r.mae20??null}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Performans");XLSX.writeFile(wb,`BIST_Tarama_Performans_${new Date().toISOString().slice(0,10)}.xlsx`)}
 
 // ─────────────────────────────────────────────────────────────────────
-// HİKÂYE RADAR LABORATUVARI v0.1
-// Tamamen tarayıcı içi çalışır; yeni ağ isteği üretmez.
+// HİKÂYE RADAR LABORATUVARI v0.2
+// Tek-hisse otomatik backend sözleşmesi + mevcut teknik motor entegrasyonu.
 function storyClamp(id,max){const el=$(id);if(!el)return 0;let n=Number(el.value||0);if(!Number.isFinite(n))n=0;n=Math.max(0,Math.min(max,n));el.value=n;return n}
 function storyScore(){return storyClamp("storyKap",20)+storyClamp("storyBilanco",25)+storyClamp("storyCash",15)+storyClamp("storySector",10)+storyClamp("storyValuation",10)+storyClamp("storyMfi",10)+storyClamp("storyTech",10)}
 function storyGrade(s){return s>=80?"A+":s>=70?"A":s>=60?"B":s>=50?"C":"ZAYIF"}
@@ -4029,7 +4037,39 @@ function storyPullTechnical(){const sym=String($("storySymbol").value||"").trim(
   const parts=[m?`MFI ${m.score??"—"}/7`:"MFI sonucu yok",ms?`Momentum ${ms.score??"—"}/9`:"Momentum sonucu yok",q?`Quant ${q.score??"—"}/10 (referans)`:"Quant sonucu yok"];
   setStatus("storyStatus",`${sym}: ${parts.join(" · ")}. Quant v0.1 Hikâye Skoruna eklenmez; yalnız referanstır.`,m||ms?"good":"warn")
 }
-function storyResetForm(){["storySymbol","storyNote","storyImpact"].forEach(id=>$(id).value="");["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id).value=0);$("storyDate").value=new Date().toISOString().slice(0,10);storyLive()}
+function storyNormSymbol(){return String($("storySymbol").value||"").trim().toUpperCase().replace(/^BIST:/,"").replace(/\.IS$/,'')}
+function storySetNum(id,v,max){const el=$(id);if(!el||v===undefined||v===null||v==='')return false;let n=Number(v);if(!Number.isFinite(n))return false;el.value=Math.max(0,Math.min(max,Math.round(n)));return true}
+function storyAutoCacheLoad(sym){try{const all=JSON.parse(localStorage.getItem(STORY_AUTO_KEY)||"{}");const r=all?.[sym];if(!r)return null;return r}catch(e){return null}}
+function storyAutoCacheSave(sym,data){try{const all=JSON.parse(localStorage.getItem(STORY_AUTO_KEY)||"{}");all[sym]={saved_at:Date.now(),data};localStorage.setItem(STORY_AUTO_KEY,JSON.stringify(all))}catch(e){console.warn('Story auto cache failed',e)}}
+function storyApplyAutoPayload(sym,p){if(!p||typeof p!=="object")return false;const score=p.scores||p.score||{};let changed=false;
+  changed=storySetNum("storyKap",score.kap??score.catalyst??p.kap,20)||changed;
+  changed=storySetNum("storyBilanco",score.bilanco??score.financials??p.bilanco,25)||changed;
+  changed=storySetNum("storyCash",score.cash??score.profitability_cash??p.cash,15)||changed;
+  changed=storySetNum("storySector",score.sector??p.sector,10)||changed;
+  changed=storySetNum("storyValuation",score.valuation??p.valuation,10)||changed;
+  if(p.type||p.story_type)$("storyType").value=p.type||p.story_type;
+  if(p.source)$("storySource").value=p.source;
+  if(p.date||p.source_date)$("storyDate").value=(p.date||p.source_date).slice(0,10);
+  if(p.summary||p.note)$("storyNote").value=p.summary||p.note;
+  if(p.impact||p.materiality)$("storyImpact").value=p.impact||p.materiality;
+  const details=p.explanation||p.details||p.summary||'Otomatik temel veri alındı.';
+  $("storyAutoSummary").textContent=String(details);
+  storyLive();return changed}
+async function storyAutoAnalyze(){const sym=storyNormSymbol();if(!sym){setStatus("storyStatus","Önce hisse kodunu yaz.","warn");return}const b=$("storyAuto");b.disabled=true;setStatus("storyStatus",`${sym}: otomatik Hikâye Radar analizi hazırlanıyor…`,"warn");
+  try{
+    storyPullTechnical();
+    const mode=$("storyAutoMode")?.value||"cache";
+    if(mode==="tech"){$("storyAutoAge").textContent="Teknik mod · şimdi";$("storyAutoSummary").textContent="Yalnız mevcut MFI + Momentum sonuçları kullanıldı. KAP/bilanço puanları değiştirilmedi.";setStatus("storyStatus",`${sym}: teknik teyit çekildi. Temel otomasyon için Cache / Backend modunu seç.`,"good");return}
+    const cached=storyAutoCacheLoad(sym);if(cached&&Date.now()-Number(cached.saved_at||0)<24*3600*1000){storyApplyAutoPayload(sym,cached.data);$("storyAutoAge").textContent=`Cache · ${Math.round((Date.now()-cached.saved_at)/60000)} dk`;setStatus("storyStatus",`${sym}: son 24 saatlik Hikâye Radar cache'i kullanıldı.`,"good");return}
+    const url=`/api/story?symbol=${encodeURIComponent(sym)}`;let j;
+    try{j=await fetchJSON(url,{},22000)}catch(e){
+      $("storyAutoAge").textContent="Backend henüz bağlı değil";
+      $("storyAutoSummary").textContent="Teknik teyit çekildi; /api/story endpoint'i bu deploy'da bulunamadı. KAP/bilanço otomasyonu için backend dosyasına v0.2 endpoint'i eklenmeli.";
+      setStatus("storyStatus",`${sym}: MFI/Momentum güncellendi; KAP/bilanço backend'i henüz bağlı değil.`,"warn");return
+    }
+    const payload=j?.data||j?.result||j;if(!payload||payload.error)throw new Error(payload?.error||"Otomatik veri boş döndü");storyApplyAutoPayload(sym,payload);storyAutoCacheSave(sym,payload);$("storyAutoAge").textContent="Canlı · şimdi";setStatus("storyStatus",`${sym}: otomatik temel + teknik Hikâye Radar analizi tamamlandı.`,"good")
+  }catch(e){setStatus("storyStatus",`${sym}: otomatik analiz hatası · ${e?.message||e}`,"bad")}finally{b.disabled=false}}
+function storyResetForm(){["storySymbol","storyNote","storyImpact"].forEach(id=>$(id).value="");$("storyAutoAge").textContent="Henüz veri yok";$("storyAutoSummary").innerHTML="Backend bağlandığında KAP/bilanço/sektör/değerleme puanları burada otomatik açıklanır. Endpoint: <b>/api/story?symbol=HISSE</b>";["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id).value=0);$("storyDate").value=new Date().toISOString().slice(0,10);storyLive()}
 function storySaveRecord(){const symbol=String($("storySymbol").value||"").trim().toUpperCase().replace(/^BIST:/,"").replace(/\.IS$/,'');if(!symbol){setStatus("storyStatus","Hisse kodu olmadan kayıt yapılamaz.","bad");return}
   const r={id:Date.now(),symbol,type:$("storyType").value,date:$("storyDate").value||new Date().toISOString().slice(0,10),source:$("storySource").value,kap:storyClamp("storyKap",20),bilanco:storyClamp("storyBilanco",25),cash:storyClamp("storyCash",15),sector:storyClamp("storySector",10),valuation:storyClamp("storyValuation",10),mfi:storyClamp("storyMfi",10),tech:storyClamp("storyTech",10),note:$("storyNote").value.trim(),impact:$("storyImpact").value.trim()};r.score=r.kap+r.bilanco+r.cash+r.sector+r.valuation+r.mfi+r.tech;r.grade=storyGrade(r.score);storyRecords.unshift(r);storyPersist();renderStory();setStatus("storyStatus",`${symbol} kaydedildi · Hikâye Skoru ${r.score}/100 · ${storyGradeLabel(r.score)}`,r.score>=70?"good":r.score>=50?"warn":"bad")}
 function storyDelete(id){storyRecords=storyRecords.filter(r=>r.id!==id);storyPersist();renderStory()}
@@ -4055,7 +4095,7 @@ $("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
 ["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id)?.addEventListener("input",storyLive));
-$("storyPullTech").onclick=storyPullTechnical;$("storySave").onclick=storySaveRecord;$("storyReset").onclick=storyResetForm;$("storyExcel").onclick=storyExport;$("storyClear").onclick=storyClearAll;
+$("storyAuto").onclick=storyAutoAnalyze;$("storyPullTech").onclick=storyPullTechnical;$("storySave").onclick=storySaveRecord;$("storyReset").onclick=storyResetForm;$("storyExcel").onclick=storyExport;$("storyClear").onclick=storyClearAll;
 if(!$("storyDate").value)$("storyDate").value=new Date().toISOString().slice(0,10);storyLive();renderStory();
 renderElliott();renderFusion();renderCont();renderEarly();renderMedianCompare();renderPerformance();renderDiv();renderOpp();renderMacd3();renderMi();renderDuk();renderAd();renderLead();renderVrp();renderHarmonic();renderHarmForward();renderComposite();renderRsiBreak();renderBb();renderEp();renderLq();renderMfi();renderMs();renderQQ();buildConsensus();renderFails();
 </script>
