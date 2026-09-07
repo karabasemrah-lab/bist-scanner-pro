@@ -685,23 +685,63 @@ def _score_profit(cur, prev, max_pts):
     return 1
 
 
+def _kap_financial_disclosures(symbol: str, oid: str, days: int = 365):
+    """KAP'tan yalnız Finansal Rapor (FR) sınıfını ayrı sorgular.
+
+    Hikâye bildirim listesinden finansal rapor seçmek güvenli değildir; ÖDA metninde
+    "finansal rapor" ifadesi geçebilir. Bu nedenle KAP kriterine disclosureClass=FR
+    verip sonucu ayrıca sembolle doğruluyoruz.
+    """
+    criteria = _kap_criteria(oid, days)
+    criteria["disclosureClass"] = "FR"
+    r = SESSION.post(
+        KAP_DISCLOSURES_URL,
+        json=criteria,
+        timeout=18,
+        headers=_kap_headers(KAP_BASE + "/tr/bildirim-sorgu"),
+    )
+    r.raise_for_status()
+    data = r.json()
+    if not isinstance(data, list):
+        raise RuntimeError("KAP finansal bildirim listesi beklenen formatta değil")
+    out = []
+    for d in data:
+        codes = " ".join([str(d.get("stockCodes") or ""), str(d.get("relatedStocks") or "")]).upper()
+        if re.search(rf"(^|[^A-Z0-9]){re.escape(symbol)}([^A-Z0-9]|$)", codes):
+            out.append(d)
+    return out
+
+
 def _latest_financial_disclosure(disclosures):
-    fr = []
+    """Sorumluluk/Faaliyet raporunu değil, gerçek Finansal Rapor satırını seç."""
+    exact = []
+    fallback = []
     for d in disclosures:
-        blob = " ".join(str(d.get(k) or "") for k in ("subject", "summary", "disclosureType", "disclosureCategory")).casefold()
-        if "finansal rapor" in blob or str(d.get("disclosureType") or "").upper() == "FR":
-            dt = _parse_publish_date(d.get("publishDate"))
-            fr.append((dt or datetime.min.replace(tzinfo=ZoneInfo("Europe/Istanbul")), d))
-    fr.sort(key=lambda x: x[0], reverse=True)
-    return fr[0][1] if fr else None
+        subject = str(d.get("subject") or "").strip()
+        summary = str(d.get("summary") or "").strip()
+        dtype = str(d.get("disclosureType") or "").upper().strip()
+        blob = f"{subject} {summary}".casefold()
+        # Bunlar FR arama sonucunda görünse bile finansal tablo gövdesi değildir.
+        if any(x in blob for x in ("sorumluluk beyan", "faaliyet raporu", "sürdürülebilirlik")):
+            continue
+        dt = _parse_publish_date(d.get("publishDate")) or datetime.min.replace(tzinfo=ZoneInfo("Europe/Istanbul"))
+        if subject.casefold() == "finansal rapor":
+            exact.append((dt, d))
+        elif "finansal rapor" in subject.casefold() or dtype == "FR":
+            fallback.append((dt, d))
+    pool = exact or fallback
+    pool.sort(key=lambda x: x[0], reverse=True)
+    return pool[0][1] if pool else None
 
 
-def _financial_snapshot(symbol: str, disclosures: list):
-    fr = _latest_financial_disclosure(disclosures)
+def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None):
+    # Finansal raporu katalizör/ÖDA listesinden seçme. KAP'ta FR sınıfını ayrı sorgula.
+    financial_disclosures = _kap_financial_disclosures(symbol, oid or "", 365) if oid else disclosures
+    fr = _latest_financial_disclosure(financial_disclosures)
     if not fr:
         return {"available": False, "reason": "Son dönemde Finansal Rapor bildirimi bulunamadı."}
     idx = fr.get("disclosureIndex")
-    key = f"kap:fin:v03:{symbol}:{idx}"
+    key = f"kap:fin:v031:{symbol}:{idx}"
     cached = _cache_json_get(key)
     if cached is not None:
         return cached
@@ -823,7 +863,7 @@ def _build_story_payload(symbol: str):
     if not oid:
         raise RuntimeError(f"{symbol} için KAP şirket OID bilgisi bulunamadı")
     disclosures = _kap_disclosures(symbol, oid, _STORY_LOOKBACK_DAYS)
-    financial = _financial_snapshot(symbol, disclosures)
+    financial = _financial_snapshot(symbol, disclosures, oid)
     now = datetime.now(ZoneInfo("Europe/Istanbul"))
 
     candidates = []
@@ -919,7 +959,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v03:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v031:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
@@ -984,7 +1024,7 @@ if __name__ == "__main__":
     print("BIST Scanner HTML - bandwidth optimized proxy")
     print("Yahoo: compact JSON + gzip + cache")
     print("TradingView: gzip + short cache")
-    print("Story Radar v0.3: /api/story?symbol=NETAS")
+    print("Story Radar v0.3.1: /api/story?symbol=NETAS")
     print("Metrics: /api/metrics")
     print()
 
