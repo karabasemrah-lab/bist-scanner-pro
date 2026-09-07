@@ -713,14 +713,43 @@ def _kap_financial_disclosures(symbol: str, oid: str, days: int = 365):
     return out
 
 
-def _latest_financial_disclosure(disclosures):
-    """Gerçek finansal tablo gövdesini seç.
+def _kap_public_financial_rows(index):
+    """KAP finansal tabloyu bildirim sayfasının gerçek HTML tablosundan oku.
 
-    KAP'ın FR sorgusu aynı paket içindeki Sorumluluk Beyanı ve Faaliyet Raporu
-    kayıtlarını da döndürebiliyor. Bu nedenle metadata/subject alanına tek başına
-    güvenmiyoruz. En yeni adaylardan detay gövdesini açıp IFRS/KAP finansal tablo
-    taxonomy işaretlerini doğruluyoruz.
+    attachment-detail ucu bazı FR kayıtlarında finansal XBRL tablo gövdesini
+    döndürmeyebiliyor. KAP'ın /tr/Bildirim/<index> sayfası ise tabloyu HTML
+    olarak içeriyor; bu yüzden finansal doğrulamada ana kaynak budur.
     """
+    if not index:
+        return []
+    key = f"kap:publicfinrows:v034:{index}"
+    cached = _cache_json_get(key)
+    if cached is not None:
+        return cached.get("rows") or []
+    url = KAP_BASE + f"/tr/Bildirim/{index}"
+    r = SESSION.get(url, timeout=25, headers={
+        "Referer": KAP_BASE + "/tr/bildirim-sorgu",
+        "Accept": "text/html,application/xhtml+xml",
+    })
+    r.raise_for_status()
+    parser = _KapTableParser()
+    parser.feed(r.text)
+    rows = parser.rows
+    # Yalnız finansal tablo olduğu doğrulanan sayfayı cache'le.
+    blob = "\n".join(" | ".join(row) for row in rows)
+    markers = (
+        "ifrs-full_Revenue", "ifrs-full_Assets", "ifrs-full_ProfitLoss",
+        "kap-fr_StatementOfFinancialPosition", "CashFlowsFromUsedInOperatingActivities",
+    )
+    hits = sum(m.casefold() in blob.casefold() for m in markers)
+    if hits >= 2:
+        _cache_json_set(key, _FIN_TTL, {"rows": rows, "taxonomy_hits": hits})
+        return rows
+    return []
+
+
+def _latest_financial_disclosure(disclosures):
+    """En yeni gerçek Finansal Rapor kaydını KAP bildirim HTML'i ile doğrula."""
     ranked = []
     for d in disclosures:
         subject = str(d.get("subject") or "").strip()
@@ -729,49 +758,23 @@ def _latest_financial_disclosure(disclosures):
         dt = _parse_publish_date(d.get("publishDate")) or datetime.min.replace(
             tzinfo=ZoneInfo("Europe/Istanbul")
         )
-        # Öncelik yalnız sıralama içindir; son karar detay gövdesinden verilir.
-        pri = 0
-        if subject.casefold() == "finansal rapor":
-            pri = 3
-        elif "finansal rapor" in blob:
-            pri = 2
+        pri = 3 if subject.casefold() == "finansal rapor" else 2 if "finansal rapor" in blob else 0
         if any(x in blob for x in ("sorumluluk beyan", "faaliyet raporu", "sürdürülebilirlik")):
             pri = -1
         ranked.append((dt, pri, d))
-
     ranked.sort(key=lambda x: (x[0], x[1]), reverse=True)
 
-    # En yeni FR paketlerinden gerçek tablo gövdesini doğrula. 12 aday bir yıllık
-    # 3/6/9/12 aylık paketleri fazlasıyla kapsar ve gereksiz KAP trafiğini sınırlar.
+    # En yeni adaylardan public KAP sayfasını aç; gerçek XBRL tablo varsa kabul et.
     for _dt, _pri, d in ranked[:12]:
         idx = d.get("disclosureIndex")
         if not idx:
             continue
         try:
-            item = _kap_detail_json(idx)
+            rows = _kap_public_financial_rows(idx)
         except Exception:
-            continue
-        body = item.get("disclosureBody") or ""
-        if isinstance(body, list):
-            body = " ".join(str(x or "") for x in body)
-        body_s = str(body or "")
-        low = body_s.casefold()
-
-        # Gerçek KAP finansal tablo bildiriminde taxonomy kodları bulunur.
-        taxonomy_hits = sum(marker.casefold() in low for marker in (
-            "kap-fr_StatementOfFinancialPositionBalanceSheetAbstract",
-            "ifrs-full_Revenue",
-            "ifrs-full_Assets",
-            "ifrs-full_ProfitLoss",
-            "ifrs-full_CashFlowsFromUsedInOperatingActivities",
-        ))
-        if taxonomy_hits >= 2:
-            # Detayı ikinci kez indirmemek için kısa süreli cache'e koy.
-            _cache_json_set(f"kap:selectedfin:v032:{idx}", _FIN_TTL, {
-                "verified": True, "taxonomy_hits": taxonomy_hits
-            })
+            rows = []
+        if rows:
             return d
-
     return None
 
 def _kap_financial_page_id(company: dict, symbol: str):
@@ -967,7 +970,7 @@ def _kap_summary_financial_snapshot(symbol: str, company: dict):
 
 
 def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
-    """v0.3.3: Önce KAP Özet Finansal Bilgiler; başarısızsa eski FR parser fallback."""
+    """v0.3.4: KAP özet sayfa + gerçek Bildirim HTML finansal tablo doğrulaması."""
     if company:
         try:
             snap=_kap_summary_financial_snapshot(symbol,company)
@@ -986,16 +989,20 @@ def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, 
     if not fr:
         return {"available": False, "reason": f"Özet finansal başarısız: {summary_error}; Finansal Rapor bildirimi ayrıştırılamadı."}
     idx = fr.get("disclosureIndex")
-    key = f"kap:fin:v033:{symbol}:{idx}"
+    key = f"kap:fin:v034:{symbol}:{idx}"
     cached = _cache_json_get(key)
     if cached is not None: return cached
-    item=_kap_detail_json(idx); body=item.get("disclosureBody") or []
-    if isinstance(body,str): body=[body]
-    parser=_KapTableParser()
-    for part in body:
-        try: parser.feed(str(part or ""))
-        except Exception: pass
-    rows=parser.rows
+    # v0.3.4: finansal tabloyu öncelikle gerçek KAP Bildirim HTML sayfasından oku.
+    rows = _kap_public_financial_rows(idx)
+    if not rows:
+        # Eski attachment-detail yapısı uyumluysa son çare olarak onu da dene.
+        item=_kap_detail_json(idx); body=item.get("disclosureBody") or []
+        if isinstance(body,str): body=[body]
+        parser=_KapTableParser()
+        for part in body:
+            try: parser.feed(str(part or ""))
+            except Exception: pass
+        rows=parser.rows
     rev4=_find_fin_row(rows,taxonomy="ifrs-full_Revenue",label="Hasılat",prefer_values=4)
     op4=_find_fin_row(rows,label="Esas Faaliyet Kârı (Zararı)",prefer_values=4) or _find_fin_row(rows,label="Esas Faaliyet Karı (Zararı)",prefer_values=4)
     net4=_find_fin_row(rows,taxonomy="ifrs-full_ProfitLoss",prefer_values=4)
@@ -1130,7 +1137,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v033:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v034:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
