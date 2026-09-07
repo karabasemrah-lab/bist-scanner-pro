@@ -1371,6 +1371,105 @@ def story_debug_api():
     except Exception as exc:
         return jsonify({"symbol":symbol,"error":f"Story debug hatası: {exc}"}), 500
 
+
+
+# ---------------------------------------------------------------------
+# Hikâye Radar v0.3.9 · finansal veri kanalı teşhisi (Yahoo Fundamentals)
+# ---------------------------------------------------------------------
+_YF_FUND_URL = "https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}"
+_YF_FUND_FIELDS = [
+    "quarterlyTotalRevenue",
+    "quarterlyOperatingIncome",
+    "quarterlyNetIncome",
+    "quarterlyOperatingCashFlow",
+    "quarterlyTotalAssets",
+    "quarterlyTotalLiabilitiesNetMinorityInterest",
+    "quarterlyCashCashEquivalentsAndShortTermInvestments",
+    "annualTotalRevenue",
+    "annualOperatingIncome",
+    "annualNetIncome",
+    "annualOperatingCashFlow",
+    "annualTotalAssets",
+    "annualTotalLiabilitiesNetMinorityInterest",
+    "annualCashCashEquivalentsAndShortTermInvestments",
+]
+
+def _yf_fundamentals_probe(symbol: str):
+    ys = symbol if symbol.endswith(".IS") else symbol + ".IS"
+    now = int(time.time())
+    key = f"yf:fundprobe:v039:{ys}"
+    cached = _cache_json_get(key)
+    if cached is not None:
+        return cached
+
+    r = SESSION.get(
+        _YF_FUND_URL.format(symbol=ys),
+        params={
+            "symbol": ys,
+            "type": ",".join(_YF_FUND_FIELDS),
+            "period1": now - 900 * 86400,
+            "period2": now + 86400,
+            "corsDomain": "finance.yahoo.com",
+        },
+        timeout=25,
+        headers={
+            "Accept": "application/json,text/plain,*/*",
+            "Referer": f"https://finance.yahoo.com/quote/{ys}/financials",
+            "Origin": "https://finance.yahoo.com",
+        },
+    )
+    r.raise_for_status()
+    j = r.json()
+    ts = j.get("timeseries") or {}
+    err = ts.get("error")
+    results = ts.get("result") or []
+    out = {}
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        data_keys = [k for k in item.keys() if k not in ("meta", "timestamp")]
+        for k in data_keys:
+            vals = item.get(k) or []
+            arr = []
+            for v in vals[-8:]:
+                if not isinstance(v, dict):
+                    continue
+                rv = v.get("reportedValue") or {}
+                arr.append({
+                    "date": v.get("asOfDate"),
+                    "period_type": v.get("periodType"),
+                    "currency": v.get("currencyCode"),
+                    "raw": rv.get("raw"),
+                    "fmt": rv.get("fmt"),
+                })
+            out[k] = arr
+
+    payload = {
+        "symbol": symbol,
+        "yahoo_symbol": ys,
+        "http_status": r.status_code,
+        "available": any(out.values()),
+        "error": err,
+        "fields_requested": _YF_FUND_FIELDS,
+        "fields_found": sorted(k for k, v in out.items() if v),
+        "series": out,
+    }
+    _cache_json_set(key, 60 * 60, payload)
+    return payload
+
+@app.get("/api/story-fin-debug")
+def story_fin_debug_api():
+    symbol = _story_symbol(request.args.get("symbol", ""))
+    if not symbol:
+        return jsonify({"error": "geçerli symbol gerekli"}), 400
+    try:
+        return jsonify(_yf_fundamentals_probe(symbol)), 200
+    except requests.RequestException as exc:
+        return jsonify({"symbol": symbol, "available": False, "error": f"Yahoo fundamentals bağlantı hatası: {exc}"}), 502
+    except Exception as exc:
+        return jsonify({"symbol": symbol, "available": False, "error": f"Finansal probe hatası: {exc}"}), 500
+
+
 @app.get("/api/metrics")
 def metrics():
     with _metrics_lock:
