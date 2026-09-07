@@ -25,6 +25,7 @@ KAP_BASE = "https://www.kap.org.tr"
 KAP_COMPANIES_URL = KAP_BASE + "/tr/api/company/items/IGS/A"
 KAP_DISCLOSURES_URL = KAP_BASE + "/tr/api/disclosure/members/byCriteria"
 KAP_DETAIL_URL = KAP_BASE + "/tr/api/notification/attachment-detail/{index}"
+KAP_COMPANY_LIST_PAGE = KAP_BASE + "/tr/bist-sirketler"
 
 SESSION = requests.Session()
 SESSION.headers.update({
@@ -773,126 +774,257 @@ def _latest_financial_disclosure(disclosures):
 
     return None
 
-def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None):
-    # Finansal raporu katalizör/ÖDA listesinden seçme. KAP'ta FR sınıfını ayrı sorgula.
+def _kap_financial_page_id(company: dict, symbol: str):
+    """KAP şirketinin sayısal web sayfası kimliğini mümkün olduğunca sağlam bul."""
+    for k in ("kapMemberId", "memberId", "companyId", "id", "kapId", "kapCompanyId"):
+        v = str(company.get(k) or "").strip()
+        if v.isdigit():
+            return v
+
+    # Bazı KAP şirket-listesi sürümleri doğrudan URL/path döndürüyor.
+    for k in ("url", "link", "path", "companyUrl", "memberUrl"):
+        v = str(company.get(k) or "")
+        m = re.search(r"/(?:sirket-finansal-bilgileri|sirket-bilgileri/ozet)/(\d+)(?:-|/|$)", v, re.I)
+        if m:
+            return m.group(1)
+
+    # Son çare: BIST şirketleri sayfasında sembolün yakınındaki şirket linkini ara.
+    # Bu yalnız cache miss'te çalışır; yoğun tarama yapılmaz.
+    try:
+        key = "kap:bist-company-list-page"
+        cached = _cache_json_get(key)
+        page = str((cached or {}).get("html") or "")
+        if not page:
+            r = SESSION.get(KAP_COMPANY_LIST_PAGE, timeout=18, headers={
+                "Referer": KAP_BASE + "/tr/", "Accept": "text/html,application/xhtml+xml"
+            })
+            r.raise_for_status()
+            page = r.text
+            _cache_json_set(key, _KAP_COMPANY_TTL, {"html": page[:1500000]})
+        # Önce sembol çevresindeki 3000 karakteri dene.
+        pos = page.upper().find(symbol.upper())
+        chunks = [page[max(0, pos-3000):pos+3000]] if pos >= 0 else []
+        chunks.append(page)
+        for chunk in chunks:
+            m = re.search(r"/(?:tr/)?(?:sirket-finansal-bilgileri|sirket-bilgileri/ozet)/(\d+)-[^\"'<> ]+", chunk, re.I)
+            if m:
+                return m.group(1)
+    except Exception:
+        pass
+    return None
+
+
+class _SimpleHtmlTableParser(HTMLParser):
+    """KAP Özet Finansal Bilgiler HTML tablosunu satır/hücre olarak okur."""
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.rows, self._row, self._cell = [], None, None
+
+    def handle_starttag(self, tag, attrs):
+        t = tag.lower()
+        if t == "tr": self._row = []
+        elif t in ("td", "th") and self._row is not None: self._cell = []
+
+    def handle_endtag(self, tag):
+        t = tag.lower()
+        if t in ("td", "th") and self._cell is not None:
+            self._row.append(re.sub(r"\s+", " ", " ".join(self._cell)).strip())
+            self._cell = None
+        elif t == "tr" and self._row is not None:
+            if self._row: self.rows.append(self._row)
+            self._row = None
+
+    def handle_data(self, data):
+        if self._cell is not None:
+            x = str(data or "").strip()
+            if x: self._cell.append(x)
+
+
+def _norm_fin_label(s: str) -> str:
+    s = html_lib.unescape(str(s or "")).casefold()
+    s = s.replace("ı", "i").replace("ğ", "g").replace("ü", "u").replace("ş", "s").replace("ö", "o").replace("ç", "c")
+    return re.sub(r"[^a-z0-9]+", " ", s).strip()
+
+
+def _summary_row(rows, *labels):
+    wanted = [_norm_fin_label(x) for x in labels]
+    for row in rows:
+        if not row: continue
+        lab = _norm_fin_label(row[0])
+        if any(w == lab or w in lab for w in wanted):
+            vals = [_tr_number(x) for x in row[1:]]
+            return vals
+    return []
+
+
+def _summary_headers(rows):
+    # KAP'ta bölüm başlığı satırı: FİNANSAL DURUM TABLOSU | 2023/12 | ...
+    for row in rows:
+        if row and "finansal durum tablosu" in _norm_fin_label(row[0]):
+            return [str(x).strip() for x in row[1:]]
+    # Fallback: dönem biçimi taşıyan en dolu satır.
+    best=[]
+    for row in rows:
+        vals=[str(x).strip() for x in row if re.fullmatch(r"20\d{2}/(?:03|06|09|12)", str(x).strip())]
+        if len(vals)>len(best): best=vals
+    return best
+
+
+def _kap_summary_financial_snapshot(symbol: str, company: dict):
+    page_id = _kap_financial_page_id(company, symbol)
+    if not page_id:
+        return {"available": False, "reason": "KAP şirket finansal sayfa kimliği bulunamadı.", "source": "kap_summary"}
+
+    slug = re.sub(r"[^a-z0-9]+", "-", str(company.get("kapMemberTitle") or symbol).casefold()
+                  .replace("ı","i").replace("ğ","g").replace("ü","u").replace("ş","s").replace("ö","o").replace("ç","c")).strip("-")
+    url = KAP_BASE + f"/tr/sirket-finansal-bilgileri/{page_id}-{slug}"
+    key = f"kap:finsummary:v033:{symbol}:{page_id}"
+    cached = _cache_json_get(key)
+    if cached is not None: return cached
+
+    r = SESSION.get(url, timeout=20, headers={"Referer": KAP_BASE + "/tr/", "Accept": "text/html,application/xhtml+xml"})
+    r.raise_for_status()
+    parser = _SimpleHtmlTableParser(); parser.feed(r.text)
+    rows = parser.rows
+    headers = _summary_headers(rows)
+
+    rev = _summary_row(rows, "Hasılat")
+    op = _summary_row(rows, "Esas Faaliyet Kârı (Zararı)", "Esas Faaliyet Karı (Zararı)")
+    net = _summary_row(rows, "Net Dönem Kârı (Zararı)", "Net Dönem Karı (Zararı)")
+    assets = _summary_row(rows, "Toplam Varlıklar")
+    liab = _summary_row(rows, "Toplam Yükümlülükler")
+    cash = _summary_row(rows, "Nakit ve Nakit Benzerleri")
+
+    n = max(len(headers), len(rev), len(op), len(net), len(assets), len(liab))
+    if n == 0:
+        snap={"available":False,"reason":"KAP Özet Finansal Bilgiler tablosu ayrıştırılamadı.","source":"kap_summary","kap_url":url}
+        _cache_json_set(key, 60*60, snap); return snap
+
+    # Sağdaki sütun en güncel dönemdir. Özet sayfa geçmiş yıllarda yalnız yıllık sütunlar
+    # taşıyabildiği için büyüme yalnız AYNI dönem (örn 2026/06 vs 2025/06) bulunursa hesaplanır.
+    cur_i = n-1
+    cur_period = headers[cur_i] if cur_i < len(headers) else None
+    prev_i = None
+    if cur_period and re.fullmatch(r"20\d{2}/\d{2}", cur_period):
+        y,m = cur_period.split("/")
+        target=f"{int(y)-1}/{m}"
+        if target in headers: prev_i=headers.index(target)
+
+    def at(a,i): return a[i] if i is not None and i < len(a) else None
+    rev_cur, rev_prev = at(rev,cur_i), at(rev,prev_i)
+    op_cur, op_prev = at(op,cur_i), at(op,prev_i)
+    net_cur, net_prev = at(net,cur_i), at(net,prev_i)
+    assets_cur = at(assets,cur_i); liab_cur=at(liab,cur_i); cash_cur=at(cash,cur_i)
+    # Bilanço yönü için bir önceki mevcut sütun kullanılabilir; gelir büyümesi için kullanılmaz.
+    bal_prev_i = cur_i-1 if cur_i > 0 else None
+    assets_prev=at(assets,bal_prev_i); liab_prev=at(liab,bal_prev_i)
+
+    rev_g=_pct_change(rev_cur,rev_prev); op_g=_pct_change(op_cur,op_prev); net_g=_pct_change(net_cur,net_prev)
+    margin_cur=(_safe_ratio(op_cur,rev_cur)*100) if _safe_ratio(op_cur,rev_cur) is not None else None
+    margin_prev=(_safe_ratio(op_prev,rev_prev)*100) if _safe_ratio(op_prev,rev_prev) is not None else None
+    margin_delta=(margin_cur-margin_prev) if margin_cur is not None and margin_prev is not None else None
+
+    # Karşılaştırılabilir dönem varsa klasik büyüme skoru; yoksa sadece cari kaliteyi ölç ve
+    # büyüme puanı uydurma. Böylece 2026/06'yı 2025/12 ile kıyaslamayız.
+    s_rev=_score_growth(rev_g) if prev_i is not None else (2 if rev_cur is not None and rev_cur>0 else 0)
+    s_op=_score_profit(op_cur,op_prev,7) if prev_i is not None else (4 if op_cur is not None and op_cur>0 else 0)
+    s_net=_score_profit(net_cur,net_prev,6) if prev_i is not None else (3 if net_cur is not None and net_cur>0 else 0)
+    if margin_delta is not None:
+        s_margin=4 if margin_delta>=3 else 3 if margin_delta>=1 else 2 if margin_delta>0 else 1 if margin_cur and margin_cur>0 else 0
+    else: s_margin=2 if margin_cur is not None and margin_cur>0 else 0
+    bilanco_score=min(25,s_rev+s_op+s_net+s_margin)
+
+    lev_cur=_safe_ratio(liab_cur,assets_cur); lev_prev=_safe_ratio(liab_prev,assets_prev)
+    if lev_cur is not None and lev_prev is not None:
+        improvement=(lev_prev-lev_cur)*100
+        s_lev=3 if improvement>=3 else 2 if improvement>0 else 1 if lev_cur<.5 else 0
+    else: s_lev=0
+    # Özet sayfada OCF yoksa nakit skorunu sahte veriyle doldurma; yalnız bilanço/nakit mevcudiyeti
+    # ve kaldıraç yönünden sınırlı puan ver.
+    s_cash_level=3 if cash_cur is not None and cash_cur>0 else 0
+    cash_score=min(15,s_cash_level+s_lev)
+
+    def r2(x): return None if x is None else round(x,2)
+    snap={
+      "available": any(v is not None for v in (rev_cur,op_cur,net_cur,assets_cur)),
+      "source":"kap_summary","comparison_period": headers[prev_i] if prev_i is not None else None,
+      "period":cur_period,"scores":{"bilanco":bilanco_score,"cash":cash_score},
+      "metrics":{
+        "revenue":{"current":rev_cur,"previous":rev_prev,"growth_pct":r2(rev_g)},
+        "operating_profit":{"current":op_cur,"previous":op_prev,"growth_pct":r2(op_g)},
+        "net_profit":{"current":net_cur,"previous":net_prev,"growth_pct":r2(net_g)},
+        "operating_margin_pct":{"current":r2(margin_cur),"previous":r2(margin_prev),"delta_pp":r2(margin_delta)},
+        "operating_cash_flow":{"current":None,"previous":None,"growth_pct":None},
+        "cash":{"current":cash_cur,"previous":None},
+        "liabilities_to_assets":{"current":r2(lev_cur),"previous":r2(lev_prev)},
+        "cash_conversion":None,
+      },
+      "score_breakdown":{"revenue":s_rev,"operating_profit":s_op,"net_profit":s_net,"margin":s_margin,"cash_level":s_cash_level,"leverage":s_lev},
+      "kap_url":url,
+      "note":"Özet finansal sayfa kullanıldı. Aynı dönem geçen yıl sütunu yoksa büyüme puanı sınırlı tutulur; OCF uydurulmaz."
+    }
+    _cache_json_set(key,_FIN_TTL,snap); return snap
+
+
+def _financial_snapshot(symbol: str, disclosures: list, oid: str | None = None, company: dict | None = None):
+    """v0.3.3: Önce KAP Özet Finansal Bilgiler; başarısızsa eski FR parser fallback."""
+    if company:
+        try:
+            snap=_kap_summary_financial_snapshot(symbol,company)
+            if snap.get("available"):
+                return snap
+        except Exception as exc:
+            summary_error=str(exc)
+        else:
+            summary_error=snap.get("reason") or "özet finansal veri yok"
+    else:
+        summary_error="company bilgisi yok"
+
+    # Eski FR parser fallback: servis yapısı tekrar uyumlu hale gelirse çalışmaya devam eder.
     financial_disclosures = _kap_financial_disclosures(symbol, oid or "", 365) if oid else disclosures
     fr = _latest_financial_disclosure(financial_disclosures)
     if not fr:
-        return {"available": False, "reason": "Son dönemde Finansal Rapor bildirimi bulunamadı."}
+        return {"available": False, "reason": f"Özet finansal başarısız: {summary_error}; Finansal Rapor bildirimi ayrıştırılamadı."}
     idx = fr.get("disclosureIndex")
-    key = f"kap:fin:v032:{symbol}:{idx}"
+    key = f"kap:fin:v033:{symbol}:{idx}"
     cached = _cache_json_get(key)
-    if cached is not None:
-        return cached
-
-    item = _kap_detail_json(idx)
-    body = item.get("disclosureBody") or []
-    if isinstance(body, str):
-        body = [body]
-    parser = _KapTableParser()
+    if cached is not None: return cached
+    item=_kap_detail_json(idx); body=item.get("disclosureBody") or []
+    if isinstance(body,str): body=[body]
+    parser=_KapTableParser()
     for part in body:
-        try:
-            parser.feed(str(part or ""))
-        except Exception:
-            pass
-    rows = parser.rows
-
-    # Gelir tablosu: son 4 sayının ilk ikisi cari ve aynı dönem geçen yıldır.
-    rev4 = _find_fin_row(rows, taxonomy="ifrs-full_Revenue", label="Hasılat", prefer_values=4)
-    op4 = _find_fin_row(rows, label="Esas Faaliyet Kârı (Zararı)", prefer_values=4)
-    if op4 is None:
-        op4 = _find_fin_row(rows, label="Esas Faaliyet Karı (Zararı)", prefer_values=4)
-    net4 = _find_fin_row(rows, taxonomy="ifrs-full_ProfitLoss", prefer_values=4)
-
-    # Nakit akışında ve bilançoda iki ana karşılaştırma sütunu bulunur.
-    ocf2 = _find_fin_row(rows, taxonomy="ifrs-full_CashFlowsFromUsedInOperatingActivities", prefer_values=2)
-    assets2 = _find_fin_row(rows, taxonomy="ifrs-full_Assets", label="TOPLAM VARLIKLAR", prefer_values=2)
-    liab2 = _find_fin_row(rows, taxonomy="ifrs-full_Liabilities", label="TOPLAM YÜKÜMLÜLÜKLER", prefer_values=2)
-    cash2 = _find_fin_row(rows, taxonomy="ifrs-full_CashAndCashEquivalents", prefer_values=2)
-
-    def first2(v):
-        return (v[0], v[1]) if v and len(v) >= 2 else (None, None)
-    rev_cur, rev_prev = first2(rev4)
-    op_cur, op_prev = first2(op4)
-    net_cur, net_prev = first2(net4)
-    ocf_cur, ocf_prev = first2(ocf2)
-    assets_cur, assets_prev = first2(assets2)
-    liab_cur, liab_prev = first2(liab2)
-    cash_cur, cash_prev = first2(cash2)
-
-    rev_g = _pct_change(rev_cur, rev_prev)
-    op_g = _pct_change(op_cur, op_prev)
-    net_g = _pct_change(net_cur, net_prev)
-    ocf_g = _pct_change(ocf_cur, ocf_prev)
-    margin_cur = (_safe_ratio(op_cur, rev_cur) or 0) * 100 if op_cur is not None and rev_cur else None
-    margin_prev = (_safe_ratio(op_prev, rev_prev) or 0) * 100 if op_prev is not None and rev_prev else None
-    margin_delta = (margin_cur - margin_prev) if margin_cur is not None and margin_prev is not None else None
-
-    # Bilanço 0-25: satış 8 + esas faaliyet 7 + net kâr 6 + faaliyet marjı 4.
-    s_rev = _score_growth(rev_g)
-    s_op = _score_profit(op_cur, op_prev, 7)
-    s_net = _score_profit(net_cur, net_prev, 6)
-    if margin_delta is None:
-        s_margin = 0
-    elif margin_delta >= 3: s_margin = 4
-    elif margin_delta >= 1: s_margin = 3
-    elif margin_delta > 0: s_margin = 2
-    elif margin_cur is not None and margin_cur > 0: s_margin = 1
-    else: s_margin = 0
-    bilanço_score = min(25, s_rev + s_op + s_net + s_margin)
-
-    # Kârlılık/Nakit 0-15: OCF seviyesi 5 + OCF yönü 4 + kârın nakde dönüşümü 3 + yükümlülük/varlık yönü 3.
-    s_ocf_level = 5 if ocf_cur is not None and ocf_cur > 0 else 0
-    if ocf_cur is not None and ocf_prev is not None and ocf_cur > 0 and ocf_prev <= 0:
-        s_ocf_growth = 4
-    elif ocf_g is not None and ocf_g >= 25: s_ocf_growth = 4
-    elif ocf_g is not None and ocf_g >= 5: s_ocf_growth = 3
-    elif ocf_g is not None and ocf_g > 0: s_ocf_growth = 2
-    else: s_ocf_growth = 0
-    conv = _safe_ratio(ocf_cur, net_cur) if net_cur is not None and net_cur > 0 else None
-    if conv is not None and conv >= 1: s_conv = 3
-    elif conv is not None and conv >= .5: s_conv = 2
-    elif conv is not None and conv > 0: s_conv = 1
-    else: s_conv = 0
-    lev_cur = _safe_ratio(liab_cur, assets_cur)
-    lev_prev = _safe_ratio(liab_prev, assets_prev)
+        try: parser.feed(str(part or ""))
+        except Exception: pass
+    rows=parser.rows
+    rev4=_find_fin_row(rows,taxonomy="ifrs-full_Revenue",label="Hasılat",prefer_values=4)
+    op4=_find_fin_row(rows,label="Esas Faaliyet Kârı (Zararı)",prefer_values=4) or _find_fin_row(rows,label="Esas Faaliyet Karı (Zararı)",prefer_values=4)
+    net4=_find_fin_row(rows,taxonomy="ifrs-full_ProfitLoss",prefer_values=4)
+    ocf2=_find_fin_row(rows,taxonomy="ifrs-full_CashFlowsFromUsedInOperatingActivities",prefer_values=2)
+    assets2=_find_fin_row(rows,taxonomy="ifrs-full_Assets",label="TOPLAM VARLIKLAR",prefer_values=2)
+    liab2=_find_fin_row(rows,taxonomy="ifrs-full_Liabilities",label="TOPLAM YÜKÜMLÜLÜKLER",prefer_values=2)
+    cash2=_find_fin_row(rows,taxonomy="ifrs-full_CashAndCashEquivalents",prefer_values=2)
+    def first2(v): return (v[0],v[1]) if v and len(v)>=2 else (None,None)
+    rev_cur,rev_prev=first2(rev4); op_cur,op_prev=first2(op4); net_cur,net_prev=first2(net4); ocf_cur,ocf_prev=first2(ocf2)
+    assets_cur,assets_prev=first2(assets2); liab_cur,liab_prev=first2(liab2); cash_cur,cash_prev=first2(cash2)
+    rev_g=_pct_change(rev_cur,rev_prev); op_g=_pct_change(op_cur,op_prev); net_g=_pct_change(net_cur,net_prev); ocf_g=_pct_change(ocf_cur,ocf_prev)
+    margin_cur=(_safe_ratio(op_cur,rev_cur)*100) if _safe_ratio(op_cur,rev_cur) is not None else None
+    margin_prev=(_safe_ratio(op_prev,rev_prev)*100) if _safe_ratio(op_prev,rev_prev) is not None else None
+    margin_delta=(margin_cur-margin_prev) if margin_cur is not None and margin_prev is not None else None
+    s_rev=_score_growth(rev_g); s_op=_score_profit(op_cur,op_prev,7); s_net=_score_profit(net_cur,net_prev,6)
+    s_margin=4 if margin_delta is not None and margin_delta>=3 else 3 if margin_delta is not None and margin_delta>=1 else 2 if margin_delta is not None and margin_delta>0 else 1 if margin_cur and margin_cur>0 else 0
+    bilanço_score=min(25,s_rev+s_op+s_net+s_margin)
+    s_ocf_level=5 if ocf_cur is not None and ocf_cur>0 else 0
+    s_ocf_growth=4 if ocf_cur is not None and ocf_prev is not None and ocf_cur>0 and ocf_prev<=0 else 4 if ocf_g is not None and ocf_g>=25 else 3 if ocf_g is not None and ocf_g>=5 else 2 if ocf_g is not None and ocf_g>0 else 0
+    conv=_safe_ratio(ocf_cur,net_cur) if net_cur is not None and net_cur>0 else None
+    s_conv=3 if conv is not None and conv>=1 else 2 if conv is not None and conv>=.5 else 1 if conv is not None and conv>0 else 0
+    lev_cur=_safe_ratio(liab_cur,assets_cur); lev_prev=_safe_ratio(liab_prev,assets_prev)
+    s_lev=0
     if lev_cur is not None and lev_prev is not None:
-        improvement = (lev_prev - lev_cur) * 100
-        if improvement >= 3: s_lev = 3
-        elif improvement > 0: s_lev = 2
-        elif lev_cur < .5: s_lev = 1
-        else: s_lev = 0
-    else:
-        s_lev = 0
-    cash_score = min(15, s_ocf_level + s_ocf_growth + s_conv + s_lev)
-
-    def r2(x): return None if x is None else round(x, 2)
-    snap = {
-        "available": any(v is not None for v in (rev_cur, op_cur, net_cur, ocf_cur)),
-        "disclosure_index": idx,
-        "publish_date": fr.get("publishDate"),
-        "year": fr.get("year"),
-        "period": fr.get("period"),
-        "scores": {"bilanco": bilanço_score, "cash": cash_score},
-        "metrics": {
-            "revenue": {"current": rev_cur, "previous": rev_prev, "growth_pct": r2(rev_g)},
-            "operating_profit": {"current": op_cur, "previous": op_prev, "growth_pct": r2(op_g)},
-            "net_profit": {"current": net_cur, "previous": net_prev, "growth_pct": r2(net_g)},
-            "operating_margin_pct": {"current": r2(margin_cur), "previous": r2(margin_prev), "delta_pp": r2(margin_delta)},
-            "operating_cash_flow": {"current": ocf_cur, "previous": ocf_prev, "growth_pct": r2(ocf_g)},
-            "cash": {"current": cash_cur, "previous": cash_prev},
-            "liabilities_to_assets": {"current": r2(lev_cur), "previous": r2(lev_prev)},
-            "cash_conversion": r2(conv),
-        },
-        "score_breakdown": {
-            "revenue": s_rev, "operating_profit": s_op, "net_profit": s_net, "margin": s_margin,
-            "ocf_level": s_ocf_level, "ocf_growth": s_ocf_growth, "cash_conversion": s_conv, "leverage": s_lev,
-        },
-        "kap_url": KAP_BASE + f"/tr/Bildirim/{idx}",
-    }
-    _cache_json_set(key, _FIN_TTL, snap)
-    return snap
-
+        improvement=(lev_prev-lev_cur)*100; s_lev=3 if improvement>=3 else 2 if improvement>0 else 1 if lev_cur<.5 else 0
+    cash_score=min(15,s_ocf_level+s_ocf_growth+s_conv+s_lev)
+    def r2(x): return None if x is None else round(x,2)
+    snap={"available":any(v is not None for v in (rev_cur,op_cur,net_cur,ocf_cur)),"source":"kap_fr_fallback","disclosure_index":idx,"publish_date":fr.get("publishDate"),"year":fr.get("year"),"period":fr.get("period"),"scores":{"bilanco":bilanço_score,"cash":cash_score},"metrics":{"revenue":{"current":rev_cur,"previous":rev_prev,"growth_pct":r2(rev_g)},"operating_profit":{"current":op_cur,"previous":op_prev,"growth_pct":r2(op_g)},"net_profit":{"current":net_cur,"previous":net_prev,"growth_pct":r2(net_g)},"operating_margin_pct":{"current":r2(margin_cur),"previous":r2(margin_prev),"delta_pp":r2(margin_delta)},"operating_cash_flow":{"current":ocf_cur,"previous":ocf_prev,"growth_pct":r2(ocf_g)},"cash":{"current":cash_cur,"previous":cash_prev},"liabilities_to_assets":{"current":r2(lev_cur),"previous":r2(lev_prev)},"cash_conversion":r2(conv)},"score_breakdown":{"revenue":s_rev,"operating_profit":s_op,"net_profit":s_net,"margin":s_margin,"ocf_level":s_ocf_level,"ocf_growth":s_ocf_growth,"cash_conversion":s_conv,"leverage":s_lev},"kap_url":KAP_BASE+f"/tr/Bildirim/{idx}","summary_error":summary_error}
+    _cache_json_set(key,_FIN_TTL,snap); return snap
 
 def _build_story_payload(symbol: str):
     company = _kap_find_company(symbol)
@@ -902,7 +1034,7 @@ def _build_story_payload(symbol: str):
     if not oid:
         raise RuntimeError(f"{symbol} için KAP şirket OID bilgisi bulunamadı")
     disclosures = _kap_disclosures(symbol, oid, _STORY_LOOKBACK_DAYS)
-    financial = _financial_snapshot(symbol, disclosures, oid)
+    financial = _financial_snapshot(symbol, disclosures, oid, company)
     now = datetime.now(ZoneInfo("Europe/Istanbul"))
 
     candidates = []
@@ -998,7 +1130,7 @@ def story_api():
     if not symbol:
         return jsonify({"error": "geçerli symbol gerekli"}), 400
 
-    cache_key = f"story:v032:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cache_key = f"story:v033:{symbol}:{_STORY_LOOKBACK_DAYS}"
     cached = _cache_get(cache_key)
     if cached:
         _metric_add("cache_hit", metric_key)
@@ -1063,7 +1195,7 @@ if __name__ == "__main__":
     print("BIST Scanner HTML - bandwidth optimized proxy")
     print("Yahoo: compact JSON + gzip + cache")
     print("TradingView: gzip + short cache")
-    print("Story Radar v0.3.2: /api/story?symbol=NETAS")
+    print("Story Radar v0.3.3: /api/story?symbol=NETAS")
     print("Metrics: /api/metrics")
     print()
 
