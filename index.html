@@ -462,7 +462,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <div><label class="text-xs muted">AD &gt; SMA En Çok Mum</label><input id="adMaxBars" class="input mt-1" type="number" value="2" min="0" max="500"></div>
       <div class="flex items-end gap-2 flex-wrap"><label class="chip"><input id="adOnlyCross" type="checkbox"> Sadece ilk kesişim barı</label><label class="chip"><input id="adClosedOnly" type="checkbox" checked> Yalnız kapanmış mumlar</label></div>
     </div>
-    <div class="text-xs muted mt-3">TradingView TRM uyumu: <b>Length 57 · Min 0 · Max 2</b>. Sayaç TradingView barssince mantığıyla kesişim barında 0 başlar. Normal eşleşme için “Sadece ilk kesişim barı” kapalı kalmalı. Haftalık mumlar BIST haftasına göre günlük veriden oluşturulur; USD modu TL fiyatı USD/TRY'ye bölerek hesaplanır.</div>
+    <div class="text-xs muted mt-3">TradingView TRM uyumu: <b>Length 57 · Min 0 · Max 2</b>. Normal eşleşme için “Sadece ilk kesişim barı” kapalı kalmalı. Haftalıkta Yahoo native 1wk mumları kullanılır; açık hafta Cuma 18:15 kapanışına göre elenir. Pine sayaç mantığında ilk AD>SMA barı 1, ikinci bar 2 olur. USD modu TL fiyatı USD/TRY'ye bölerek hesaplanır.</div>
 
     <button id="adBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📊 A/D Taramasını Başlat</button>
     <div id="adCounts" class="text-xs muted mt-3"></div>
@@ -2019,9 +2019,9 @@ const AD_TF={
   "1h":{label:"1 Saat",range:"60d",interval:"1h"},
   "4h":{label:"4 Saat",range:"180d",interval:"1h"},
   "1d":{label:"Günlük",range:"2y",interval:"1d"},
-  // Haftalık Yahoo 1wk barı yerine günlük veriden BIST haftası oluşturulur.
-  // Böylece TradingView ile hafta kapanışı ve USD referans hizası daha tutarlı olur.
-  "1w":{label:"Haftalık",range:"5y",interval:"1d"}
+  // Haftalıkta native 1wk kullanılır. TradingView request.security(...,"1W",...)
+  // davranışına günlük veriden yeniden örneklemekten daha yakındır.
+  "1w":{label:"Haftalık",range:"5y",interval:"1wk"}
 };
 const adRefCache=new Map();
 function selectedAdTimeframes(){const a=[];if($("adTf1h").checked)a.push("1h");if($("adTf4h").checked)a.push("4h");if($("adTf1d").checked)a.push("1d");if($("adTf1w").checked)a.push("1w");return a}
@@ -2042,44 +2042,37 @@ function resampleAdWeekly(df){
   }
   return out
 }
+function adWeekCloseTs(ts){
+  const p=adDateParts(ts),d=new Date(Date.UTC(p.year,p.month-1,p.day)),dow=d.getUTCDay()||7;
+  d.setUTCDate(d.getUTCDate()+(5-dow));
+  const y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dd=d.getUTCDate();
+  return Math.floor(new Date(`${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}T18:15:00+03:00`).getTime()/1000)
+}
 function adDropOpenBar(df,tf){
   if(!$("adClosedOnly").checked||!df?.t?.length||tf==="4h")return df;
   const now=Math.floor(Date.now()/1000),last=df.t.at(-1);let isOpen=false;
   if(tf==="1h")isOpen=now-last<3600;
   else if(tf==="1d"){const lp=istParts(last),np=istParts(now);isOpen=lp.date===np.date&&(np.hour<18||(np.hour===18&&np.minute<15))}
-  else if(tf==="1w")isOpen=now<last; // weekly timestamp is synthetic Friday 18:15 Istanbul close
+  else if(tf==="1w"){
+    const sameWeek=adIsoWeekKey(last)===adIsoWeekKey(now);
+    isOpen=sameWeek && now<adWeekCloseTs(last);
+  }
   if(!isOpen)return df;const o={};for(const k of ["t","o","h","l","c","v"])o[k]=df[k].slice(0,-1);return o
 }
-async function getAdRaw(symbol,tf){const cfg=AD_TF[tf];if(tf==="4h")return resample4h(await yahoo(symbol,cfg.range,"1h"));if(tf==="1w")return resampleAdWeekly(await yahoo(symbol,cfg.range,"1d"));return yahoo(symbol,cfg.range,cfg.interval)}
+async function getAdRaw(symbol,tf){const cfg=AD_TF[tf];if(tf==="4h")return resample4h(await yahoo(symbol,cfg.range,"1h"));return yahoo(symbol,cfg.range,cfg.interval)}
 async function getAdBaseDf(symbol,tf){return adDropOpenBar(await getAdRaw(symbol+".IS",tf),tf)}
 function alignRefToStock(stock,ref){
   if(!stock?.t?.length||!ref?.t?.length)return null;
-
-  // A/D TV uyumu:
-  // Günlük/haftalıkta aynı Istanbul takvim gününü tercih et.
-  // Intraday'de ise HER barı kendi zamanına en yakın geçmiş referans barına bağla.
-  // Eski kod dateMap nedeniyle aynı gündeki bütün 1H/4H barlarını günün SON FX barına
-  // bağlıyordu; bu özellikle USD/EUR/XAU modunda H/L/C ve dolayısıyla A/D'yi bozuyordu.
-  const refIsDailyLike = ref.t.length < 2 || (ref.t[1]-ref.t[0]) >= 20*3600;
-  const stockIsDailyLike = stock.t.length < 2 || (stock.t[1]-stock.t[0]) >= 20*3600;
-
-  if(refIsDailyLike && stockIsDailyLike){
-    const dateMap=new Map(ref.t.map((ts,i)=>[adDateParts(ts).date,i]));
-    let j=0,last=-1;const idx=[];
-    for(const ts of stock.t){
-      const ds=adDateParts(ts).date;
-      if(dateMap.has(ds)){idx.push(dateMap.get(ds));continue}
-      while(j<ref.t.length && ref.t[j]<=ts){last=j;j++}
-      idx.push(last);
-    }
-    return idx.some(x=>x<0)?null:idx;
+  const stockStep=stock.t.length>1?stock.t[1]-stock.t[0]:86400;
+  const refStep=ref.t.length>1?ref.t[1]-ref.t[0]:86400;
+  const dailyLike=stockStep>=20*3600 && refStep>=20*3600;
+  if(dailyLike){
+    const dateMap=new Map(ref.t.map((ts,i)=>[adDateParts(ts).date,i]));let j=0,last=-1;const idx=[];
+    for(const ts of stock.t){const ds=adDateParts(ts).date;if(dateMap.has(ds)){idx.push(dateMap.get(ds));continue}while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
+    return idx.some(x=>x<0)?null:idx
   }
-
   let j=0,last=-1;const idx=[];
-  for(const ts of stock.t){
-    while(j<ref.t.length && ref.t[j]<=ts){last=j;j++}
-    idx.push(last);
-  }
+  for(const ts of stock.t){while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
   return idx.some(x=>x<0)?null:idx
 }
 async function getAdReference(tf,mode){
@@ -2103,22 +2096,9 @@ function adSeries(df){let sum=0;return df.c.map((c,i)=>{const h=df.h[i],l=df.l[i
 function analyzeAd(symbol,tf,mode,df){
   const len=Math.max(2,Math.trunc(val("adSmaLen"))),minB=Math.max(0,Math.trunc(val("adMinBars"))),maxB=Math.max(minB,Math.trunc(val("adMaxBars")));if(!df||df.c.length<len+2)return null;
   const ad=adSeries(df),sma=rollingMean(ad,len),i=df.c.length-1;if(!finite(ad[i])||!finite(sma[i])||!finite(ad[i-1])||!finite(sma[i-1]))return null;
-  const above=sma[i]<ad[i],newCross=above&&(sma[i-1]>=ad[i-1]);
-
-  // TradingView ta.barssince(ta.crossover(AD,SMA)) semantiği:
-  // kesişim barı = 0, sonraki bar = 1, sonraki = 2.
-  // Eski sayaç kesişim barını 1 saydığı için Min 0 / Max 2 filtresi bir bar erken bitiyordu.
-  let pineBars=null;
-  if(above){
-    let crossIndex=-1;
-    for(let k=i;k>=1;k--){
-      if(finite(ad[k])&&finite(sma[k])&&finite(ad[k-1])&&finite(sma[k-1]) &&
-         ad[k]>sma[k] && ad[k-1]<=sma[k-1]){crossIndex=k;break}
-    }
-    if(crossIndex>=0)pineBars=i-crossIndex;
-  }
-  const cond=$("adOnlyCross").checked?newCross:above;
-  if(!cond||pineBars===null||pineBars<minB||pineBars>maxB)return null;
+  const above=sma[i]<ad[i],newCross=above&&(sma[i-1]>=ad[i-1]);let pineBars=0;
+  if(above){for(let k=i;k>=0;k--){if(finite(sma[k])&&sma[k]<ad[k])pineBars++;else break}}
+  const cond=$("adOnlyCross").checked?newCross:above;if(!cond||pineBars<minB||pineBars>maxB)return null;
   const distance=sma[i]!==0?(ad[i]-sma[i])/Math.abs(sma[i])*100:NaN;
   return{symbol,timeframe:AD_TF[tf].label,mode:mode==="XAU"?"ALTIN (XAU)":mode,condition:newCross?"YENİ YUKARI KESİŞİM":"AD > SMA",bars:pineBars,ad:+ad[i].toFixed(2),sma:+sma[i].toFixed(2),distance:finite(distance)?+distance.toFixed(2):null,close:+df.c[i].toFixed(6),last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}
 }
