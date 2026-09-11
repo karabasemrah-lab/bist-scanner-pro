@@ -1,27 +1,27 @@
 {
   "hasScan": true,
   "health": {
-    "score": 12,
+    "score": 14,
     "label": "Zayıf",
-    "positivePct": 29,
-    "trendPct": 6,
-    "breakouts": 6,
-    "distribution": 322,
+    "positivePct": 36,
+    "trendPct": 7,
+    "breakouts": 7,
+    "distribution": 293,
     "reasons": [
       {
         "name": "Pozitif kapanış oranı",
-        "value": 29,
-        "impact": -6
+        "value": 36,
+        "impact": -4
       },
       {
         "name": "EMA trend uyumu",
-        "value": 6,
+        "value": 7,
         "impact": -10
       },
       {
         "name": "Breakout sayısı",
-        "value": 6,
-        "impact": 6
+        "value": 7,
+        "impact": 7
       },
       {
         "name": "70+ skor hisseler",
@@ -31,1284 +31,1284 @@
     ]
   },
   "breadth": {
-    "total": 451,
-    "advancing": 129,
-    "declining": 304,
+    "total": 461,
+    "advancing": 168,
+    "declining": 275,
     "unchanged": 18,
-    "advancePct": 29,
-    "aboveEmaPct": 6,
-    "volumeSpikePct": 11,
+    "advancePct": 36,
+    "aboveEmaPct": 7,
+    "volumeSpikePct": 13,
     "strongPct": 0
   },
   "marketLists": {
     "advancers": [
       {
-        "symbol": "KRPLS",
-        "name": "KOROPLAST TEMİZLİK AMBALAJ ÜRÜNLERİ SANAYİ VE DIŞ TİCARET A.Ş.",
+        "symbol": "EPLAS",
+        "name": "EGEPLAST EGE PLASTİK TİCARET VE SANAYİ A.Ş.",
         "changePct": 10.0,
-        "volumeRatio": 2.33,
-        "volume": 11770551,
-        "score": 67,
-        "setup": "Breakout"
-      },
-      {
-        "symbol": "KTLEV",
-        "name": "KATILIMEVİM TASARRUF FİNANSMAN A.Ş.",
-        "changePct": 9.99,
-        "volumeRatio": 2.49,
-        "volume": 358571782,
-        "score": 31,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "FZLGY",
-        "name": "FUZUL GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 9.99,
-        "volumeRatio": 1.22,
-        "volume": 24954839,
-        "score": 23,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "GRTHO",
-        "name": "GRAINTURK HOLDİNG A.Ş.",
-        "changePct": 9.97,
-        "volumeRatio": 1.72,
-        "volume": 1977332,
-        "score": 35,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKFGY",
-        "name": "AKFEN GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 9.96,
-        "volumeRatio": 4.54,
-        "volume": 95944821,
-        "score": 60,
-        "setup": "Breakout"
-      },
-      {
-        "symbol": "JANTS",
-        "name": "JANTSA JANT SANAYİ VE TİCARET A.Ş.",
-        "changePct": 9.95,
-        "volumeRatio": 0.61,
-        "volume": 3085465,
-        "score": 47,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "PEKGY",
-        "name": "PEKER GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 9.95,
-        "volumeRatio": 2.17,
-        "volume": 389593266,
-        "score": 37,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "GRNYO",
-        "name": "GARANTİ YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 9.94,
-        "volumeRatio": 2.07,
-        "volume": 610030,
-        "score": 26,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BMSCH",
-        "name": "BMS ÇELİK HASIR SANAYİ VE TİCARET A.Ş.",
-        "changePct": 9.93,
-        "volumeRatio": 3.14,
-        "volume": 4525467,
-        "score": 32,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "DCTTR",
-        "name": "DCT TRADİNG DIŞ TİCARET A.Ş.",
-        "changePct": 9.86,
-        "volumeRatio": 2.74,
-        "volume": 24246138,
-        "score": 32,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "KRTEK",
-        "name": "KARSU TEKSTİL SANAYİİ VE TİCARET A.Ş.",
-        "changePct": 9.86,
-        "volumeRatio": 0.95,
-        "volume": 926642,
-        "score": 26,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "INFO",
-        "name": "İNFO YATIRIM MENKUL DEĞERLER A.Ş.",
-        "changePct": 9.11,
-        "volumeRatio": 1.8,
-        "volume": 93493194,
-        "score": 33,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ETILR",
-        "name": "ETİLER GIDA VE TİCARİ YATIRIMLAR SANAYİ VE TİCARET A.Ş.",
-        "changePct": 8.15,
-        "volumeRatio": 2.72,
-        "volume": 20225354,
-        "score": 62,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "KERVN",
-        "name": "KERVANSARAY YATIRIM HOLDİNG A.Ş.",
-        "changePct": 7.73,
-        "volumeRatio": 0.81,
-        "volume": 895072,
-        "score": 41,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BINHO",
-        "name": "1000 YATIRIMLAR HOLDİNG A.Ş.",
-        "changePct": 7.53,
-        "volumeRatio": 2.22,
-        "volume": 67052010,
-        "score": 44,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKYHO",
-        "name": "AKDENİZ YATIRIM HOLDİNG A.Ş.",
-        "changePct": 6.6,
-        "volumeRatio": 1.51,
-        "volume": 1945701,
-        "score": 40,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "DUNYH",
-        "name": "DÜNYA HOLDİNG A.Ş.",
-        "changePct": 6.23,
-        "volumeRatio": 0.0,
-        "volume": 218400,
-        "score": 55,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "BRMEN",
-        "name": "BİRLİK MENSUCAT TİCARET VE SANAYİ İŞLETMESİ A.Ş.",
-        "changePct": 6.09,
-        "volumeRatio": 0.73,
-        "volume": 216022,
-        "score": 28,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "GLCVY",
-        "name": "GELECEK VARLIK YÖNETİMİ A.Ş.",
-        "changePct": 5.46,
-        "volumeRatio": 2.79,
-        "volume": 1727053,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "CEOEM",
-        "name": "CEO EVENT MEDYA A.Ş.",
-        "changePct": 5.2,
-        "volumeRatio": 1.35,
-        "volume": 1605736,
-        "score": 59,
-        "setup": "İzleme"
-      }
-    ],
-    "decliners": [
-      {
-        "symbol": "AKSUE",
-        "name": "AKSU ENERJİ VE TİCARET A.Ş.",
-        "changePct": -10.0,
-        "volumeRatio": 2.99,
-        "volume": 7449640,
-        "score": 28,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "HEDEF",
-        "name": "HEDEF HOLDİNG A.Ş.",
-        "changePct": -9.96,
-        "volumeRatio": 10.58,
-        "volume": 81670878,
-        "score": 19,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EGEPO",
-        "name": "NASMED ÖZEL SAĞLIK HİZMETLERİ TİCARET A.Ş.",
-        "changePct": -9.95,
-        "volumeRatio": 2.58,
-        "volume": 9935844,
-        "score": 27,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "ALVES",
-        "name": "ALVES KABLO SANAYİ VE TİCARET A.Ş.",
-        "changePct": -9.77,
-        "volumeRatio": 0.05,
-        "volume": 5457078,
-        "score": 12,
+        "volumeRatio": 3.52,
+        "volume": 13109506,
+        "score": 49,
         "setup": "Zayıf"
       },
       {
         "symbol": "GATEG",
         "name": "GATE GROUP TEKNOLOJİ MEDYA VE SİBER GÜVENLİK HİZMETLERİ A.Ş.",
-        "changePct": -9.58,
-        "volumeRatio": 2.19,
-        "volume": 30183,
-        "score": 35,
+        "changePct": 10.0,
+        "volumeRatio": 1.7,
+        "volume": 24023,
+        "score": 40,
         "setup": "Zayıf"
       },
       {
-        "symbol": "KARTN",
-        "name": "KARTONSAN KARTON SANAYİ VE TİCARET A.Ş.",
-        "changePct": -6.57,
-        "volumeRatio": 1.22,
-        "volume": 958077,
-        "score": 45,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "DITAS",
-        "name": "DİTAŞ BDY YEDEK PARÇA İMALAT VE TEKNİK A.Ş.",
-        "changePct": -6.33,
-        "volumeRatio": 1.6,
-        "volume": 4972270,
-        "score": 28,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "CWENE",
-        "name": "CW ENERJİ MÜHENDİSLİK TİCARET VE SANAYİ A.Ş.",
-        "changePct": -6.28,
-        "volumeRatio": 0.3,
-        "volume": 28973424,
-        "score": 22,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "SARKY",
-        "name": "SARKUYSAN ELEKTROLİTİK BAKIR SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.95,
-        "volumeRatio": 1.11,
-        "volume": 8086160,
-        "score": 31,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKCNS",
-        "name": "AKÇANSA ÇİMENTO SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.86,
-        "volumeRatio": 4.2,
-        "volume": 1329483,
-        "score": 44,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "GIPTA",
-        "name": "GIPTA OFİS KIRTASİYE VE PROMOSYON ÜRÜNLERİ İMALAT SANAYİ A.Ş.",
-        "changePct": -5.53,
-        "volumeRatio": 0.42,
-        "volume": 3783641,
-        "score": 19,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BRLSM",
-        "name": "BİRLEŞİM MÜHENDİSLİK ISITMA SOĞUTMA HAVALANDIRMA SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.45,
-        "volumeRatio": 0.94,
-        "volume": 15904203,
-        "score": 21,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EUPWR",
-        "name": "EUROPOWER ENERJİ VE OTOMASYON TEKNOLOJİLERİ SANAYİ TİCARET A.Ş.",
-        "changePct": -5.22,
-        "volumeRatio": 1.17,
-        "volume": 25372966,
-        "score": 25,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ONCSM",
-        "name": "ONCOSEM ONKOLOJİK SİSTEMLER SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.19,
-        "volumeRatio": 0.63,
-        "volume": 559093,
-        "score": 20,
-        "setup": "Pozitif Uyumsuzluk"
+        "symbol": "VAKBN",
+        "name": "TÜRKİYE VAKIFLAR BANKASI T.A.O.",
+        "changePct": 9.99,
+        "volumeRatio": 4.11,
+        "volume": 258446070,
+        "score": 69,
+        "setup": "Breakout"
       },
       {
         "symbol": "EGEEN",
         "name": "EGE ENDÜSTRİ VE TİCARET A.Ş.",
-        "changePct": -5.15,
-        "volumeRatio": 2.4,
-        "volume": 34096,
-        "score": 43,
+        "changePct": 9.99,
+        "volumeRatio": 3.02,
+        "volume": 46815,
+        "score": 49,
         "setup": "Zayıf"
       },
       {
-        "symbol": "POLHO",
-        "name": "POLİSAN HOLDİNG A.Ş.",
-        "changePct": -4.98,
-        "volumeRatio": 3.12,
-        "volume": 5539229,
-        "score": 50,
+        "symbol": "MOGAN",
+        "name": "MOGAN ENERJİ YATIRIM HOLDİNG A.Ş.",
+        "changePct": 9.99,
+        "volumeRatio": 1.75,
+        "volume": 30899803,
+        "score": 37,
         "setup": "Zayıf"
       },
       {
-        "symbol": "EGEGY",
-        "name": "EGEYAPI AVRUPA GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -4.95,
-        "volumeRatio": 2.98,
-        "volume": 12754895,
-        "score": 38,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BRKO",
-        "name": "BİRKO BİRLEŞİK KOYUNLULULAR MENSUCAT TİCARET VE SANAYİ A.Ş.",
-        "changePct": -4.94,
-        "volumeRatio": 0.91,
-        "volume": 346812,
-        "score": 34,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ASTOR",
-        "name": "Astor Enerji A.Ş.",
-        "changePct": -4.84,
-        "volumeRatio": 0.8,
-        "volume": 28328375,
-        "score": 27,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BLCYT",
-        "name": "BİLİCİ YATIRIM SANAYİ VE TİCARET A.Ş.",
-        "changePct": -4.76,
-        "volumeRatio": 0.88,
-        "volume": 38868076,
-        "score": 33,
-        "setup": "Zayıf"
-      }
-    ],
-    "volumeLeaders": [
-      {
-        "symbol": "HEDEF",
-        "name": "HEDEF HOLDİNG A.Ş.",
-        "changePct": -9.96,
-        "volumeRatio": 10.58,
-        "volume": 81670878,
-        "score": 19,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BVSAN",
-        "name": "BÜLBÜLOĞLU VİNÇ SANAYİ VE TİCARET A.Ş.",
-        "changePct": 4.93,
-        "volumeRatio": 6.64,
-        "volume": 5846829,
-        "score": 64,
-        "setup": "Breakout"
-      },
-      {
-        "symbol": "LYDYE",
-        "name": "LYDİA YEŞİL ENERJİ KAYNAKLARI A.Ş.",
-        "changePct": -0.89,
-        "volumeRatio": 5.81,
-        "volume": 10100,
-        "score": 21,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKFGY",
-        "name": "AKFEN GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "symbol": "MRSHL",
+        "name": "MARSHALL BOYA VE VERNİK SANAYİİ A.Ş.",
         "changePct": 9.96,
-        "volumeRatio": 4.54,
-        "volume": 95944821,
-        "score": 60,
-        "setup": "Breakout"
-      },
-      {
-        "symbol": "AKGRT",
-        "name": "AKSİGORTA A.Ş.",
-        "changePct": -3.06,
-        "volumeRatio": 4.31,
-        "volume": 47531450,
-        "score": 36,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "AKCNS",
-        "name": "AKÇANSA ÇİMENTO SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.86,
-        "volumeRatio": 4.2,
-        "volume": 1329483,
+        "volumeRatio": 1.9,
+        "volume": 87632,
         "score": 44,
         "setup": "Zayıf"
       },
       {
-        "symbol": "VRGYO",
-        "name": "VERA KONSEPT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 2.22,
-        "volumeRatio": 3.4,
-        "volume": 36437831,
-        "score": 51,
-        "setup": "İzleme"
+        "symbol": "YEOTK",
+        "name": "YEO TEKNOLOJİ ENERJİ VE ENDÜSTRİ A.Ş.",
+        "changePct": 9.96,
+        "volumeRatio": 1.41,
+        "volume": 22759146,
+        "score": 36,
+        "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "BMSCH",
-        "name": "BMS ÇELİK HASIR SANAYİ VE TİCARET A.Ş.",
-        "changePct": 9.93,
-        "volumeRatio": 3.14,
-        "volume": 4525467,
-        "score": 32,
+        "symbol": "IZMDC",
+        "name": "İZMİR DEMİR ÇELİK SANAYİ A.Ş.",
+        "changePct": 9.96,
+        "volumeRatio": 1.59,
+        "volume": 17695161,
+        "score": 34,
         "setup": "Zayıf"
       },
       {
-        "symbol": "POLHO",
-        "name": "POLİSAN HOLDİNG A.Ş.",
-        "changePct": -4.98,
-        "volumeRatio": 3.12,
-        "volume": 5539229,
+        "symbol": "GRNYO",
+        "name": "GARANTİ YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 9.93,
+        "volumeRatio": 4.62,
+        "volume": 1454543,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "IHLAS",
+        "name": "İHLAS HOLDİNG A.Ş.",
+        "changePct": 9.43,
+        "volumeRatio": 1.79,
+        "volume": 220803569,
+        "score": 53,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "KONYA",
+        "name": "KONYA ÇİMENTO SANAYİİ A.Ş.",
+        "changePct": 6.5,
+        "volumeRatio": 3.24,
+        "volume": 53522,
+        "score": 58,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "AVGYO",
+        "name": "AVRASYA GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 6.27,
+        "volumeRatio": 1.01,
+        "volume": 2074956,
+        "score": 44,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "KERVN",
+        "name": "KERVANSARAY YATIRIM HOLDİNG A.Ş.",
+        "changePct": 6.06,
+        "volumeRatio": 2.14,
+        "volume": 2343217,
         "score": 50,
         "setup": "Zayıf"
       },
       {
-        "symbol": "AKSUE",
-        "name": "AKSU ENERJİ VE TİCARET A.Ş.",
-        "changePct": -10.0,
-        "volumeRatio": 2.99,
-        "volume": 7449640,
-        "score": 28,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EGEGY",
-        "name": "EGEYAPI AVRUPA GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -4.95,
-        "volumeRatio": 2.98,
-        "volume": 12754895,
-        "score": 38,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AYEN",
-        "name": "AYEN ENERJİ A.Ş.",
-        "changePct": 3.1,
-        "volumeRatio": 2.92,
-        "volume": 1957613,
-        "score": 48,
+        "symbol": "KONTR",
+        "name": "KONTROLMATİK TEKNOLOJİ ENERJİ VE MÜHENDİSLİK A.Ş.",
+        "changePct": 6.06,
+        "volumeRatio": 1.02,
+        "volume": 4027259,
+        "score": 33,
         "setup": "Sıkışma"
       },
       {
-        "symbol": "NATEN",
-        "name": "NATUREL YENİLENEBİLİR ENERJİ TİCARET A.Ş.",
-        "changePct": 1.32,
-        "volumeRatio": 2.9,
-        "volume": 22793120,
-        "score": 35,
+        "symbol": "IHGZT",
+        "name": "İHLAS GAZETECİLİK A.Ş.",
+        "changePct": 5.93,
+        "volumeRatio": 2.84,
+        "volume": 49898476,
+        "score": 52,
+        "setup": "İzleme"
+      },
+      {
+        "symbol": "ALKLC",
+        "name": "ALTINKILIÇ GIDA VE SÜT SANAYİ TİCARET A.Ş.",
+        "changePct": 5.68,
+        "volumeRatio": 1.46,
+        "volume": 3434611,
+        "score": 62,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "KSTUR",
+        "name": "KUŞTUR KUŞADASI TURİZM ENDÜSTRİSİ A.Ş.",
+        "changePct": 5.68,
+        "volumeRatio": 1.02,
+        "volume": 804,
+        "score": 22,
         "setup": "Zayıf"
       },
       {
-        "symbol": "DNISI",
-        "name": "DİNAMİK ISI MAKİNA YALITIM MALZEMELERİ SANAYİ VE TİCARET A.Ş.",
-        "changePct": 3.29,
-        "volumeRatio": 2.86,
-        "volume": 12539012,
-        "score": 50,
+        "symbol": "GOZDE",
+        "name": "GÖZDE GİRİŞİM SERMAYESİ YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 5.17,
+        "volumeRatio": 2.34,
+        "volume": 2974159,
+        "score": 67,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "TERA",
+        "name": "TERA YATIRIM MENKUL DEĞERLER A.Ş.",
+        "changePct": 5.01,
+        "volumeRatio": 2.6,
+        "volume": 36928027,
+        "score": 67,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "CMBTN",
+        "name": "ÇİMBETON HAZIRBETON VE PREFABRİK YAPI ELEMANLARI SANAYİ VE TİCARET A.Ş.",
+        "changePct": 4.92,
+        "volumeRatio": 3.06,
+        "volume": 66149,
+        "score": 52,
+        "setup": "İzleme"
+      }
+    ],
+    "decliners": [
+      {
+        "symbol": "KTLEV",
+        "name": "KATILIMEVİM TASARRUF FİNANSMAN A.Ş.",
+        "changePct": -10.0,
+        "volumeRatio": 2.49,
+        "volume": 385875178,
+        "score": 33,
         "setup": "Zayıf"
       },
       {
-        "symbol": "GLCVY",
-        "name": "GELECEK VARLIK YÖNETİMİ A.Ş.",
-        "changePct": 5.46,
-        "volumeRatio": 2.79,
-        "volume": 1727053,
-        "score": 45,
+        "symbol": "EGEPO",
+        "name": "NASMED ÖZEL SAĞLIK HİZMETLERİ TİCARET A.Ş.",
+        "changePct": -10.0,
+        "volumeRatio": 5.6,
+        "volume": 23548416,
+        "score": 25,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "ALVES",
+        "name": "ALVES KABLO SANAYİ VE TİCARET A.Ş.",
+        "changePct": -10.0,
+        "volumeRatio": 0.06,
+        "volume": 6040368,
+        "score": 11,
         "setup": "Zayıf"
       },
       {
-        "symbol": "AKMGY",
-        "name": "AKMERKEZ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 0.9,
-        "volumeRatio": 2.75,
-        "volume": 105135,
-        "score": 46,
+        "symbol": "PASEU",
+        "name": "PASİFİK EURASİA LOJİSTİK DIŞ TİCARET A.Ş.",
+        "changePct": -9.99,
+        "volumeRatio": 3.46,
+        "volume": 44886287,
+        "score": 25,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "HEDEF",
+        "name": "HEDEF HOLDİNG A.Ş.",
+        "changePct": -9.96,
+        "volumeRatio": 2.53,
+        "volume": 29477968,
+        "score": 19,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "IZFAS",
+        "name": "İZMİR FIRÇA SANAYİ VE TİCARET A.Ş.",
+        "changePct": -9.93,
+        "volumeRatio": 0.49,
+        "volume": 3392791,
+        "score": 28,
         "setup": "Zayıf"
       },
       {
         "symbol": "DCTTR",
         "name": "DCT TRADİNG DIŞ TİCARET A.Ş.",
-        "changePct": 9.86,
-        "volumeRatio": 2.74,
-        "volume": 24246138,
-        "score": 32,
+        "changePct": -9.75,
+        "volumeRatio": 5.91,
+        "volume": 49189596,
+        "score": 23,
         "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "ETILR",
-        "name": "ETİLER GIDA VE TİCARİ YATIRIMLAR SANAYİ VE TİCARET A.Ş.",
-        "changePct": 8.15,
-        "volumeRatio": 2.72,
-        "volume": 20225354,
-        "score": 62,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "HEKTS",
-        "name": "Hektaş Ticaret T.A.Ş.",
-        "changePct": 1.05,
-        "volumeRatio": 2.6,
-        "volume": 694857039,
-        "score": 41,
+        "symbol": "AKFYE",
+        "name": "AKFEN YENİLENEBİLİR ENERJİ A.Ş.",
+        "changePct": -8.82,
+        "volumeRatio": 1.5,
+        "volume": 15046139,
+        "score": 47,
         "setup": "Zayıf"
       },
       {
-        "symbol": "ALCAR",
-        "name": "ALARKO CARRIER SANAYİ VE TİCARET A.Ş.",
-        "changePct": 2.16,
-        "volumeRatio": 2.59,
-        "volume": 96147,
-        "score": 52,
+        "symbol": "BVSAN",
+        "name": "BÜLBÜLOĞLU VİNÇ SANAYİ VE TİCARET A.Ş.",
+        "changePct": -8.26,
+        "volumeRatio": 3.78,
+        "volume": 4339607,
+        "score": 48,
         "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "ARMGD",
+        "name": "ARMADA GIDA TİCARET SANAYİ A.Ş.",
+        "changePct": -6.81,
+        "volumeRatio": 0.94,
+        "volume": 1289666,
+        "score": 43,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "GEREL",
+        "name": "GERSAN ELEKTRİK TİCARET VE SANAYİ A.Ş.",
+        "changePct": -6.27,
+        "volumeRatio": 0.59,
+        "volume": 3644533,
+        "score": 28,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "TMPOL",
+        "name": "TEMAPOL POLİMER PLASTİK VE İNŞAAT SANAYİ TİCARET A.Ş.",
+        "changePct": -5.97,
+        "volumeRatio": 0.36,
+        "volume": 739642,
+        "score": 24,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "OTTO",
+        "name": "OTTO HOLDİNG A.Ş.",
+        "changePct": -5.44,
+        "volumeRatio": 1.64,
+        "volume": 321986,
+        "score": 17,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "CRFSA",
+        "name": "CARREFOURSA CARREFOUR SABANCI TİCARET MERKEZİ A.Ş.",
+        "changePct": -5.33,
+        "volumeRatio": 0.56,
+        "volume": 1866258,
+        "score": 32,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "INFO",
+        "name": "İNFO YATIRIM MENKUL DEĞERLER A.Ş.",
+        "changePct": -5.24,
+        "volumeRatio": 0.86,
+        "volume": 47186495,
+        "score": 21,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "MANAS",
+        "name": "MANAS ENERJİ YÖNETİMİ SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.74,
+        "volumeRatio": 1.08,
+        "volume": 31166846,
+        "score": 47,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "AKCNS",
+        "name": "AKÇANSA ÇİMENTO SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.71,
+        "volumeRatio": 1.97,
+        "volume": 709458,
+        "score": 39,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "TRILC",
+        "name": "TURK İLAÇ VE SERUM SANAYİ A.Ş.",
+        "changePct": -4.55,
+        "volumeRatio": 0.54,
+        "volume": 2404737,
+        "score": 27,
+        "setup": "Sıkışma"
+      },
+      {
+        "symbol": "JANTS",
+        "name": "JANTSA JANT SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.52,
+        "volumeRatio": 4.44,
+        "volume": 22795502,
+        "score": 40,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "SANEL",
+        "name": "SAN-EL MÜHENDİSLİK ELEKTRİK TAAHHÜT SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.28,
+        "volumeRatio": 1.09,
+        "volume": 535274,
+        "score": 23,
+        "setup": "Zayıf"
       }
     ],
-    "heatmap": [
+    "volumeLeaders": [
       {
-        "symbol": "KRPLS",
-        "name": "KOROPLAST TEMİZLİK AMBALAJ ÜRÜNLERİ SANAYİ VE DIŞ TİCARET A.Ş.",
-        "changePct": 10.0,
-        "volumeRatio": 2.33,
-        "volume": 11770551,
-        "score": 67,
+        "symbol": "SASA",
+        "name": "SASA Polyester Sanayi A.Ş.",
+        "changePct": 1.81,
+        "volumeRatio": 7.12,
+        "volume": 2204988935,
+        "score": 51,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "DCTTR",
+        "name": "DCT TRADİNG DIŞ TİCARET A.Ş.",
+        "changePct": -9.75,
+        "volumeRatio": 5.91,
+        "volume": 49189596,
+        "score": 23,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "BMSCH",
+        "name": "BMS ÇELİK HASIR SANAYİ VE TİCARET A.Ş.",
+        "changePct": 3.76,
+        "volumeRatio": 5.84,
+        "volume": 9368019,
+        "score": 34,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "AKFGY",
+        "name": "AKFEN GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 0.0,
+        "volumeRatio": 5.81,
+        "volume": 145609396,
+        "score": 50,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "EGEPO",
+        "name": "NASMED ÖZEL SAĞLIK HİZMETLERİ TİCARET A.Ş.",
+        "changePct": -10.0,
+        "volumeRatio": 5.6,
+        "volume": 23548416,
+        "score": 25,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "GRNYO",
+        "name": "GARANTİ YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 9.93,
+        "volumeRatio": 4.62,
+        "volume": 1454543,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "ZRGYO",
+        "name": "ZİRAAT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 0.7,
+        "volumeRatio": 4.46,
+        "volume": 3688001,
+        "score": 47,
+        "setup": "Sıkışma"
+      },
+      {
+        "symbol": "JANTS",
+        "name": "JANTSA JANT SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.52,
+        "volumeRatio": 4.44,
+        "volume": 22795502,
+        "score": 40,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "VAKBN",
+        "name": "TÜRKİYE VAKIFLAR BANKASI T.A.O.",
+        "changePct": 9.99,
+        "volumeRatio": 4.11,
+        "volume": 258446070,
+        "score": 69,
         "setup": "Breakout"
       },
       {
         "symbol": "BVSAN",
         "name": "BÜLBÜLOĞLU VİNÇ SANAYİ VE TİCARET A.Ş.",
-        "changePct": 4.93,
-        "volumeRatio": 6.64,
-        "volume": 5846829,
-        "score": 64,
-        "setup": "Breakout"
+        "changePct": -8.26,
+        "volumeRatio": 3.78,
+        "volume": 4339607,
+        "score": 48,
+        "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "ETILR",
-        "name": "ETİLER GIDA VE TİCARİ YATIRIMLAR SANAYİ VE TİCARET A.Ş.",
-        "changePct": 8.15,
-        "volumeRatio": 2.72,
-        "volume": 20225354,
-        "score": 62,
-        "setup": "İzleme"
+        "symbol": "ALCAR",
+        "name": "ALARKO CARRIER SANAYİ VE TİCARET A.Ş.",
+        "changePct": 2.47,
+        "volumeRatio": 3.63,
+        "volume": 137700,
+        "score": 54,
+        "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "AKFGY",
-        "name": "AKFEN GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 9.96,
-        "volumeRatio": 4.54,
-        "volume": 95944821,
-        "score": 60,
-        "setup": "Breakout"
-      },
-      {
-        "symbol": "CEOEM",
-        "name": "CEO EVENT MEDYA A.Ş.",
-        "changePct": 5.2,
-        "volumeRatio": 1.35,
-        "volume": 1605736,
-        "score": 59,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "KLYPV",
-        "name": "KALYON GÜNEŞ TEKNOLOJİLERİ ÜRETİM A.Ş.",
-        "changePct": 3.74,
-        "volumeRatio": 1.54,
-        "volume": 4159374,
-        "score": 58,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "DURDO",
-        "name": "DURAN DOĞAN BASIM VE AMBALAJ SANAYİ A.Ş.",
-        "changePct": 0.97,
-        "volumeRatio": 0.87,
-        "volume": 1861175,
-        "score": 56,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "DUNYH",
-        "name": "DÜNYA HOLDİNG A.Ş.",
-        "changePct": 6.23,
-        "volumeRatio": 0.0,
-        "volume": 218400,
-        "score": 55,
-        "setup": "İzleme"
-      },
-      {
-        "symbol": "AYGAZ",
-        "name": "AYGAZ A.Ş.",
-        "changePct": -0.75,
-        "volumeRatio": 2.05,
-        "volume": 2809771,
-        "score": 55,
+        "symbol": "EPLAS",
+        "name": "EGEPLAST EGE PLASTİK TİCARET VE SANAYİ A.Ş.",
+        "changePct": 10.0,
+        "volumeRatio": 3.52,
+        "volume": 13109506,
+        "score": 49,
         "setup": "Zayıf"
       },
       {
-        "symbol": "EREGL",
-        "name": "Ereğli Demir ve Çelik Fabrikaları T.A.Ş.",
-        "changePct": -0.26,
-        "volumeRatio": 0.64,
-        "volume": 112131497,
-        "score": 53,
+        "symbol": "BANVT",
+        "name": "BANVİT BANDIRMA VİTAMİNLİ YEM SANAYİ A.Ş.",
+        "changePct": 2.87,
+        "volumeRatio": 3.51,
+        "volume": 292354,
+        "score": 41,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "PASEU",
+        "name": "PASİFİK EURASİA LOJİSTİK DIŞ TİCARET A.Ş.",
+        "changePct": -9.99,
+        "volumeRatio": 3.46,
+        "volume": 44886287,
+        "score": 25,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "FZLGY",
+        "name": "FUZUL GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": -0.55,
+        "volumeRatio": 3.35,
+        "volume": 69596118,
+        "score": 24,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "KONYA",
+        "name": "KONYA ÇİMENTO SANAYİİ A.Ş.",
+        "changePct": 6.5,
+        "volumeRatio": 3.24,
+        "volume": 53522,
+        "score": 58,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "IHLGM",
+        "name": "İHLAS GAYRİMENKUL PROJE GELİŞTİRME VE TİCARET A.Ş.",
+        "changePct": 3.77,
+        "volumeRatio": 3.23,
+        "volume": 71854259,
+        "score": 52,
         "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "KRVGD",
+        "name": "KERVAN GIDA SANAYİ VE TİCARET A.Ş.",
+        "changePct": 0.0,
+        "volumeRatio": 3.06,
+        "volume": 28371853,
+        "score": 38,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "CMBTN",
+        "name": "ÇİMBETON HAZIRBETON VE PREFABRİK YAPI ELEMANLARI SANAYİ VE TİCARET A.Ş.",
+        "changePct": 4.92,
+        "volumeRatio": 3.06,
+        "volume": 66149,
+        "score": 52,
+        "setup": "İzleme"
+      },
+      {
+        "symbol": "EGEEN",
+        "name": "EGE ENDÜSTRİ VE TİCARET A.Ş.",
+        "changePct": 9.99,
+        "volumeRatio": 3.02,
+        "volume": 46815,
+        "score": 49,
+        "setup": "Zayıf"
+      }
+    ],
+    "heatmap": [
+      {
+        "symbol": "VAKBN",
+        "name": "TÜRKİYE VAKIFLAR BANKASI T.A.O.",
+        "changePct": 9.99,
+        "volumeRatio": 4.11,
+        "volume": 258446070,
+        "score": 69,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "GOZDE",
+        "name": "GÖZDE GİRİŞİM SERMAYESİ YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 5.17,
+        "volumeRatio": 2.34,
+        "volume": 2974159,
+        "score": 67,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "TERA",
+        "name": "TERA YATIRIM MENKUL DEĞERLER A.Ş.",
+        "changePct": 5.01,
+        "volumeRatio": 2.6,
+        "volume": 36928027,
+        "score": 67,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "ALKLC",
+        "name": "ALTINKILIÇ GIDA VE SÜT SANAYİ TİCARET A.Ş.",
+        "changePct": 5.68,
+        "volumeRatio": 1.46,
+        "volume": 3434611,
+        "score": 62,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "KONYA",
+        "name": "KONYA ÇİMENTO SANAYİİ A.Ş.",
+        "changePct": 6.5,
+        "volumeRatio": 3.24,
+        "volume": 53522,
+        "score": 58,
+        "setup": "Breakout"
+      },
+      {
+        "symbol": "ISDMR",
+        "name": "İSKENDERUN DEMİR VE ÇELİK A.Ş.",
+        "changePct": 0.74,
+        "volumeRatio": 1.18,
+        "volume": 2052621,
+        "score": 57,
+        "setup": "İzleme"
       },
       {
         "symbol": "HURGZ",
         "name": "HÜRRİYET GAZETECİLİK VE MATBAACILIK A.Ş.",
-        "changePct": 2.31,
-        "volumeRatio": 0.82,
-        "volume": 7496140,
-        "score": 52,
+        "changePct": 3.26,
+        "volumeRatio": 1.3,
+        "volume": 11762852,
+        "score": 55,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "KRPLS",
+        "name": "KOROPLAST TEMİZLİK AMBALAJ ÜRÜNLERİ SANAYİ VE DIŞ TİCARET A.Ş.",
+        "changePct": -3.05,
+        "volumeRatio": 3.0,
+        "volume": 16347198,
+        "score": 55,
         "setup": "Zayıf"
       },
       {
         "symbol": "ALCAR",
         "name": "ALARKO CARRIER SANAYİ VE TİCARET A.Ş.",
-        "changePct": 2.16,
-        "volumeRatio": 2.59,
-        "volume": 96147,
-        "score": 52,
+        "changePct": 2.47,
+        "volumeRatio": 3.63,
+        "volume": 137700,
+        "score": 54,
         "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "ALBRK",
-        "name": "ALBARAKA TÜRK KATILIM BANKASI A.Ş.",
+        "symbol": "DURDO",
+        "name": "DURAN DOĞAN BASIM VE AMBALAJ SANAYİ A.Ş.",
         "changePct": 0.0,
-        "volumeRatio": 1.03,
-        "volume": 15003354,
-        "score": 52,
+        "volumeRatio": 0.67,
+        "volume": 1396741,
+        "score": 54,
         "setup": "Zayıf"
       },
       {
-        "symbol": "VRGYO",
-        "name": "VERA KONSEPT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 2.22,
-        "volumeRatio": 3.4,
-        "volume": 36437831,
-        "score": 51,
-        "setup": "İzleme"
+        "symbol": "IHLAS",
+        "name": "İHLAS HOLDİNG A.Ş.",
+        "changePct": 9.43,
+        "volumeRatio": 1.79,
+        "volume": 220803569,
+        "score": 53,
+        "setup": "Breakout"
       },
       {
-        "symbol": "ASELS",
-        "name": "ASELSAN Elektronik Sanayi ve Ticaret A.Ş.",
-        "changePct": -0.93,
-        "volumeRatio": 0.76,
-        "volume": 26436478,
-        "score": 51,
-        "setup": "Zayıf"
+        "symbol": "RALYH",
+        "name": "RAL YATIRIM HOLDİNG A.Ş.",
+        "changePct": -2.95,
+        "volumeRatio": 0.57,
+        "volume": 1157995,
+        "score": 53,
+        "setup": "Sıkışma"
       },
       {
-        "symbol": "ARMGD",
-        "name": "ARMADA GIDA TİCARET SANAYİ A.Ş.",
-        "changePct": 0.53,
-        "volumeRatio": 2.51,
-        "volume": 3206863,
-        "score": 51,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "POLHO",
-        "name": "POLİSAN HOLDİNG A.Ş.",
-        "changePct": -4.98,
-        "volumeRatio": 3.12,
-        "volume": 5539229,
-        "score": 50,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "DNISI",
-        "name": "DİNAMİK ISI MAKİNA YALITIM MALZEMELERİ SANAYİ VE TİCARET A.Ş.",
-        "changePct": 3.29,
-        "volumeRatio": 2.86,
-        "volume": 12539012,
-        "score": 50,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ISDMR",
-        "name": "İSKENDERUN DEMİR VE ÇELİK A.Ş.",
-        "changePct": 1.51,
-        "volumeRatio": 0.95,
-        "volume": 1657703,
-        "score": 50,
+        "symbol": "DUNYH",
+        "name": "DÜNYA HOLDİNG A.Ş.",
+        "changePct": 2.11,
+        "volumeRatio": 0.0,
+        "volume": 673813,
+        "score": 53,
         "setup": "Zayıf"
       },
       {
         "symbol": "ANHYT",
         "name": "ANADOLU HAYAT EMEKLİLİK A.Ş.",
-        "changePct": 0.66,
-        "volumeRatio": 1.31,
-        "volume": 926778,
-        "score": 50,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "ALKLC",
-        "name": "ALTINKILIÇ GIDA VE SÜT SANAYİ TİCARET A.Ş.",
-        "changePct": 0.11,
-        "volumeRatio": 0.19,
-        "volume": 446247,
-        "score": 50,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ETYAT",
-        "name": "EURO TREND YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -3.33,
-        "volumeRatio": 1.5,
-        "volume": 1409614,
-        "score": 49,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ASGYO",
-        "name": "ASCE GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -0.7,
-        "volumeRatio": 1.01,
-        "volume": 3215913,
-        "score": 49,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "GENIL",
-        "name": "GEN İLAÇ VE SAĞLIK ÜRÜNLERİ SANAYİ VE TİCARET A.Ş.",
-        "changePct": -3.24,
-        "volumeRatio": 1.7,
-        "volume": 81853500,
-        "score": 48,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AYEN",
-        "name": "AYEN ENERJİ A.Ş.",
-        "changePct": 3.1,
-        "volumeRatio": 2.92,
-        "volume": 1957613,
-        "score": 48,
+        "changePct": 1.68,
+        "volumeRatio": 1.02,
+        "volume": 681631,
+        "score": 53,
         "setup": "Sıkışma"
       },
       {
-        "symbol": "PENGD",
-        "name": "PENGUEN GIDA SANAYİ A.Ş.",
-        "changePct": -0.63,
-        "volumeRatio": 1.58,
-        "volume": 3858455,
-        "score": 48,
-        "setup": "Sıkışma"
+        "symbol": "IHGZT",
+        "name": "İHLAS GAZETECİLİK A.Ş.",
+        "changePct": 5.93,
+        "volumeRatio": 2.84,
+        "volume": 49898476,
+        "score": 52,
+        "setup": "İzleme"
+      },
+      {
+        "symbol": "CMBTN",
+        "name": "ÇİMBETON HAZIRBETON VE PREFABRİK YAPI ELEMANLARI SANAYİ VE TİCARET A.Ş.",
+        "changePct": 4.92,
+        "volumeRatio": 3.06,
+        "volume": 66149,
+        "score": 52,
+        "setup": "İzleme"
+      },
+      {
+        "symbol": "IHLGM",
+        "name": "İHLAS GAYRİMENKUL PROJE GELİŞTİRME VE TİCARET A.Ş.",
+        "changePct": 3.77,
+        "volumeRatio": 3.23,
+        "volume": 71854259,
+        "score": 52,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "TURGG",
+        "name": "TÜRKER PROJE GAYRİMENKUL VE YATIRIM GELİŞTİRME A.Ş.",
+        "changePct": 4.92,
+        "volumeRatio": 1.71,
+        "volume": 1851427,
+        "score": 51,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "BOBET",
+        "name": "BOĞAZİÇİ BETON SANAYİ VE TİCARET A.Ş.",
+        "changePct": 4.66,
+        "volumeRatio": 0.72,
+        "volume": 7170897,
+        "score": 51,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "EGPRO",
+        "name": "EGE PROFİL TİCARET VE SANAYİ A.Ş.",
+        "changePct": 3.78,
+        "volumeRatio": 0.49,
+        "volume": 762980,
+        "score": 51,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "SASA",
+        "name": "SASA Polyester Sanayi A.Ş.",
+        "changePct": 1.81,
+        "volumeRatio": 7.12,
+        "volume": 2204988935,
+        "score": 51,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "ALARK",
+        "name": "Alarko Holding A.Ş.",
+        "changePct": 0.69,
+        "volumeRatio": 0.73,
+        "volume": 4216852,
+        "score": 51,
+        "setup": "Zayıf"
       },
       {
         "symbol": "KCHOL",
         "name": "Koç Holding A.Ş.",
-        "changePct": 0.27,
-        "volumeRatio": 0.75,
-        "volume": 24223650,
+        "changePct": 0.53,
+        "volumeRatio": 0.66,
+        "volume": 20551372,
+        "score": 51,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "KERVN",
+        "name": "KERVANSARAY YATIRIM HOLDİNG A.Ş.",
+        "changePct": 6.06,
+        "volumeRatio": 2.14,
+        "volume": 2343217,
+        "score": 50,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "GSDDE",
+        "name": "GSD DENİZCİLİK GAYRİMENKUL İNŞAAT SANAYİ VE TİCARET A.Ş.",
+        "changePct": 4.03,
+        "volumeRatio": 0.92,
+        "volume": 5126933,
+        "score": 50,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "EREGL",
+        "name": "Ereğli Demir ve Çelik Fabrikaları T.A.Ş.",
+        "changePct": 1.08,
+        "volumeRatio": 0.71,
+        "volume": 121720014,
+        "score": 50,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "VKGYO",
+        "name": "VAKIF GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 1.04,
+        "volumeRatio": 1.55,
+        "volume": 37948390,
+        "score": 50,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "AKFGY",
+        "name": "AKFEN GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 0.0,
+        "volumeRatio": 5.81,
+        "volume": 145609396,
+        "score": 50,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "EPLAS",
+        "name": "EGEPLAST EGE PLASTİK TİCARET VE SANAYİ A.Ş.",
+        "changePct": 10.0,
+        "volumeRatio": 3.52,
+        "volume": 13109506,
+        "score": 49,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "EGEEN",
+        "name": "EGE ENDÜSTRİ VE TİCARET A.Ş.",
+        "changePct": 9.99,
+        "volumeRatio": 3.02,
+        "volume": 46815,
+        "score": 49,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "FMIZP",
+        "name": "FEDERAL MOGUL İZMİT PİSTON VE PİM ÜRETİM TESİSLERİ A.Ş.",
+        "changePct": 4.39,
+        "volumeRatio": 1.83,
+        "volume": 98585,
+        "score": 49,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "ETILR",
+        "name": "ETİLER GIDA VE TİCARİ YATIRIMLAR SANAYİ VE TİCARET A.Ş.",
+        "changePct": -2.31,
+        "volumeRatio": 0.98,
+        "volume": 7929244,
+        "score": 49,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "BVSAN",
+        "name": "BÜLBÜLOĞLU VİNÇ SANAYİ VE TİCARET A.Ş.",
+        "changePct": -8.26,
+        "volumeRatio": 3.78,
+        "volume": 4339607,
+        "score": 48,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "YKBNK",
+        "name": "Yapı ve Kredi Bankası A.Ş.",
+        "changePct": 1.38,
+        "volumeRatio": 0.83,
+        "volume": 193109298,
         "score": 48,
         "setup": "Zayıf"
       },
       {
-        "symbol": "JANTS",
-        "name": "JANTSA JANT SANAYİ VE TİCARET A.Ş.",
-        "changePct": 9.95,
-        "volumeRatio": 0.61,
-        "volume": 3085465,
+        "symbol": "AYDEM",
+        "name": "AYDEM YENİLENEBİLİR ENERJİ A.Ş.",
+        "changePct": -0.15,
+        "volumeRatio": 0.4,
+        "volume": 2049346,
+        "score": 48,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "AKFYE",
+        "name": "AKFEN YENİLENEBİLİR ENERJİ A.Ş.",
+        "changePct": -8.82,
+        "volumeRatio": 1.5,
+        "volume": 15046139,
+        "score": 47,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "MANAS",
+        "name": "MANAS ENERJİ YÖNETİMİ SANAYİ VE TİCARET A.Ş.",
+        "changePct": -4.74,
+        "volumeRatio": 1.08,
+        "volume": 31166846,
+        "score": 47,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "SISE",
+        "name": "Türkiye Şişe ve Cam Fabrikaları A.Ş.",
+        "changePct": 2.09,
+        "volumeRatio": 1.84,
+        "volume": 150938689,
+        "score": 47,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "YIGIT",
+        "name": "YİĞİT AKÜ MALZEMELERİ NAKLİYAT TURİZM İNŞAAT SANAYİ VE TİCARET A.Ş.",
+        "changePct": 1.74,
+        "volumeRatio": 1.51,
+        "volume": 5353492,
+        "score": 47,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "ZRGYO",
+        "name": "ZİRAAT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 0.7,
+        "volumeRatio": 4.46,
+        "volume": 3688001,
+        "score": 47,
+        "setup": "Sıkışma"
+      },
+      {
+        "symbol": "AYGAZ",
+        "name": "AYGAZ A.Ş.",
+        "changePct": -0.3,
+        "volumeRatio": 1.0,
+        "volume": 1407816,
         "score": 47,
         "setup": "Zayıf"
       },
       {
         "symbol": "MHRGY",
         "name": "MHR GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 0.0,
-        "volumeRatio": 2.12,
-        "volume": 12853636,
-        "score": 47,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ONRYT",
-        "name": "ONUR YÜKSEK TEKNOLOJİ A.Ş.",
-        "changePct": 2.48,
-        "volumeRatio": 1.03,
-        "volume": 1104817,
+        "changePct": 2.67,
+        "volumeRatio": 1.45,
+        "volume": 9568057,
         "score": 46,
         "setup": "Zayıf"
       },
       {
-        "symbol": "MIATK",
-        "name": "MİA TEKNOLOJİ A.Ş.",
-        "changePct": 2.2,
-        "volumeRatio": 2.47,
-        "volume": 52025385,
-        "score": 46,
+        "symbol": "TKFEN",
+        "name": "TEKFEN HOLDİNG A.Ş.",
+        "changePct": 2.79,
+        "volumeRatio": 0.74,
+        "volume": 4732859,
+        "score": 45,
         "setup": "Zayıf"
       },
       {
-        "symbol": "SERNT",
-        "name": "SERANİT GRANİT SERAMİK SANAYİ VE TİCARET A.Ş.",
-        "changePct": 1.57,
-        "volumeRatio": 0.93,
-        "volume": 3655863,
-        "score": 46,
-        "setup": "Sıkışma"
-      },
-      {
-        "symbol": "TRENJ",
-        "name": "TR Doğal Enerji Kaynakları Araştırma ve Üretim A.Ş.",
-        "changePct": -1.19,
-        "volumeRatio": 0.47,
-        "volume": 1009841,
-        "score": 46,
+        "symbol": "GENIL",
+        "name": "GEN İLAÇ VE SAĞLIK ÜRÜNLERİ SANAYİ VE TİCARET A.Ş.",
+        "changePct": 0.92,
+        "volumeRatio": 1.04,
+        "volume": 46126340,
+        "score": 45,
         "setup": "Zayıf"
       },
       {
-        "symbol": "AKMGY",
-        "name": "AKMERKEZ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 0.9,
-        "volumeRatio": 2.75,
-        "volume": 105135,
-        "score": 46,
+        "symbol": "INVES",
+        "name": "INVESTCO HOLDİNG A.Ş.",
+        "changePct": 0.77,
+        "volumeRatio": 0.27,
+        "volume": 24005,
+        "score": 45,
         "setup": "Zayıf"
       },
       {
-        "symbol": "BORSK",
-        "name": "BOR ŞEKER A.Ş.",
-        "changePct": 0.15,
-        "volumeRatio": 1.35,
-        "volume": 14688958,
-        "score": 46,
+        "symbol": "ASGYO",
+        "name": "ASCE GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": -0.27,
+        "volumeRatio": 0.46,
+        "volume": 1476280,
+        "score": 45,
+        "setup": "Pozitif Uyumsuzluk"
+      },
+      {
+        "symbol": "MRSHL",
+        "name": "MARSHALL BOYA VE VERNİK SANAYİİ A.Ş.",
+        "changePct": 9.96,
+        "volumeRatio": 1.9,
+        "volume": 87632,
+        "score": 44,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "AVGYO",
+        "name": "AVRASYA GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 6.27,
+        "volumeRatio": 1.01,
+        "volume": 2074956,
+        "score": 44,
         "setup": "Zayıf"
       },
       {
         "symbol": "KARTN",
         "name": "KARTONSAN KARTON SANAYİ VE TİCARET A.Ş.",
-        "changePct": -6.57,
-        "volumeRatio": 1.22,
-        "volume": 958077,
-        "score": 45,
+        "changePct": 3.19,
+        "volumeRatio": 0.75,
+        "volume": 565419,
+        "score": 44,
         "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "GLCVY",
-        "name": "GELECEK VARLIK YÖNETİMİ A.Ş.",
-        "changePct": 5.46,
-        "volumeRatio": 2.79,
-        "volume": 1727053,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ZOREN",
-        "name": "ZORLU ENERJİ ELEKTRİK ÜRETİM A.Ş.",
-        "changePct": 1.61,
-        "volumeRatio": 1.52,
-        "volume": 86459083,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BRSAN",
-        "name": "BORUSAN BİRLEŞİK BORU FABRİKALARI SANAYİ VE TİCARET A.Ş.",
-        "changePct": -1.54,
-        "volumeRatio": 0.43,
-        "volume": 1205420,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EFOR",
-        "name": "EFOR YATIRIM SANAYİ TİCARET A.Ş.",
-        "changePct": 1.13,
-        "volumeRatio": 0.66,
-        "volume": 55570856,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "YKBNK",
-        "name": "Yapı ve Kredi Bankası A.Ş.",
-        "changePct": -1.09,
-        "volumeRatio": 0.92,
-        "volume": 215498223,
-        "score": 45,
-        "setup": "Zayıf"
       },
       {
         "symbol": "ORGE",
         "name": "ORGE ENERJİ ELEKTRİK TAAHHÜT A.Ş.",
-        "changePct": -0.09,
-        "volumeRatio": 0.44,
-        "volume": 3057653,
-        "score": 45,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BINHO",
-        "name": "1000 YATIRIMLAR HOLDİNG A.Ş.",
-        "changePct": 7.53,
-        "volumeRatio": 2.22,
-        "volume": 67052010,
+        "changePct": -1.63,
+        "volumeRatio": 0.35,
+        "volume": 2397271,
         "score": 44,
         "setup": "Zayıf"
       },
       {
-        "symbol": "AKCNS",
-        "name": "AKÇANSA ÇİMENTO SANAYİ VE TİCARET A.Ş.",
-        "changePct": -5.86,
-        "volumeRatio": 4.2,
-        "volume": 1329483,
-        "score": 44,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "SEKUR",
-        "name": "SEKURO PLASTİK AMBALAJ SANAYİ A.Ş.",
-        "changePct": 2.68,
-        "volumeRatio": 0.86,
-        "volume": 2097858,
-        "score": 44,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "SAHOL",
-        "name": "Hacı Ömer Sabancı Holding A.Ş.",
-        "changePct": -1.3,
-        "volumeRatio": 0.59,
-        "volume": 23728192,
+        "symbol": "SERNT",
+        "name": "SERANİT GRANİT SERAMİK SANAYİ VE TİCARET A.Ş.",
+        "changePct": -1.19,
+        "volumeRatio": 1.43,
+        "volume": 5702521,
         "score": 44,
         "setup": "Zayıf"
       },
       {
         "symbol": "AEFES",
         "name": "ANADOLU EFES BİRACILIK VE MALT SANAYİİ A.Ş.",
-        "changePct": 0.62,
-        "volumeRatio": 0.63,
-        "volume": 38654772,
+        "changePct": 0.82,
+        "volumeRatio": 0.66,
+        "volume": 36280407,
         "score": 44,
         "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "EGSER",
-        "name": "EGE SERAMİK SANAYİ VE TİCARET A.Ş.",
-        "changePct": 0.34,
-        "volumeRatio": 0.64,
-        "volume": 1502028,
-        "score": 44,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EGEEN",
-        "name": "EGE ENDÜSTRİ VE TİCARET A.Ş.",
-        "changePct": -5.15,
-        "volumeRatio": 2.4,
-        "volume": 34096,
-        "score": 43,
-        "setup": "Zayıf"
       },
       {
         "symbol": "AGHOL",
         "name": "AG ANADOLU GRUBU HOLDİNG A.Ş.",
-        "changePct": -4.44,
-        "volumeRatio": 0.58,
-        "volume": 3448394,
-        "score": 43,
+        "changePct": 0.59,
+        "volumeRatio": 0.71,
+        "volume": 3938433,
+        "score": 44,
         "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "VAKBN",
-        "name": "TÜRKİYE VAKIFLAR BANKASI T.A.O.",
-        "changePct": -2.53,
-        "volumeRatio": 1.13,
-        "volume": 69886178,
+        "symbol": "ARTMS",
+        "name": "ARTEMİS HALI A.Ş.",
+        "changePct": -0.53,
+        "volumeRatio": 0.5,
+        "volume": 547231,
+        "score": 44,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "ARMGD",
+        "name": "ARMADA GIDA TİCARET SANAYİ A.Ş.",
+        "changePct": -6.81,
+        "volumeRatio": 0.94,
+        "volume": 1289666,
         "score": 43,
         "setup": "Zayıf"
       },
       {
-        "symbol": "DGGYO",
-        "name": "DOĞUŞ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -2.33,
-        "volumeRatio": 0.82,
-        "volume": 109358,
+        "symbol": "GLRMK",
+        "name": "GÜLERMAK AĞIR SANAYİ İNŞAAT VE TAAHHÜT A.Ş.",
+        "changePct": 3.33,
+        "volumeRatio": 1.21,
+        "volume": 5460007,
         "score": 43,
         "setup": "Zayıf"
       },
       {
-        "symbol": "INVES",
-        "name": "INVESTCO HOLDİNG A.Ş.",
-        "changePct": 1.97,
-        "volumeRatio": 0.51,
-        "volume": 45357,
+        "symbol": "DNISI",
+        "name": "DİNAMİK ISI MAKİNA YALITIM MALZEMELERİ SANAYİ VE TİCARET A.Ş.",
+        "changePct": -2.79,
+        "volumeRatio": 1.08,
+        "volume": 5232555,
         "score": 43,
         "setup": "Zayıf"
       },
       {
-        "symbol": "GOZDE",
-        "name": "GÖZDE GİRİŞİM SERMAYESİ YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 1.49,
-        "volumeRatio": 1.31,
-        "volume": 2153957,
-        "score": 43,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "AKBNK",
-        "name": "Akbank T.A.Ş.",
-        "changePct": -1.17,
-        "volumeRatio": 1.28,
-        "volume": 220672117,
+        "symbol": "MIATK",
+        "name": "MİA TEKNOLOJİ A.Ş.",
+        "changePct": -1.79,
+        "volumeRatio": 2.13,
+        "volume": 48679147,
         "score": 43,
         "setup": "Zayıf"
       },
       {
-        "symbol": "NUGYO",
-        "name": "NUROL GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": -1.08,
-        "volumeRatio": 0.88,
-        "volume": 1591615,
-        "score": 43,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "USAK",
-        "name": "UŞAK SERAMİK SANAYİ A.Ş.",
-        "changePct": -0.82,
-        "volumeRatio": 1.48,
-        "volume": 51802179,
+        "symbol": "IHYAY",
+        "name": "İHLAS YAYIN HOLDİNG A.Ş.",
+        "changePct": 1.64,
+        "volumeRatio": 1.8,
+        "volume": 4281439,
         "score": 43,
         "setup": "Sıkışma"
       },
       {
-        "symbol": "TOASO",
-        "name": "Tofaş Türk Otomobil Fabrikası A.Ş.",
-        "changePct": -0.68,
-        "volumeRatio": 0.66,
-        "volume": 2391576,
+        "symbol": "ASELS",
+        "name": "ASELSAN Elektronik Sanayi ve Ticaret A.Ş.",
+        "changePct": -1.19,
+        "volumeRatio": 0.73,
+        "volume": 24340606,
         "score": 43,
         "setup": "Zayıf"
       },
       {
-        "symbol": "PNSUT",
-        "name": "PINAR SÜT MAMÜLLERİ SANAYİİ A.Ş.",
-        "changePct": 0.32,
-        "volumeRatio": 1.35,
-        "volume": 5920139,
+        "symbol": "OZGYO",
+        "name": "ÖZDERİCİ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 0.98,
+        "volumeRatio": 1.1,
+        "volume": 17844939,
         "score": 43,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "EGPRO",
-        "name": "EGE PROFİL TİCARET VE SANAYİ A.Ş.",
-        "changePct": -2.19,
-        "volumeRatio": 0.42,
-        "volume": 662682,
-        "score": 42,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKENR",
-        "name": "AKENERJİ ELEKTRİK ÜRETİM A.Ş.",
-        "changePct": 1.52,
-        "volumeRatio": 0.68,
-        "volume": 7685034,
-        "score": 42,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "SASA",
-        "name": "SASA Polyester Sanayi A.Ş.",
-        "changePct": 1.47,
-        "volumeRatio": 1.06,
-        "volume": 328089125,
-        "score": 42,
-        "setup": "Pozitif Uyumsuzluk"
-      },
-      {
-        "symbol": "PETUN",
-        "name": "PINAR ENTEGRE ET VE UN SANAYİİ A.Ş.",
-        "changePct": 0.91,
-        "volumeRatio": 0.87,
-        "volume": 2708666,
-        "score": 42,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "GARAN",
-        "name": "Türkiye Garanti Bankası A.Ş.",
-        "changePct": -0.67,
-        "volumeRatio": 0.87,
-        "volume": 31532875,
-        "score": 42,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "BASGZ",
-        "name": "BAŞKENT DOĞALGAZ DAĞITIM GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 0.31,
-        "volumeRatio": 0.91,
-        "volume": 307008,
-        "score": 42,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "TERA",
-        "name": "TERA YATIRIM MENKUL DEĞERLER A.Ş.",
-        "changePct": 0.1,
-        "volumeRatio": 0.56,
-        "volume": 7979718,
-        "score": 42,
         "setup": "Sıkışma"
       },
       {
-        "symbol": "KERVN",
-        "name": "KERVANSARAY YATIRIM HOLDİNG A.Ş.",
-        "changePct": 7.73,
-        "volumeRatio": 0.81,
-        "volume": 895072,
-        "score": 41,
+        "symbol": "ALBRK",
+        "name": "ALBARAKA TÜRK KATILIM BANKASI A.Ş.",
+        "changePct": -0.65,
+        "volumeRatio": 0.61,
+        "volume": 8875003,
+        "score": 43,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "SAHOL",
+        "name": "Hacı Ömer Sabancı Holding A.Ş.",
+        "changePct": 0.53,
+        "volumeRatio": 0.84,
+        "volume": 32370044,
+        "score": 43,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "TRENJ",
+        "name": "TR Doğal Enerji Kaynakları Araştırma ve Üretim A.Ş.",
+        "changePct": 0.46,
+        "volumeRatio": 0.61,
+        "volume": 1317771,
+        "score": 43,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "GRNYO",
+        "name": "GARANTİ YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": 9.93,
+        "volumeRatio": 4.62,
+        "volume": 1454543,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "BORSK",
+        "name": "BOR ŞEKER A.Ş.",
+        "changePct": -3.15,
+        "volumeRatio": 0.96,
+        "volume": 10897495,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "DESPC",
+        "name": "DESPEC BİLGİSAYAR PAZARLAMA VE TİCARET A.Ş.",
+        "changePct": 1.83,
+        "volumeRatio": 0.55,
+        "volume": 301760,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "NUHCM",
+        "name": "NUH ÇİMENTO SANAYİ A.Ş.",
+        "changePct": 1.18,
+        "volumeRatio": 1.19,
+        "volume": 81191,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "OYAKC",
+        "name": "OYAK Çimento Fabrikaları A.Ş.",
+        "changePct": 0.72,
+        "volumeRatio": 0.38,
+        "volume": 7988805,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "OFSYM",
+        "name": "OFİS YEM GIDA SANAYİ TİCARET A.Ş.",
+        "changePct": -0.6,
+        "volumeRatio": 0.19,
+        "volume": 468820,
+        "score": 42,
         "setup": "Zayıf"
       },
       {
         "symbol": "YGGYO",
         "name": "YENİ GİMAT GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 1.86,
-        "volumeRatio": 0.8,
-        "volume": 116761,
+        "changePct": -0.53,
+        "volumeRatio": 0.58,
+        "volume": 86421,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "SAMAT",
+        "name": "SARAY MATBAACILIK KAĞITÇILIK KIRTASİYECİLİK TİCARET VE SANAYİ A.Ş.",
+        "changePct": 0.38,
+        "volumeRatio": 0.7,
+        "volume": 797318,
+        "score": 42,
+        "setup": "Sıkışma"
+      },
+      {
+        "symbol": "BFREN",
+        "name": "BOSCH FREN SİSTEMLERİ SANAYİ VE TİCARET A.Ş.",
+        "changePct": 0.16,
+        "volumeRatio": 2.23,
+        "volume": 395647,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "HALKB",
+        "name": "TÜRKİYE HALK BANKASI A.Ş.",
+        "changePct": -0.1,
+        "volumeRatio": 1.58,
+        "volume": 82807976,
+        "score": 42,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "DZGYO",
+        "name": "DENİZ GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
+        "changePct": -3.68,
+        "volumeRatio": 1.44,
+        "volume": 3284799,
         "score": 41,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "HEKTS",
-        "name": "Hektaş Ticaret T.A.Ş.",
-        "changePct": 1.05,
-        "volumeRatio": 2.6,
-        "volume": 694857039,
-        "score": 41,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKSEN",
-        "name": "AKSA ENERJİ ÜRETİM A.Ş.",
-        "changePct": -0.56,
-        "volumeRatio": 0.57,
-        "volume": 7385623,
-        "score": 41,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "MARBL",
-        "name": "TUREKS TURUNÇ MADENCİLİK İÇ VE DIŞ TİCARET A.Ş.",
-        "changePct": 0.41,
-        "volumeRatio": 0.79,
-        "volume": 1067685,
-        "score": 41,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "AKYHO",
-        "name": "AKDENİZ YATIRIM HOLDİNG A.Ş.",
-        "changePct": 6.6,
-        "volumeRatio": 1.51,
-        "volume": 1945701,
-        "score": 40,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "TURSG",
-        "name": "TÜRKİYE SİGORTA A.Ş.",
-        "changePct": -1.91,
-        "volumeRatio": 1.55,
-        "volume": 98511017,
-        "score": 40,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "ALKIM",
-        "name": "ALKİM ALKALİ KİMYA A.Ş.",
-        "changePct": 0.44,
-        "volumeRatio": 1.04,
-        "volume": 1793129,
-        "score": 40,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "MNDTR",
-        "name": "MONDİ TURKEY OLUKLU MUKAVVA KAĞIT VE AMBALAJ SANAYİ A.Ş.",
-        "changePct": -0.19,
-        "volumeRatio": 1.02,
-        "volume": 1984494,
-        "score": 40,
         "setup": "Pozitif Uyumsuzluk"
       },
       {
-        "symbol": "VKGYO",
-        "name": "VAKIF GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
-        "changePct": 0.0,
-        "volumeRatio": 1.41,
-        "volume": 33201264,
-        "score": 40,
+        "symbol": "BANVT",
+        "name": "BANVİT BANDIRMA VİTAMİNLİ YEM SANAYİ A.Ş.",
+        "changePct": 2.87,
+        "volumeRatio": 3.51,
+        "volume": 292354,
+        "score": 41,
         "setup": "Zayıf"
       },
       {
-        "symbol": "KLMSN",
-        "name": "KLİMASAN KLİMA SANAYİ VE TİCARET A.Ş.",
-        "changePct": 0.0,
+        "symbol": "MERIT",
+        "name": "MERİT TURİZM YATIRIM VE İŞLETME A.Ş.",
+        "changePct": 2.36,
+        "volumeRatio": 0.73,
+        "volume": 1754954,
+        "score": 41,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "TCELL",
+        "name": "Turkcell İletişim Hizmetleri A.Ş.",
+        "changePct": 2.07,
+        "volumeRatio": 1.42,
+        "volume": 48843234,
+        "score": 41,
+        "setup": "Zayıf"
+      },
+      {
+        "symbol": "ONRYT",
+        "name": "ONUR YÜKSEK TEKNOLOJİ A.Ş.",
+        "changePct": -1.85,
         "volumeRatio": 0.78,
-        "volume": 512788,
-        "score": 40,
+        "volume": 828956,
+        "score": 41,
         "setup": "Zayıf"
       },
       {
-        "symbol": "KORDS",
-        "name": "KORDSA TEKNİK TEKSTİL A.Ş.",
-        "changePct": -3.69,
-        "volumeRatio": 1.14,
-        "volume": 3236757,
-        "score": 39,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "A1YEN",
-        "name": "A1 YENİLENEBİLİR ENERJİ ÜRETİM A.Ş.",
-        "changePct": 3.04,
-        "volumeRatio": 1.16,
-        "volume": 23527540,
-        "score": 39,
-        "setup": "Zayıf"
-      },
-      {
-        "symbol": "PRKME",
-        "name": "PARK ELEKTRİK ÜRETİM MADENCİLİK SANAYİ VE TİCARET A.Ş.",
-        "changePct": -1.91,
-        "volumeRatio": 0.31,
-        "volume": 1245585,
-        "score": 39,
+        "symbol": "USHOL",
+        "name": "US YATIRIM HOLDİNG A.Ş.",
+        "changePct": 1.84,
+        "volumeRatio": 1.71,
+        "volume": 766137,
+        "score": 41,
         "setup": "Zayıf"
       }
     ]
   },
-  "updatedAt": "2026-09-10 19:20:16"
+  "updatedAt": "2026-09-11 19:21:04"
 }
