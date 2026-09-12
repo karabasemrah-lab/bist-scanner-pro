@@ -462,7 +462,13 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <div><label class="text-xs muted">AD &gt; SMA En Çok Mum</label><input id="adMaxBars" class="input mt-1" type="number" value="2" min="0" max="500"></div>
       <div class="flex items-end gap-2 flex-wrap"><label class="chip"><input id="adOnlyCross" type="checkbox"> Sadece ilk kesişim barı</label><label class="chip"><input id="adClosedOnly" type="checkbox" checked> Yalnız kapanmış mumlar</label></div>
     </div>
-    <div class="text-xs muted mt-3">TradingView TRM uyumu: <b>Length 57 · Min 0 · Max 2</b>. Normal eşleşme için “Sadece ilk kesişim barı” kapalı kalmalı. Haftalıkta Yahoo native 1wk mumları kullanılır; açık hafta Cuma 18:15 kapanışına göre elenir. Pine sayaç mantığında ilk AD>SMA barı 1, ikinci bar 2 olur. USD modu TL fiyatı USD/TRY'ye bölerek hesaplanır.</div>
+    <div class="text-xs muted mt-3">TradingView TRM uyumu: <b>Length 57 · Min 0 · Max 2</b>. Normal eşleşme için “Sadece ilk kesişim barı” kapalı kalmalı. Haftalık mumlar BIST haftasına göre günlük veriden oluşturulur; USD modu TL fiyatı USD/TRY'ye bölerek hesaplanır.</div>
+
+    <div class="grid grid-cols-3 gap-3 mt-4 grid-settings">
+      <div><label class="text-xs muted">A/D Teşhis Hisseleri</label><input id="adDiagSymbols" class="input mt-1" value="SASA,SISE,SOKM,TCELL,GRNYO,FLAP,KZGYO,LKMNH,HURGZ,MARTI"></div>
+      <div class="flex items-end"><button id="adDiagBtn" class="btn w-full" style="background:#1f2937;color:#e5e7eb">🧪 A/D Teşhis</button></div>
+      <div class="flex items-end"><span class="chip">Haftalık TL · son 8 bar OHLCV + AD + SMA57</span></div>
+    </div>
 
     <button id="adBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📊 A/D Taramasını Başlat</button>
     <div id="adCounts" class="text-xs muted mt-3"></div>
@@ -475,6 +481,11 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <button id="adExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
     </div>
     <div class="overflow-auto max-h-[650px]"><table id="adTable"></table></div>
+  </div>
+
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🧪 A/D Teşhis Sonuçları</h3><div id="adDiagStatus" class="text-xs muted mt-2">Henüz çalıştırılmadı.</div></div>
+    <div class="overflow-auto max-h-[650px]"><table id="adDiagTable"></table></div>
   </div>
 </section>
 
@@ -2019,9 +2030,9 @@ const AD_TF={
   "1h":{label:"1 Saat",range:"60d",interval:"1h"},
   "4h":{label:"4 Saat",range:"180d",interval:"1h"},
   "1d":{label:"Günlük",range:"2y",interval:"1d"},
-  // Haftalıkta native 1wk kullanılır. TradingView request.security(...,"1W",...)
-  // davranışına günlük veriden yeniden örneklemekten daha yakındır.
-  "1w":{label:"Haftalık",range:"5y",interval:"1wk"}
+  // Haftalık Yahoo 1wk barı yerine günlük veriden BIST haftası oluşturulur.
+  // Böylece TradingView ile hafta kapanışı ve USD referans hizası daha tutarlı olur.
+  "1w":{label:"Haftalık",range:"5y",interval:"1d"}
 };
 const adRefCache=new Map();
 function selectedAdTimeframes(){const a=[];if($("adTf1h").checked)a.push("1h");if($("adTf4h").checked)a.push("4h");if($("adTf1d").checked)a.push("1d");if($("adTf1w").checked)a.push("1w");return a}
@@ -2042,37 +2053,20 @@ function resampleAdWeekly(df){
   }
   return out
 }
-function adWeekCloseTs(ts){
-  const p=adDateParts(ts),d=new Date(Date.UTC(p.year,p.month-1,p.day)),dow=d.getUTCDay()||7;
-  d.setUTCDate(d.getUTCDate()+(5-dow));
-  const y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dd=d.getUTCDate();
-  return Math.floor(new Date(`${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}T18:15:00+03:00`).getTime()/1000)
-}
 function adDropOpenBar(df,tf){
   if(!$("adClosedOnly").checked||!df?.t?.length||tf==="4h")return df;
   const now=Math.floor(Date.now()/1000),last=df.t.at(-1);let isOpen=false;
   if(tf==="1h")isOpen=now-last<3600;
   else if(tf==="1d"){const lp=istParts(last),np=istParts(now);isOpen=lp.date===np.date&&(np.hour<18||(np.hour===18&&np.minute<15))}
-  else if(tf==="1w"){
-    const sameWeek=adIsoWeekKey(last)===adIsoWeekKey(now);
-    isOpen=sameWeek && now<adWeekCloseTs(last);
-  }
+  else if(tf==="1w")isOpen=now<last; // weekly timestamp is synthetic Friday 18:15 Istanbul close
   if(!isOpen)return df;const o={};for(const k of ["t","o","h","l","c","v"])o[k]=df[k].slice(0,-1);return o
 }
-async function getAdRaw(symbol,tf){const cfg=AD_TF[tf];if(tf==="4h")return resample4h(await yahoo(symbol,cfg.range,"1h"));return yahoo(symbol,cfg.range,cfg.interval)}
+async function getAdRaw(symbol,tf){const cfg=AD_TF[tf];if(tf==="4h")return resample4h(await yahoo(symbol,cfg.range,"1h"));if(tf==="1w")return resampleAdWeekly(await yahoo(symbol,cfg.range,"1d"));return yahoo(symbol,cfg.range,cfg.interval)}
 async function getAdBaseDf(symbol,tf){return adDropOpenBar(await getAdRaw(symbol+".IS",tf),tf)}
 function alignRefToStock(stock,ref){
   if(!stock?.t?.length||!ref?.t?.length)return null;
-  const stockStep=stock.t.length>1?stock.t[1]-stock.t[0]:86400;
-  const refStep=ref.t.length>1?ref.t[1]-ref.t[0]:86400;
-  const dailyLike=stockStep>=20*3600 && refStep>=20*3600;
-  if(dailyLike){
-    const dateMap=new Map(ref.t.map((ts,i)=>[adDateParts(ts).date,i]));let j=0,last=-1;const idx=[];
-    for(const ts of stock.t){const ds=adDateParts(ts).date;if(dateMap.has(ds)){idx.push(dateMap.get(ds));continue}while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
-    return idx.some(x=>x<0)?null:idx
-  }
-  let j=0,last=-1;const idx=[];
-  for(const ts of stock.t){while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
+  const dateMap=new Map(ref.t.map((ts,i)=>[adDateParts(ts).date,i]));let j=0,last=-1;const idx=[];
+  for(const ts of stock.t){const ds=adDateParts(ts).date;if(dateMap.has(ds)){idx.push(dateMap.get(ds));continue}while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
   return idx.some(x=>x<0)?null:idx
 }
 async function getAdReference(tf,mode){
@@ -2103,6 +2097,52 @@ function analyzeAd(symbol,tf,mode,df){
   return{symbol,timeframe:AD_TF[tf].label,mode:mode==="XAU"?"ALTIN (XAU)":mode,condition:newCross?"YENİ YUKARI KESİŞİM":"AD > SMA",bars:pineBars,ad:+ad[i].toFixed(2),sma:+sma[i].toFixed(2),distance:finite(distance)?+distance.toFixed(2):null,close:+df.c[i].toFixed(6),last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}
 }
 function renderAd(){adShown=adAll.slice().sort((a,b)=>a.bars-b.bars||a.symbol.localeCompare(b.symbol)||a.timeframe.localeCompare(b.timeframe));$("adCount").textContent=adShown.length;$("adTable").innerHTML=`<thead><tr>${["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","Pine Bar Sayacı","AD","SMA57","AD-SMA %","Fiyat","Son Mum"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+adShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.mode}</td><td>${r.timeframe}</td><td>${r.condition}</td><td>${r.bars} bar</td><td>${fmt(r.ad,2)}</td><td>${fmt(r.sma,2)}</td><td>${fmt(r.distance,2)}</td><td>${fmt(r.close,6)}</td><td>${r.last_bar}</td></tr>`).join("")+"</tbody>"}
+
+function adDiagRows(symbol,df){
+  const ad=adSeries(df),sma=rollingMean(ad,Math.max(2,Math.trunc(val("adSmaLen")))),rows=[];
+  const start=Math.max(0,df.c.length-8);
+  for(let i=start;i<df.c.length;i++){
+    let bars=0;
+    if(finite(ad[i])&&finite(sma[i])&&ad[i]>sma[i]){
+      for(let k=i;k>=0;k--){if(finite(sma[k])&&sma[k]<ad[k])bars++;else break}
+    }
+    rows.push({
+      symbol,
+      date:new Date(df.t[i]*1000).toLocaleDateString("tr-TR",{timeZone:"Europe/Istanbul"}),
+      o:df.o[i],h:df.h[i],l:df.l[i],c:df.c[i],v:df.v[i],
+      ad:ad[i],sma:sma[i],above:finite(ad[i])&&finite(sma[i])&&ad[i]>sma[i],bars
+    });
+  }
+  return rows
+}
+
+async function runAdDiagnostics(){
+  const btn=$("adDiagBtn");btn.disabled=true;
+  $("adDiagStatus").textContent="Teşhis hazırlanıyor…";
+  $("adDiagTable").innerHTML="";
+  try{
+    const syms=($("adDiagSymbols").value||"").toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/^BIST:/,"").replace(/\.IS$/,"")).filter(Boolean);
+    const all=[];
+    for(let n=0;n<syms.length;n++){
+      const s=syms[n];
+      $("adDiagStatus").textContent=`${s} · ${n+1}/${syms.length}`;
+      try{
+        const df=await getAdBaseDf(s,"1w");
+        all.push(...adDiagRows(s,df));
+      }catch(e){
+        all.push({symbol:s,error:e?.message||String(e)});
+      }
+      await sleep(0);
+    }
+    const heads=["Hisse","Hafta","Open","High","Low","Close","Hacim","AD","SMA57","AD>SMA","Sayaç"];
+    $("adDiagTable").innerHTML=`<thead><tr>${heads.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
+      all.map(r=>r.error?`<tr><td>${r.symbol}</td><td colspan="10">${r.error}</td></tr>`:
+      `<tr><td>${link(r.symbol)}</td><td>${r.date}</td><td>${fmt(r.o,4)}</td><td>${fmt(r.h,4)}</td><td>${fmt(r.l,4)}</td><td>${fmt(r.c,4)}</td><td>${fmt(r.v,0)}</td><td>${fmt(r.ad,2)}</td><td>${fmt(r.sma,2)}</td><td>${r.above?"EVET":"HAYIR"}</td><td>${r.bars}</td></tr>`).join("")+"</tbody>";
+    $("adDiagStatus").textContent=`Tamamlandı · ${syms.length} hisse · haftalık TL · son 8 bar`;
+  }catch(e){
+    $("adDiagStatus").textContent="Hata: "+(e?.message||e);
+  }finally{btn.disabled=false}
+}
 async function scanAd(){
   const tfs=selectedAdTimeframes(),modes=selectedAdModes();
   if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
@@ -4281,7 +4321,8 @@ $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$(
 $("harmFwCaptureBtn").onclick=harmFwCapture;$("harmFwUpdateBtn").onclick=harmFwUpdate;$("harmFwExcelBtn").onclick=harmFwExport;$("harmFwClearBtn").onclick=harmFwClear;
 $("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;$("elQuickFilter").onchange=renderElliott;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
-$("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("sdBtn").onclick=scanSD;$("sdMinScore").onchange=renderSD;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
+$("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;
+$("adDiagBtn").onclick=runAdDiagnostics;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("sdBtn").onclick=scanSD;$("sdMinScore").onchange=renderSD;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
 ["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id)?.addEventListener("input",storyLive));
