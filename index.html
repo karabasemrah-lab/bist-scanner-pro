@@ -103,8 +103,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#f97316" data-tab="macd3buy">📈 MACD 0 Altı 3. AL</button>
   <button class="tab" style="--ac:#22d3ee" data-tab="marketintel">🧬 Market Intelligence</button>
   <button class="tab" style="--ac:#89b4fa" data-tab="duk">🔷 DÜK</button>
-  <button class="tab" style="--ac:#10b981" data-tab="adscan">📊 Accumulation / Distribution</button>
-  <button class="tab" style="--ac:#eab308" data-tab="leadbreak">🏆 Liderlik + Sıkışma</button>
+<button class="tab" style="--ac:#eab308" data-tab="leadbreak">🏆 Liderlik + Sıkışma</button>
   <button class="tab" style="--ac:#c084fc" data-tab="vrp">🌪️ Volatilite / VRP</button>
   <button class="tab" style="--ac:#f472b6" data-tab="harmonic">🦋 Harmonik</button>
   <button class="tab" style="--ac:#60a5fa" data-tab="composite">📊 XU100 Kompozit</button>
@@ -428,65 +427,6 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
     <button id="dukBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#3b82f6,#89b4fa);color:#07111f">🔷 DÜK Taramasını Başlat</button><div id="dukCounts" class="text-xs muted mt-3"></div><div class="progress mt-4"><div id="dukProg"></div></div><div id="dukStatus" class="mt-3 rounded-xl p-3 text-sm warn">DÜK taramasını başlat.</div>
   </div>
   <div class="card overflow-hidden"><div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800"><h3 class="font-black text-xl">🔷 DÜK Sonuçları · <span id="dukCount">0</span> satır</h3><button id="dukExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button></div><div class="overflow-auto max-h-[650px]"><table id="dukTable"></table></div></div>
-</section>
-
-
-<section id="adscan" class="tabpage space-y-4 hidden">
-  <div class="card p-5">
-    <h2 class="text-2xl font-black">📊 Accumulation / Distribution Tarayıcı</h2>
-    <div class="text-sm muted mt-2">Orijinal AD motoru · AD = kümülatif Money Flow Volume · AD'nin 57 periyot SMA üzerindeki durumunu ve yeni yukarı kesişimleri tarar.</div>
-
-    <div class="mt-4">
-      <div class="text-xs muted mb-2">Zaman Dilimleri · çoklu seçilebilir</div>
-      <div class="grid grid-cols-4 gap-3 grid-settings">
-        <label class="chip"><input id="adTf1h" type="checkbox"> 1 Saat</label>
-        <label class="chip"><input id="adTf4h" type="checkbox"> 4 Saat</label>
-        <label class="chip"><input id="adTf1d" type="checkbox" checked> Günlük</label>
-        <label class="chip"><input id="adTf1w" type="checkbox"> Haftalık</label>
-      </div>
-    </div>
-
-    <div class="mt-4">
-      <div class="text-xs muted mb-2">Veri Modları · çoklu seçilebilir</div>
-      <div class="grid grid-cols-4 gap-3 grid-settings">
-        <label class="chip"><input id="adModeTL" type="checkbox" checked> TL</label>
-        <label class="chip"><input id="adModeUSD" type="checkbox"> USD</label>
-        <label class="chip"><input id="adModeEUR" type="checkbox"> EUR</label>
-        <label class="chip"><input id="adModeXAU" type="checkbox"> ALTIN (XAU)</label>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-4 gap-4 mt-5 grid-settings">
-      <div><label class="text-xs muted">AD SMA Periyodu</label><input id="adSmaLen" class="input mt-1" type="number" value="57" min="2" max="500"></div>
-      <div><label class="text-xs muted">AD &gt; SMA En Az Mum</label><input id="adMinBars" class="input mt-1" type="number" value="0" min="0" max="500"></div>
-      <div><label class="text-xs muted">AD &gt; SMA En Çok Mum</label><input id="adMaxBars" class="input mt-1" type="number" value="2" min="0" max="500"></div>
-      <div class="flex items-end gap-2 flex-wrap"><label class="chip"><input id="adOnlyCross" type="checkbox"> Sadece ilk kesişim barı</label><label class="chip"><input id="adClosedOnly" type="checkbox" checked> Yalnız kapanmış mumlar</label></div>
-    </div>
-    <div class="text-xs muted mt-3">TradingView TRM uyumu: <b>Length 57 · Min 0 · Max 2</b>. Normal eşleşme için “Sadece ilk kesişim barı” kapalı kalmalı. Haftalık mumlar BIST haftasına göre günlük veriden oluşturulur; USD modu TL fiyatı USD/TRY'ye bölerek hesaplanır.</div>
-
-    <div class="grid grid-cols-3 gap-3 mt-4 grid-settings">
-      <div><label class="text-xs muted">A/D Teşhis Hisseleri</label><input id="adDiagSymbols" class="input mt-1" value="SASA,SISE,SOKM,TCELL,GRNYO,FLAP,KZGYO,LKMNH,HURGZ,MARTI"></div>
-      <div class="flex items-end"><button id="adDiagBtn" class="btn w-full" style="background:#1f2937;color:#e5e7eb">🧪 A/D Teşhis</button></div>
-      <div class="flex items-end"><span class="chip">Haftalık TL · son 8 bar OHLCV + AD + SMA57</span></div>
-    </div>
-
-    <button id="adBtn" class="btn w-full mt-5" style="background:linear-gradient(90deg,#047857,#10b981);color:white">📊 A/D Taramasını Başlat</button>
-    <div id="adCounts" class="text-xs muted mt-3"></div>
-    <div class="progress mt-4"><div id="adProg"></div></div>
-    <div id="adStatus" class="mt-3 rounded-xl p-3 text-sm warn">Accumulation / Distribution taramasını başlat.</div>
-  </div>
-  <div class="card overflow-hidden">
-    <div class="p-4 flex flex-wrap items-center gap-3 border-b border-gray-800">
-      <h3 class="font-black text-xl">📊 A/D Sonuçları · <span id="adCount">0</span> satır</h3>
-      <button id="adExcel" class="btn ml-auto" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
-    </div>
-    <div class="overflow-auto max-h-[650px]"><table id="adTable"></table></div>
-  </div>
-
-  <div class="card overflow-hidden">
-    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">🧪 A/D Teşhis Sonuçları</h3><div id="adDiagStatus" class="text-xs muted mt-2">Henüz çalıştırılmadı.</div></div>
-    <div class="overflow-auto max-h-[650px]"><table id="adDiagTable"></table></div>
-  </div>
 </section>
 
 
@@ -1191,7 +1131,7 @@ const TV_BASE = [
 const REFS = {XU100:"XU100.IS",XU030:"XU030.IS",XBANK:"XBANK.IS",XUTUM:"XUTUM.IS",XBANA:"XBANA.IS"};
 const CORE_PHASES = new Set(["🚀 TAZE KIRILIM","🟢 GÜÇLÜ FUSION","🔵 BİRİKİM","🟠 YAŞLANMA / DAĞITIM","🟠 OLGUN TREND"]);
 
-let elliottAll=[], elliottShown=[], fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], adAll=[], adShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], highConfAll=[], highConfShown=[], sdAll=[], sdShown=[], failures=[];
+let elliottAll=[], elliottShown=[], fusionAll=[], fusionShown=[], contAll=[], contShown=[], earlyAll=[], earlyShown=[], medAll=[], medShown=[], divAll=[], divShown=[], oppAll=[], oppShown=[], macdAll=[], macdShown=[], miAll=[], miShown=[], dukAll=[], dukShown=[], leadAll=[], leadShown=[], vrpAll=[], vrpShown=[], harmAll=[], harmShown=[], compAll=[], compShown=[], rsiBreakAll=[], rsiBreakShown=[], bbAll=[], bbShown=[], epAll=[], epShown=[], lqAll=[], lqShown=[], mfiAll=[], mfiShown=[], msAll=[], msShown=[], qqAll=[], qqShown=[], consensusShown=[], highConfAll=[], highConfShown=[], sdAll=[], sdShown=[], failures=[];
 let refCache=null;
 let storyRecords=[];
 const STORY_KEY="bist_story_radar_v01";
@@ -2026,181 +1966,6 @@ function renderDuk(){dukShown=dukAll.slice().sort((a,b)=>b.score-a.score||a.symb
 async function scanDuk(){const tfs=selectedDukTimeframes();if(!tfs.length){alert("En az bir zaman dilimi seç.");return}const b=$("dukBtn");b.disabled=true;failures=[];dukAll=[];$("dukProg").style.width="0";setStatus("dukStatus","Evren hazırlanıyor…","warn");try{const u=await getUniverse(),jobs=[];for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);$("dukCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse × ${tfs.length} periyot = ${jobs.length} görev`;let next=0,done=0;async function run(){while(true){const ix=next++;if(ix>=jobs.length)return;const[s,tf]=jobs[ix];try{const r=analyzeDuk(s,tf,await getDukDf(s,tf));if(r)dukAll.push(r)}catch(e){failures.push({symbol:`${s} (${DUK_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}done++;$("dukProg").style.width=(100*done/jobs.length)+"%";setStatus("dukStatus",`${s} · ${DUK_TF[tf].label} · ${done}/${jobs.length}`,"warn");if(done%25===0||done===jobs.length){renderDuk();renderFails();await sleep(0)}else if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));renderDuk();renderFails();setStatus("dukStatus",`Tarama tamamlandı · ${dukShown.length} sonuç · ${failures.length} hata`,"good")}catch(e){setStatus("dukStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false}}
 
 
-const AD_TF={
-  "1h":{label:"1 Saat",range:"60d",interval:"1h"},
-  "4h":{label:"4 Saat",range:"180d",interval:"1h"},
-  "1d":{label:"Günlük",range:"2y",interval:"1d"},
-  // Haftalık Yahoo 1wk barı yerine günlük veriden BIST haftası oluşturulur.
-  // Böylece TradingView ile hafta kapanışı ve USD referans hizası daha tutarlı olur.
-  "1w":{label:"Haftalık",range:"5y",interval:"1d"}
-};
-const adRefCache=new Map();
-function selectedAdTimeframes(){const a=[];if($("adTf1h").checked)a.push("1h");if($("adTf4h").checked)a.push("4h");if($("adTf1d").checked)a.push("1d");if($("adTf1w").checked)a.push("1w");return a}
-function selectedAdModes(){const a=[];if($("adModeTL").checked)a.push("TL");if($("adModeUSD").checked)a.push("USD");if($("adModeEUR").checked)a.push("EUR");if($("adModeXAU").checked)a.push("XAU");return a}
-function cloneDf(df){return {t:df.t.slice(),o:df.o.slice(),h:df.h.slice(),l:df.l.slice(),c:df.c.slice(),v:df.v.slice()}}
-function adDateParts(ts){const ps=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Istanbul",year:"numeric",month:"2-digit",day:"2-digit",weekday:"short"}).formatToParts(new Date(ts*1000)),o={};for(const p of ps)o[p.type]=p.value;return {date:`${o.year}-${o.month}-${o.day}`,year:+o.year,month:+o.month,day:+o.day,weekday:o.weekday}}
-function adIsoWeekKey(ts){const p=adDateParts(ts),d=new Date(Date.UTC(p.year,p.month-1,p.day)),day=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+4-day);const y=d.getUTCFullYear(),y0=new Date(Date.UTC(y,0,1)),w=Math.ceil((((d-y0)/86400000)+1)/7);return `${y}-W${String(w).padStart(2,"0")}`}
-function adFridayCloseTsFromWeek(indices,df){const last=adDateParts(df.t[indices.at(-1)]),d=new Date(Date.UTC(last.year,last.month-1,last.day)),dow=d.getUTCDay()||7;d.setUTCDate(d.getUTCDate()+(5-dow));const y=d.getUTCFullYear(),m=d.getUTCMonth()+1,dd=d.getUTCDate();return Math.floor(new Date(`${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}T18:15:00+03:00`).getTime()/1000)}
-function resampleAdWeekly(df){
-  if(!df?.t?.length)return {t:[],o:[],h:[],l:[],c:[],v:[]};
-  const groups=new Map();
-  for(let i=0;i<df.t.length;i++){const k=adIsoWeekKey(df.t[i]);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(i)}
-  const out={t:[],o:[],h:[],l:[],c:[],v:[]};
-  for(const idx of groups.values()){
-    idx.sort((a,b)=>df.t[a]-df.t[b]);
-    const valid=idx.filter(i=>[df.o[i],df.h[i],df.l[i],df.c[i]].every(finite));if(!valid.length)continue;
-    out.t.push(adFridayCloseTsFromWeek(valid,df));out.o.push(df.o[valid[0]]);out.h.push(Math.max(...valid.map(i=>df.h[i])));out.l.push(Math.min(...valid.map(i=>df.l[i])));out.c.push(df.c[valid.at(-1)]);out.v.push(valid.reduce((s,i)=>s+(finite(df.v[i])?df.v[i]:0),0));
-  }
-  return out
-}
-function adDropOpenBar(df,tf){
-  if(!$("adClosedOnly").checked||!df?.t?.length||tf==="4h")return df;
-  const now=Math.floor(Date.now()/1000),last=df.t.at(-1);let isOpen=false;
-  if(tf==="1h")isOpen=now-last<3600;
-  else if(tf==="1d"){const lp=istParts(last),np=istParts(now);isOpen=lp.date===np.date&&(np.hour<18||(np.hour===18&&np.minute<15))}
-  else if(tf==="1w")isOpen=now<last; // weekly timestamp is synthetic Friday 18:15 Istanbul close
-  if(!isOpen)return df;const o={};for(const k of ["t","o","h","l","c","v"])o[k]=df[k].slice(0,-1);return o
-}
-async function getAdRaw(symbol,tf){const cfg=AD_TF[tf];if(tf==="4h")return resample4h(await yahoo(symbol,cfg.range,"1h"));if(tf==="1w")return resampleAdWeekly(await yahoo(symbol,cfg.range,"1d"));return yahoo(symbol,cfg.range,cfg.interval)}
-async function getAdBaseDf(symbol,tf){return adDropOpenBar(await getAdRaw(symbol+".IS",tf),tf)}
-function alignRefToStock(stock,ref){
-  if(!stock?.t?.length||!ref?.t?.length)return null;
-  const dateMap=new Map(ref.t.map((ts,i)=>[adDateParts(ts).date,i]));let j=0,last=-1;const idx=[];
-  for(const ts of stock.t){const ds=adDateParts(ts).date;if(dateMap.has(ds)){idx.push(dateMap.get(ds));continue}while(j<ref.t.length&&ref.t[j]<=ts){last=j;j++}idx.push(last)}
-  return idx.some(x=>x<0)?null:idx
-}
-async function getAdReference(tf,mode){
-  if(mode==="TL")return null;const key=tf+"|"+mode;if(adRefCache.has(key))return adRefCache.get(key);
-  async function raw(sym){return adDropOpenBar(await getAdRaw(sym,tf),tf)}let ref;
-  if(mode==="USD")ref=await raw("USDTRY=X");
-  else if(mode==="EUR")ref=await raw("EURTRY=X");
-  else{
-    const fx=await raw("USDTRY=X"),gold=await raw("GC=F"),gidx=alignRefToStock(fx,gold);if(!gidx)throw new Error("XAU referansı hizalanamadı");
-    const out={t:fx.t.slice(),o:[],h:[],l:[],c:[],v:Array(fx.t.length).fill(0)};
-    for(let i=0;i<fx.t.length;i++){const k=gidx[i],vals=[fx.o[i]*gold.o[k],fx.h[i]*gold.h[k],fx.l[i]*gold.l[k],fx.c[i]*gold.c[k]];out.o.push(vals[0]);out.h.push(Math.max(...vals));out.l.push(Math.min(...vals));out.c.push(vals[3])}ref=out
-  }
-  if(!ref?.t?.length)throw new Error(`${mode} referans verisi alınamadı`);adRefCache.set(key,ref);return ref
-}
-function convertAdMode(stock,mode,ref){
-  if(mode==="TL")return cloneDf(stock);if(!ref?.t?.length)throw new Error(`${mode} referansı boş`);const idx=alignRefToStock(stock,ref);if(!idx)throw new Error(`${mode} referansı hisse barlarıyla hizalanamadı`);
-  const out={t:stock.t.slice(),o:[],h:[],l:[],c:[],v:stock.v.slice()};
-  for(let i=0;i<stock.t.length;i++){const j=idx[i],eps=1e-12,ro=Math.max(ref.o[j],eps),rh=Math.max(ref.h[j],eps),rl=Math.max(ref.l[j],eps),rc=Math.max(ref.c[j],eps),oo=stock.o[i]/ro,hh=stock.h[i]/rl,ll=stock.l[i]/rh,cc=stock.c[i]/rc,vals=[oo,hh,ll,cc];if(!vals.every(finite))throw new Error(`${mode} dönüşümünde geçersiz OHLC`);out.o.push(oo);out.h.push(Math.max(...vals));out.l.push(Math.min(...vals));out.c.push(cc)}return out
-}
-function adSeries(df){let sum=0;return df.c.map((c,i)=>{const h=df.h[i],l=df.l[i],den=h-l,mfm=(h===l)?0:(2*c-l-h)/den;sum+=mfm*(df.v[i]||0);return sum})}
-function analyzeAd(symbol,tf,mode,df){
-  const len=Math.max(2,Math.trunc(val("adSmaLen"))),minB=Math.max(0,Math.trunc(val("adMinBars"))),maxB=Math.max(minB,Math.trunc(val("adMaxBars")));if(!df||df.c.length<len+2)return null;
-  const ad=adSeries(df),sma=rollingMean(ad,len),i=df.c.length-1;if(!finite(ad[i])||!finite(sma[i])||!finite(ad[i-1])||!finite(sma[i-1]))return null;
-  const above=sma[i]<ad[i],newCross=above&&(sma[i-1]>=ad[i-1]);let pineBars=0;
-  if(above){for(let k=i;k>=0;k--){if(finite(sma[k])&&sma[k]<ad[k])pineBars++;else break}}
-  const cond=$("adOnlyCross").checked?newCross:above;if(!cond||pineBars<minB||pineBars>maxB)return null;
-  const distance=sma[i]!==0?(ad[i]-sma[i])/Math.abs(sma[i])*100:NaN;
-  return{symbol,timeframe:AD_TF[tf].label,mode:mode==="XAU"?"ALTIN (XAU)":mode,condition:newCross?"YENİ YUKARI KESİŞİM":"AD > SMA",bars:pineBars,ad:+ad[i].toFixed(2),sma:+sma[i].toFixed(2),distance:finite(distance)?+distance.toFixed(2):null,close:+df.c[i].toFixed(6),last_bar:new Date(df.t[i]*1000).toLocaleString("tr-TR",{timeZone:"Europe/Istanbul"})}
-}
-function renderAd(){adShown=adAll.slice().sort((a,b)=>a.bars-b.bars||a.symbol.localeCompare(b.symbol)||a.timeframe.localeCompare(b.timeframe));$("adCount").textContent=adShown.length;$("adTable").innerHTML=`<thead><tr>${["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","Pine Bar Sayacı","AD","SMA57","AD-SMA %","Fiyat","Son Mum"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+adShown.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.mode}</td><td>${r.timeframe}</td><td>${r.condition}</td><td>${r.bars} bar</td><td>${fmt(r.ad,2)}</td><td>${fmt(r.sma,2)}</td><td>${fmt(r.distance,2)}</td><td>${fmt(r.close,6)}</td><td>${r.last_bar}</td></tr>`).join("")+"</tbody>"}
-
-function adDiagRows(symbol,df){
-  const ad=adSeries(df),sma=rollingMean(ad,Math.max(2,Math.trunc(val("adSmaLen")))),rows=[];
-  const start=Math.max(0,df.c.length-8);
-  for(let i=start;i<df.c.length;i++){
-    let bars=0;
-    if(finite(ad[i])&&finite(sma[i])&&ad[i]>sma[i]){
-      for(let k=i;k>=0;k--){if(finite(sma[k])&&sma[k]<ad[k])bars++;else break}
-    }
-    rows.push({
-      symbol,
-      date:new Date(df.t[i]*1000).toLocaleDateString("tr-TR",{timeZone:"Europe/Istanbul"}),
-      o:df.o[i],h:df.h[i],l:df.l[i],c:df.c[i],v:df.v[i],
-      ad:ad[i],sma:sma[i],above:finite(ad[i])&&finite(sma[i])&&ad[i]>sma[i],bars
-    });
-  }
-  return rows
-}
-
-async function runAdDiagnostics(){
-  const btn=$("adDiagBtn");btn.disabled=true;
-  $("adDiagStatus").textContent="Teşhis hazırlanıyor…";
-  $("adDiagTable").innerHTML="";
-  try{
-    const syms=($("adDiagSymbols").value||"").toUpperCase().split(/[\s,;]+/).map(x=>x.replace(/^BIST:/,"").replace(/\.IS$/,"")).filter(Boolean);
-    const all=[];
-    for(let n=0;n<syms.length;n++){
-      const s=syms[n];
-      $("adDiagStatus").textContent=`${s} · ${n+1}/${syms.length}`;
-      try{
-        const df=await getAdBaseDf(s,"1w");
-        all.push(...adDiagRows(s,df));
-      }catch(e){
-        all.push({symbol:s,error:e?.message||String(e)});
-      }
-      await sleep(0);
-    }
-    const heads=["Hisse","Hafta","Open","High","Low","Close","Hacim","AD","SMA57","AD>SMA","Sayaç"];
-    $("adDiagTable").innerHTML=`<thead><tr>${heads.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+
-      all.map(r=>r.error?`<tr><td>${r.symbol}</td><td colspan="10">${r.error}</td></tr>`:
-      `<tr><td>${link(r.symbol)}</td><td>${r.date}</td><td>${fmt(r.o,4)}</td><td>${fmt(r.h,4)}</td><td>${fmt(r.l,4)}</td><td>${fmt(r.c,4)}</td><td>${fmt(r.v,0)}</td><td>${fmt(r.ad,2)}</td><td>${fmt(r.sma,2)}</td><td>${r.above?"EVET":"HAYIR"}</td><td>${r.bars}</td></tr>`).join("")+"</tbody>";
-    $("adDiagStatus").textContent=`Tamamlandı · ${syms.length} hisse · haftalık TL · son 8 bar`;
-  }catch(e){
-    $("adDiagStatus").textContent="Hata: "+(e?.message||e);
-  }finally{btn.disabled=false}
-}
-async function scanAd(){
-  const tfs=selectedAdTimeframes(),modes=selectedAdModes();
-  if(!tfs.length){alert("En az bir zaman dilimi seç.");return}
-  if(!modes.length){alert("En az bir veri modu seç.");return}
-  const minB=Math.max(0,Math.trunc(val("adMinBars"))),maxB=Math.max(0,Math.trunc(val("adMaxBars")));
-  if(minB>maxB){alert("En Az mum değeri En Çok değerinden büyük olamaz.");return}
-  const b=$("adBtn");
-  b.disabled=true;failures=[];adAll=[];adRefCache.clear();$("adProg").style.width="0";
-  setStatus("adStatus","Evren ve referanslar hazırlanıyor…","warn");
-  try{
-    const u=await getUniverse(),refsBy={};
-    for(const tf of tfs){
-      refsBy[tf]={};
-      for(const mode of modes){
-        if(mode!=="TL"){
-          try{refsBy[tf][mode]=await getAdReference(tf,mode)}
-          catch(e){refsBy[tf][mode]=null;failures.push({symbol:`REFERANS ${mode} (${AD_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}
-        }
-      }
-    }
-    const jobs=[];
-    for(const s of u.symbols)for(const tf of tfs)jobs.push([s,tf]);
-    $("adCounts").textContent=`BIST ham evren: ${u.raw} · ${u.symbols.length} hisse × ${tfs.length} periyot × ${modes.length} mod`;
-    let next=0,done=0;
-    async function run(){
-      while(true){
-        const ix=next++;if(ix>=jobs.length)return;
-        const [s,tf]=jobs[ix];
-        try{
-          const base=await getAdBaseDf(s,tf);
-          for(const mode of modes){
-            try{
-              if(mode!=="TL"&&!refsBy[tf][mode])continue;
-              const df=convertAdMode(base,mode,refsBy[tf][mode]);
-              const r=analyzeAd(s,tf,mode,df);
-              if(r)adAll.push(r);
-            }catch(e){failures.push({symbol:`${s} (${AD_TF[tf].label}/${mode})`,reason:(e?.message||String(e)).slice(0,180)})}
-          }
-        }catch(e){failures.push({symbol:`${s} (${AD_TF[tf].label})`,reason:(e?.message||String(e)).slice(0,180)})}
-        done++;
-        $("adProg").style.width=(100*done/jobs.length)+"%";
-        setStatus("adStatus",`${s} · ${AD_TF[tf].label} · ${done}/${jobs.length}`,"warn");
-        if(done%25===0||done===jobs.length){renderAd();renderFails();await sleep(0)}else if(done%8===0)await sleep(0);
-      }
-    }
-    await Promise.all(Array.from({length:Math.min(5,jobs.length||1)},run));
-    renderAd();renderFails();
-    const modeSummary=modes.map(m=>`${m}: ${adAll.filter(x=>x.mode===(m==="XAU"?"ALTIN (XAU)":m)).length}`).join(" · ");
-    setStatus("adStatus",`Tarama tamamlandı · ${adShown.length} sonuç · ${modeSummary} · ${failures.length} hata/işlenemeyen görev`,"good");
-    try{localStorage.setItem("bist_html_ad",JSON.stringify({at:Date.now(),results:adAll,failures}))}catch(e){console.warn("A/D cache kaydedilemedi:",e)}
-  }catch(e){setStatus("adStatus","Hata: "+(e?.message||e),"bad")}
-  finally{b.disabled=false}
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 10. MODÜL · BIST LİDERLİK + SIKIŞMA KIRILIM
-// ─────────────────────────────────────────────────────────────────────────────
 const LEAD_TF={
   "1h":{label:"1 Saat",range:"180d",interval:"1h"},
   "4h":{label:"4 Saat",range:"729d",interval:"1h"},
@@ -3762,7 +3527,7 @@ const smartObs=new MutationObserver(()=>{clearTimeout(window.__smartTblT);window
 if(document.body)smartObs.observe(document.body,{childList:true,subtree:true});
 window.addEventListener("DOMContentLoaded",smartEnhanceAll);
 
-const SMART_KIND_TABLE={fusion:"fusionTable",cont:"contTable",early:"earlyTable",opp:"oppTable",macd3:"macdTable",mi:"miTable",duk:"dukTable",ad:"adTable",lead:"leadTable",vrp:"vrpTable",harmonic:"harmTable",composite:"compTable",rsibreak:"rsiBreakTable",bbconf:"bbTable",emapull:"epTable",liqmss:"lqTable",mfiflow:"mfiTable",momshock:"msTable",quantquality:"qqTable",elliott:"elTable",div:"divTable"};
+const SMART_KIND_TABLE={fusion:"fusionTable",cont:"contTable",early:"earlyTable",opp:"oppTable",macd3:"macdTable",mi:"miTable",duk:"dukTable",lead:"leadTable",vrp:"vrpTable",harmonic:"harmTable",composite:"compTable",rsibreak:"rsiBreakTable",bbconf:"bbTable",emapull:"epTable",liqmss:"lqTable",mfiflow:"mfiTable",momshock:"msTable",quantquality:"qqTable",elliott:"elTable",div:"divTable"};
 function smartDomExport(kind){
   const table=document.getElementById(SMART_KIND_TABLE[kind]);if(!table?.tHead?.rows?.[0]||!table.tBodies[0]?.rows?.length)return null;
   const heads=[...table.tHead.rows[0].cells],keep=heads.map((c,i)=>({i,h:smartNormHeader(c.innerText)})).filter(x=>x.h!=="Görsel");
@@ -3931,7 +3696,6 @@ async function exportXLSX(kind){
   } else if(kind==="duk") {
     addDataSheet("DÜK Sonuçları",["Hisse","Zaman","Aktif Sinyaller","Skor","Fiyat","Değişim %","Son Mum","DÜK1","DÜK2","DÜK3"],dukShown.map(r=>[r.symbol,r.timeframe,r.signals,`${r.score}/3`,r.close,r.change,r.last_bar,r.duk1?"EVET":"HAYIR",r.duk2?"EVET":"HAYIR",r.duk3?"EVET":"HAYIR"]),[13,14,24,10,12,12,22,10,10,10],[4,5,6]);
   } else if(kind==="ad") {
-    addDataSheet("A-D Sonuçları",["Hisse","Veri Modu","Zaman Dilimi","Sinyal Durumu","AD > SMA Süresi","AD","SMA57","AD-SMA %","Fiyat","Son Mum"],adShown.map(r=>[r.symbol,r.mode,r.timeframe,r.condition,r.bars,r.ad,r.sma,r.distance,r.close,r.last_bar]),[13,14,14,20,16,16,16,13,14,22],[5,6,7,8,9]);
   } else if(kind==="lead") {
     addDataSheet("Liderlik Sıkışma",["Hisse","Periyot","Durum","Skor","Fiyat","Kırılım Seviyesi","Uzaklık %","Hacim Oranı","RSI","ATR %","RS 20","RS 60","Sıkışma %Dil","Trend Yaşı","XU100 Rejim","Son Mum"],leadShown.map(r=>[r.symbol,r.timeframe,r.status,r.score,r.close,r.breakout_level,r.distance_pct,r.volume_ratio,r.rsi,r.atr_pct,r.rs20,r.rs60,r.squeeze_rank,r.trend_age,r.market_ok?"EVET":"HAYIR",r.last_bar]),[13,13,18,10,12,16,12,13,10,10,11,11,14,12,13,22],[4,5,6,7,8,9,10,11,12,13,14]);
   } else if(kind==="vrp") {
@@ -4147,7 +3911,7 @@ function perfSourceRows(){
   add("MACD 0 Altı 3.AL",macdShown,r=>({direction:"LONG",tag:`${r.signal_count}. AL`,price:r.last_close||r.signal_close}));
   add("Market Intelligence",miShown,r=>r.candidate?{direction:r.direction==="SAT"?"SHORT":"LONG",tag:r.stage}:null);
   add("DÜK",dukShown,r=>({direction:"LONG",tag:r.signals}));
-  add("A/D",adShown,r=>({direction:"LONG",tag:r.condition}));
+  
   add("Liderlik + Sıkışma",leadShown,r=>({direction:"LONG",tag:r.status}));
   add("Volatilite / VRP",vrpShown,r=>/VOL SAT/.test(r.signal||"")?{direction:"SHORT",tag:r.signal}:/VOL AL/.test(r.signal||"")?{direction:"LONG",tag:r.signal}:null);
   add("Harmonik",harmShown,r=>({direction:r.direction==="BEARISH"?"SHORT":"LONG",tag:r.pattern+" · "+r.status}));
@@ -4321,8 +4085,8 @@ $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$(
 $("harmFwCaptureBtn").onclick=harmFwCapture;$("harmFwUpdateBtn").onclick=harmFwUpdate;$("harmFwExcelBtn").onclick=harmFwExport;$("harmFwClearBtn").onclick=harmFwClear;
 $("elBtn").onclick=scanElliott;$("elExcel").onclick=()=>exportXLSX("elliott");$("elMinScore").onchange=renderElliott;$("elOnlyCandidates").onchange=renderElliott;$("elQuickFilter").onchange=renderElliott;
 $("consBtn").onclick=buildConsensus;$("consMinModules").onchange=buildConsensus;$("consMinTF").onchange=buildConsensus;$("consTopN").onchange=buildConsensus;$("consExcel").onclick=exportConsensusXLSX;
-$("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;$("adBtn").onclick=scanAd;
-$("adDiagBtn").onclick=runAdDiagnostics;$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("sdBtn").onclick=scanSD;$("sdMinScore").onchange=renderSD;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
+$("sdExcel").onclick=exportStructureLabExcel;$("fusionBtn").onclick=scanFusion;$("contBtn").onclick=scanCont;$("earlyBtn").onclick=scanEarly;$("medBtn").onclick=scanMedianCompare;$("medExcel").onclick=exportMedianCompare;$("medFilter").onchange=renderMedianCompare;$("medMinVol").onchange=renderMedianCompare;$("medOnlyDifferent").onchange=renderMedianCompare;$("medZThreshold").onchange=renderMedianCompare;$("divBtn").onclick=scanDiv;$("oppBtn").onclick=scanOpp;$("macdBtn").onclick=scanMacd3;$("miBtn").onclick=scanMi;$("dukBtn").onclick=scanDuk;
+$("leadBtn").onclick=scanLead;$("vrpBtn").onclick=scanVrp;$("harmBtn").onclick=scanHarmonic;$("compBtn").onclick=scanComposite;$("rsiBreakBtn").onclick=scanRsiBreak;$("bbBtn").onclick=scanBb;$("epBtn").onclick=scanEp;$("lqBtn").onclick=scanLq;$("sdBtn").onclick=scanSD;$("sdMinScore").onchange=renderSD;$("mfiBtn").onclick=scanMfi;$("msBtn").onclick=scanMs;$("qqBtn").onclick=scanQQ;
 $("fusionExcel").onclick=()=>exportXLSX("fusion");$("contExcel").onclick=()=>exportXLSX("cont");$("earlyExcel").onclick=()=>exportXLSX("early");$("divExcel").onclick=()=>exportXLSX("div");$("oppExcel").onclick=()=>exportXLSX("opp");$("macdExcel").onclick=()=>exportXLSX("macd3");$("miExcel").onclick=()=>exportXLSX("mi");$("dukExcel").onclick=()=>exportXLSX("duk");$("adExcel").onclick=()=>exportXLSX("ad");$("leadExcel").onclick=()=>exportXLSX("lead");$("vrpExcel").onclick=()=>exportXLSX("vrp");$("harmExcel").onclick=()=>exportXLSX("harmonic");$("compExcel").onclick=()=>exportXLSX("composite");$("rsiBreakExcel").onclick=()=>exportXLSX("rsibreak");$("bbExcel").onclick=()=>exportXLSX("bbconf");$("epExcel").onclick=()=>exportXLSX("emapull");$("lqExcel").onclick=()=>exportXLSX("liqmss");$("mfiExcel").onclick=()=>exportXLSX("mfiflow");$("msExcel").onclick=()=>exportXLSX("momshock");$("qqExcel").onclick=()=>exportXLSX("quantquality");
 $("qqMinScore").onchange=renderQQ;$("mfiMinScore").onchange=renderMfi;$("epStage").onchange=renderEp;$("lqStage").onchange=renderLq;$("oppOnlyCandidates").onchange=renderOpp;$("miOnlyCandidates").onchange=renderMi;$("miTopN").onchange=renderMi;$("leadShowPrep").onchange=renderLead;$("leadShowTrigger").onchange=renderLead;$("vrpOnlyCandidates").onchange=renderVrp;$("vrpMax").onchange=renderVrp;$("vrpMinScore").onchange=renderVrp;$("vrpTopN").onchange=renderVrp;$("harmShowForming").onchange=renderHarmonic;$("harmShowNear").onchange=renderHarmonic;$("harmShowDone").onchange=renderHarmonic;$("compOnlySignals").onchange=renderComposite;$("rsiOnlySignals").onchange=renderRsiBreak;
 ["storyKap","storyBilanco","storyCash","storySector","storyValuation","storyMfi","storyTech"].forEach(id=>$(id)?.addEventListener("input",storyLive));
@@ -4367,8 +4131,7 @@ const UV_MODULES={
  macd3:{table:'macdTable',name:'MACD 0 Altı 3. AL',rows:()=>macdShown},
  mi:{table:'miTable',name:'Market Intelligence',rows:()=>miShown},
  duk:{table:'dukTable',name:'DÜK',rows:()=>dukShown},
- ad:{table:'adTable',name:'Accumulation / Distribution',rows:()=>adShown},
- lead:{table:'leadTable',name:'Liderlik + Sıkışma',rows:()=>leadShown},
+lead:{table:'leadTable',name:'Liderlik + Sıkışma',rows:()=>leadShown},
  vrp:{table:'vrpTable',name:'Volatilite / VRP',rows:()=>vrpShown},
  harmonic:{table:'harmTable',name:'Harmonik',rows:()=>harmShown,special:true},
  composite:{table:'compTable',name:'XU100 Kompozit',rows:()=>compShown},
@@ -4661,8 +4424,7 @@ function uvNarrative(kind,r){let found='',confirm=[],missing=[],invalid='';
  case'macd3':found=`MACD sıfır bölgesinin altında hedeflenen AL döngüsü tespit edildi.`;confirm=[`AL No ${r.buy_no??r.al_no??'—'}`,uvFinite(r.histogram)?`Histogram ${uvFmt(r.histogram,4)}`:'',r.bars_ago!=null?`${r.bars_ago} mum önce`:'' ];missing=['MACD sinyali fiyat trendi ve hacimle ayrıca teyit edilmeli.'];invalid='MACD yeniden signal altına iner ve histogram negatife dönerse AL yapısı zayıflar.';break;
  case'mi':found=`Market Intelligence fiyat, hacim, momentum, volatilite, katılım ve rejim motorlarını birlikte değerlendirdi.`;confirm=[`Giriş ${uvFmt(r.entry_score)}`,`Güç ${uvFmt(r.strength)}`,`Güven ${uvFmt(r.confidence)}`,`Kalite ${uvFmt(r.quality)}`,r.regime||''];missing=[r.early_warning?'Erken uyarı aktif':''];invalid='Güç/güven düşer, piyasa rejimi tersine döner veya risk yükselirse adaylık bozulur.';break;
  case'duk':found=`DÜK1/DÜK2/DÜK3 koşullarından ${r.score??'—'}/3 tanesi aktif.`;confirm=[r.signals||'',r.duk1?'DÜK1 ✓':'',r.duk2?'DÜK2 ✓':'',r.duk3?'DÜK3 ✓':''];missing=[!r.duk1?'DÜK1': '',!r.duk2?'DÜK2':'',!r.duk3?'DÜK3':''];invalid='Aktif DÜK koşullarının kapanmış mumlarda kaybolması sinyali zayıflatır.';break;
- case'ad':found=`Accumulation / Distribution motoru fiyat-hacim birikim/dağılım ilişkisini yakaladı.`;confirm=[r.signal||r.status||'',uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:''];missing=['A/D sinyalinin fiyat trendiyle aynı yönde teyidi tercih edilir.'];invalid='A/D çizgisinin tekrar aşağı dönmesi ve fiyat desteğinin kırılması birikim tezini bozar.';break;
- case'lead':found=`Hisse endekse göre liderlik + Bollinger sıkışma/kırılım koşullarını sağladı.`;confirm=[r.status||'',`Skor ${r.score??'—'}`,uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',uvFinite(r.rs20)?`RS20 ${uvFmt(r.rs20)}`:''];missing=[r.status&&String(r.status).includes('HAZIR')?'Kırılım henüz tetiklenmedi':''];invalid='Kırılım seviyesi altında kalıcılık, RS kaybı veya sıkışma sonrası başarısız kırılım senaryoyu bozar.';break;
+case'lead':found=`Hisse endekse göre liderlik + Bollinger sıkışma/kırılım koşullarını sağladı.`;confirm=[r.status||'',`Skor ${r.score??'—'}`,uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:'',uvFinite(r.rs20)?`RS20 ${uvFmt(r.rs20)}`:''];missing=[r.status&&String(r.status).includes('HAZIR')?'Kırılım henüz tetiklenmedi':''];invalid='Kırılım seviyesi altında kalıcılık, RS kaybı veya sıkışma sonrası başarısız kırılım senaryoyu bozar.';break;
  case'vrp':found=`Gerçekleşen volatilite, IV Proxy ve VRP Proxy birlikte fırsat üretti.`;confirm=[r.signal||'',`Fırsat ${uvFmt(r.opportunity_score)}`,`VRP ${uvFmt(r.vrp_proxy)}`,uvFinite(r.volume_ratio)?`Hacim ${uvFmt(r.volume_ratio)}x`:''];missing=['IV Proxy gerçek opsiyon IV değildir; proxy niteliğindedir.'];invalid='VRP yönü tersine döner veya volatilite genişlemesi sönerse fırsat zayıflar.';break;
  case'composite':found=`Hisse/XU100 kompozit oranında göreceli güç sinyali oluştu.`;confirm=[r.signal||'',`Skor ${r.score??'—'}`,r.trend_break?'Düşen kırılım ✓':'',r.br20?'20B breakout ✓':'',r.br50?'50B breakout ✓':''];missing=[!r.price_br20?'Fiyat kendi 20B breakoutunu henüz yapmadı':''];invalid='Kompozit EMA altına döner ve relatif breakoutlar kaybolursa liderlik tezi bozulur.';break;
  case'rsibreak':found=`RSI üzerinde düşen kırılımı / breakout koşulları tespit edildi.`;confirm=[r.signal||'',`RSI ${uvFmt(r.rsi)}`,r.trend_break?'Düşen kırıldı ✓':'',r.br20?'RSI 20B BO ✓':'',uvFinite(vol)?`Hacim ${uvFmt(vol)}x`:''];missing=[!r.trend_break?'Düşen kırılım teyidi':''];invalid='RSI tekrar kırılan trend çizgisinin altına dönerse sinyal zayıflar.';break;
