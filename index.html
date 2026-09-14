@@ -4031,13 +4031,13 @@ async function storyScanAll(){
   const syms=[...new Set((u.symbols||[]).map(x=>String(x).replace(/^BIST:/,'').replace(/\.IS$/,'').toUpperCase()).filter(Boolean))];
   if(!syms.length)throw new Error('Tarama evreninde hisse bulunamadı');
   const today=storyScanDayKey(),stored=storyScanStored();
-  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&stored?.meta?.complete){
+  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&stored?.meta?.complete&&!(stored?.meta?.unresolved||[]).length){
     storyScanResults=stored.results||[];storyScanMeta=stored.meta||{};renderStoryScan();$('storyScanProg').style.width='100%';
     setStatus('storyScanStatus',`Bugünün tamamlanmış Hikâye Taraması cache'den açıldı · ${storyScanResults.length} sonuç.`,'good');return
   }
 
   // Aynı güne ait yarım kalmış sonuçları koru. Sunucu yeniden başlarsa sadece eksikler devam eder.
-  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&!stored?.meta?.complete){
+  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&(!stored?.meta?.complete||(stored?.meta?.unresolved||[]).length)){
     storyScanResults=stored.results||[];
     storyScanMeta=stored.meta||{};
     renderStoryScan();
@@ -4060,6 +4060,7 @@ async function storyScanAll(){
   let jobId=r.job_id;
   if(!jobId)throw new Error(r.error||'Sunucu tarama işi oluşturamadı');
   let offset=0;
+  let retryRound=Number(storyScanMeta?.retry_round||0);
   storyScanMeta={...storyScanMeta,day:today,universe_count:syms.length,complete:false,server_job_id:jobId};
   storyScanPersist(storyScanMeta);
 
@@ -4118,10 +4119,54 @@ async function storyScanAll(){
       setStatus('storyScanStatus',`Hikâye Taraması tamamlandı · ${storyScanResults.length} analiz.`,'good');
       break
     }
-    // Some symbols failed in this server batch. Do not loop forever; finish with explicit count.
-    storyScanPersist({complete:true,server_job_id:null,finished_at:Date.now(),unresolved:rem});
+    // Kalanları hata türüne göre ayır. Geçici hataları otomatik yeniden dene.
+    const failMap=new Map((j.failures||[]).map(f=>[String(f.sym||'').toUpperCase(),f]));
+    const retryable=rem.filter(s=>{
+      const k=String(failMap.get(s)?.kind||'diğer');
+      return k!=='veri-yok';
+    });
+    const hard=rem.filter(s=>String(failMap.get(s)?.kind||'diğer')==='veri-yok');
+
+    if(retryable.length && retryRound<3){
+      retryRound++;
+      storyScanPersist({
+        complete:false,
+        server_job_id:null,
+        retry_round:retryRound,
+        unresolved:rem,
+        hard_failures:hard,
+        last_retry_count:retryable.length
+      });
+      const waitMs=retryRound===1?12000:retryRound===2?25000:45000;
+      setStatus('storyScanStatus',
+        `İlk tur tamamlandı · ${storyScanResults.length} analiz. ${retryable.length} geçici hatalı hisse ${retryRound}. yeniden deneme turuna alınacak${hard.length?` · ${hard.length} veri-yok`:''}.`,
+        'warn');
+      await sleep(waitMs);
+
+      const rr=await fetchJSON('/api/story-scan/start',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({symbols:retryable})
+      },30000);
+      jobId=rr.job_id;
+      if(!jobId)throw new Error(rr.error||'Hatalı hisseler için yeniden tarama başlatılamadı');
+      offset=0;
+      storyScanPersist({complete:false,server_job_id:jobId,retry_round:retryRound});
+      continue
+    }
+
+    storyScanPersist({
+      complete:true,
+      server_job_id:null,
+      finished_at:Date.now(),
+      unresolved:rem,
+      retry_round:retryRound,
+      hard_failures:hard
+    });
     $('storyScanProg').style.width='100%';
-    setStatus('storyScanStatus',`Tarama tamamlandı · ${storyScanResults.length} analiz · ${rem.length} hisse sonuçsuz/hatalı kaldı.` , rem.length?'warn':'good');
+    setStatus('storyScanStatus',
+      `Tarama tamamlandı · ${storyScanResults.length} analiz · ${rem.length} hisse sonuçsuz kaldı${retryRound?` · ${retryRound} yeniden deneme turu yapıldı`:''}.`,
+      rem.length?'warn':'good');
     break
    }
    await sleep(3000);
