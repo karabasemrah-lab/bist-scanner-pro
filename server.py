@@ -1506,6 +1506,128 @@ def story_api():
 
 
 
+# ---------------------------------------------------------------------
+# Background Scan Manager v1 · Hikâye Radar
+# Tarama Flask/Render sürecinde devam eder; telefon sekmesinin açık kalmasına bağlı değildir.
+# ---------------------------------------------------------------------
+_SCAN_LOCK = threading.Lock()
+_SCAN_JOBS = OrderedDict()
+_SCAN_MAX_JOBS = 4
+
+def _scan_err_kind(exc):
+    m = str(exc or '').lower()
+    if '429' in m: return 'rate-limit'
+    if any(x in m for x in ('502','503','504')): return 'upstream'
+    if any(x in m for x in ('timeout','timed out','connection','network')): return 'timeout'
+    if '404' in m or isinstance(exc, LookupError): return 'veri-yok'
+    return 'diğer'
+
+def _story_payload_cached(symbol):
+    key = f"story:v040:{symbol}:{_STORY_LOOKBACK_DAYS}"
+    cached = _cache_json_get(key)
+    if cached is not None:
+        return cached, True
+    payload = _build_story_payload(symbol)
+    _cache_json_set(key, _STORY_TTL, payload)
+    return payload, False
+
+def _story_scan_worker(job_id):
+    with _SCAN_LOCK:
+        job = _SCAN_JOBS.get(job_id)
+        if not job: return
+        job['state']='running'; job['started_at']=time.time()
+        symbols=list(job['symbols'])
+    failed=[]
+    for idx,sym in enumerate(symbols):
+        with _SCAN_LOCK:
+            job=_SCAN_JOBS.get(job_id)
+            if not job or job.get('stop_requested'): break
+            job['current']=sym
+        ok=False; last=None
+        for attempt in range(3):
+            try:
+                payload,was_cached=_story_payload_cached(sym)
+                with _SCAN_LOCK:
+                    job=_SCAN_JOBS[job_id]
+                    job['results'].append({'symbol':sym,'payload':payload})
+                    job['done']+=1
+                    job['cached']+=1 if was_cached else 0
+                    job['live']+=0 if was_cached else 1
+                    job['updated_at']=time.time()
+                ok=True; break
+            except Exception as exc:
+                last=exc
+                kind=_scan_err_kind(exc)
+                if kind=='veri-yok' or attempt==2: break
+                time.sleep((1.5,4.0,8.0)[attempt])
+        if not ok:
+            with _SCAN_LOCK:
+                job=_SCAN_JOBS[job_id]
+                job['done']+=1
+                job['failures'].append({'sym':sym,'reason':str(last)[:180],'kind':_scan_err_kind(last)})
+                job['updated_at']=time.time()
+        time.sleep(0.20)
+    with _SCAN_LOCK:
+        job=_SCAN_JOBS.get(job_id)
+        if job:
+            job['state']='stopped' if job.get('stop_requested') else 'complete'
+            job['current']=''; job['finished_at']=time.time(); job['updated_at']=time.time()
+
+def _scan_public(job, offset=0):
+    results=job.get('results',[])
+    return {
+      'job_id':job['job_id'],'type':job['type'],'state':job['state'],
+      'total':job['total'],'done':job['done'],'live':job['live'],'cached':job['cached'],
+      'current':job.get('current',''),'failures':job.get('failures',[]),
+      'result_count':len(results),'results':results[max(0,offset):],
+      'next_offset':len(results),'started_at':job.get('started_at'),
+      'finished_at':job.get('finished_at')
+    }
+
+@app.post('/api/story-scan/start')
+def story_scan_start():
+    body=request.get_json(silent=True) or {}
+    raw=body.get('symbols') or []
+    symbols=[]
+    for x in raw:
+        sym=_story_symbol(str(x))
+        if sym and sym not in symbols: symbols.append(sym)
+    if not symbols: return jsonify({'error':'symbols gerekli'}),400
+    if len(symbols)>700: return jsonify({'error':'en fazla 700 sembol'}),400
+    with _SCAN_LOCK:
+        # Aynı tipte çalışan işi tekrar başlatma; mevcut işi geri ver.
+        for j in reversed(list(_SCAN_JOBS.values())):
+            if j.get('type')=='story' and j.get('state') in ('queued','running'):
+                return jsonify(_scan_public(j,0))
+        job_id=f"story-{int(time.time())}-{os.urandom(3).hex()}"
+        job={'job_id':job_id,'type':'story','state':'queued','symbols':symbols,'total':len(symbols),
+             'done':0,'live':0,'cached':0,'current':'','results':[],'failures':[],
+             'stop_requested':False,'created_at':time.time(),'updated_at':time.time()}
+        _SCAN_JOBS[job_id]=job
+        while len(_SCAN_JOBS)>_SCAN_MAX_JOBS: _SCAN_JOBS.popitem(last=False)
+    threading.Thread(target=_story_scan_worker,args=(job_id,),daemon=True).start()
+    return jsonify(_scan_public(job,0))
+
+@app.get('/api/story-scan/status')
+def story_scan_status():
+    job_id=(request.args.get('job_id') or '').strip()
+    try: offset=max(0,int(request.args.get('offset','0')))
+    except Exception: offset=0
+    with _SCAN_LOCK:
+        job=_SCAN_JOBS.get(job_id)
+        if not job: return jsonify({'error':'tarama işi bulunamadı; sunucu yeniden başlamış olabilir'}),404
+        return jsonify(_scan_public(job,offset))
+
+@app.post('/api/story-scan/stop')
+def story_scan_stop():
+    body=request.get_json(silent=True) or {}; job_id=str(body.get('job_id') or '')
+    with _SCAN_LOCK:
+        job=_SCAN_JOBS.get(job_id)
+        if not job: return jsonify({'error':'tarama işi bulunamadı'}),404
+        job['stop_requested']=True; job['updated_at']=time.time()
+        return jsonify({'ok':True,'job_id':job_id,'state':job['state']})
+
+
 @app.get("/api/story-debug")
 def story_debug_api():
     """Geçici teşhis ucu: KAP finansal sayfasının Render'da nasıl geldiğini gösterir."""
