@@ -1514,6 +1514,95 @@ _SCAN_LOCK = threading.Lock()
 _SCAN_JOBS = OrderedDict()
 _SCAN_MAX_JOBS = 4
 
+_SCAN_STATE_FILE = os.environ.get("BIST_SCAN_STATE_FILE", "/tmp/bist_story_scan_checkpoint.json")
+_SCAN_CHECKPOINT_EVERY = int(os.environ.get("BIST_SCAN_CHECKPOINT_EVERY", "10"))
+
+def _scan_checkpoint_snapshot(job):
+    return {
+        "job_id": job.get("job_id"),
+        "type": job.get("type"),
+        "state": job.get("state"),
+        "symbols": list(job.get("symbols") or []),
+        "total": int(job.get("total") or 0),
+        "done": int(job.get("done") or 0),
+        "live": int(job.get("live") or 0),
+        "cached": int(job.get("cached") or 0),
+        "current": job.get("current") or "",
+        "results": list(job.get("results") or []),
+        "failures": list(job.get("failures") or []),
+        "stop_requested": bool(job.get("stop_requested")),
+        "created_at": job.get("created_at"),
+        "started_at": job.get("started_at"),
+        "updated_at": job.get("updated_at"),
+        "finished_at": job.get("finished_at"),
+    }
+
+def _scan_checkpoint_save(job, force=False):
+    try:
+        done = int(job.get("done") or 0)
+        if not force and done % max(1, _SCAN_CHECKPOINT_EVERY) != 0:
+            return
+        snap = _scan_checkpoint_snapshot(job)
+        tmp = _SCAN_STATE_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(snap, f, ensure_ascii=False, separators=(",", ":"))
+        os.replace(tmp, _SCAN_STATE_FILE)
+    except Exception:
+        pass
+
+def _scan_checkpoint_load():
+    try:
+        if not os.path.exists(_SCAN_STATE_FILE):
+            return None
+        with open(_SCAN_STATE_FILE, "r", encoding="utf-8") as f:
+            j = json.load(f)
+        if not isinstance(j, dict) or j.get("type") != "story" or not j.get("job_id"):
+            return None
+        j.setdefault("results", [])
+        j.setdefault("failures", [])
+        j.setdefault("symbols", [])
+        j.setdefault("done", len(j["results"]) + len(j["failures"]))
+        j.setdefault("total", len(j["symbols"]))
+        j.setdefault("live", 0)
+        j.setdefault("cached", 0)
+        j.setdefault("current", "")
+        j.setdefault("stop_requested", False)
+        # "running" from a dead process means interrupted; it is resumable.
+        if j.get("state") in ("running", "queued"):
+            j["state"] = "interrupted"
+            j["current"] = ""
+        return j
+    except Exception:
+        return None
+
+def _scan_restore_job(job_id=None):
+    """Restore the last Story scan checkpoint if RAM state was lost."""
+    saved = _scan_checkpoint_load()
+    if not saved:
+        return None
+    if job_id and saved.get("job_id") != job_id:
+        return None
+    with _SCAN_LOCK:
+        existing = _SCAN_JOBS.get(saved["job_id"])
+        if existing:
+            return existing
+        _SCAN_JOBS[saved["job_id"]] = saved
+        while len(_SCAN_JOBS) > _SCAN_MAX_JOBS:
+            _SCAN_JOBS.popitem(last=False)
+        return saved
+
+def _scan_completed_symbols(job):
+    out = {str(x.get("symbol") or "").upper() for x in (job.get("results") or [])}
+    out.update(str(x.get("sym") or "").upper() for x in (job.get("failures") or []))
+    return {x for x in out if x}
+
+def _scan_resume_thread(job):
+    if job.get("_thread_alive"):
+        return
+    job["_thread_alive"] = True
+    t = threading.Thread(target=_story_scan_worker, args=(job["job_id"],), daemon=True)
+    t.start()
+
 def _scan_err_kind(exc):
     m = str(exc or '').lower()
     if '429' in m: return 'rate-limit'
@@ -1535,8 +1624,12 @@ def _story_scan_worker(job_id):
     with _SCAN_LOCK:
         job = _SCAN_JOBS.get(job_id)
         if not job: return
-        job['state']='running'; job['started_at']=time.time()
-        symbols=list(job['symbols'])
+        job['state']='running'
+        if not job.get('started_at'): job['started_at']=time.time()
+        job['updated_at']=time.time()
+        completed=_scan_completed_symbols(job)
+        symbols=[s for s in list(job['symbols']) if s not in completed]
+        _scan_checkpoint_save(job, force=True)
     failed=[]
     for idx,sym in enumerate(symbols):
         with _SCAN_LOCK:
@@ -1554,6 +1647,7 @@ def _story_scan_worker(job_id):
                     job['cached']+=1 if was_cached else 0
                     job['live']+=0 if was_cached else 1
                     job['updated_at']=time.time()
+                    _scan_checkpoint_save(job)
                 ok=True; break
             except Exception as exc:
                 last=exc
@@ -1566,12 +1660,15 @@ def _story_scan_worker(job_id):
                 job['done']+=1
                 job['failures'].append({'sym':sym,'reason':str(last)[:180],'kind':_scan_err_kind(last)})
                 job['updated_at']=time.time()
+                _scan_checkpoint_save(job)
         time.sleep(0.20)
     with _SCAN_LOCK:
         job=_SCAN_JOBS.get(job_id)
         if job:
             job['state']='stopped' if job.get('stop_requested') else 'complete'
             job['current']=''; job['finished_at']=time.time(); job['updated_at']=time.time()
+            job['_thread_alive']=False
+            _scan_checkpoint_save(job, force=True)
 
 def _scan_public(job, offset=0):
     results=job.get('results',[])
@@ -1594,6 +1691,16 @@ def story_scan_start():
         if sym and sym not in symbols: symbols.append(sym)
     if not symbols: return jsonify({'error':'symbols gerekli'}),400
     if len(symbols)>700: return jsonify({'error':'en fazla 700 sembol'}),400
+    restored = _scan_restore_job()
+    if restored and restored.get('state') in ('interrupted','queued','running'):
+        # If the restored job has the same universe, continue it.
+        if set(restored.get('symbols') or []) == set(symbols):
+            with _SCAN_LOCK:
+                restored['stop_requested']=False
+                restored['state']='queued'
+                restored['updated_at']=time.time()
+            _scan_resume_thread(restored)
+            return jsonify(_scan_public(restored,0))
     with _SCAN_LOCK:
         # Aynı tipte çalışan işi tekrar başlatma; mevcut işi geri ver.
         for j in reversed(list(_SCAN_JOBS.values())):
@@ -1605,7 +1712,8 @@ def story_scan_start():
              'stop_requested':False,'created_at':time.time(),'updated_at':time.time()}
         _SCAN_JOBS[job_id]=job
         while len(_SCAN_JOBS)>_SCAN_MAX_JOBS: _SCAN_JOBS.popitem(last=False)
-    threading.Thread(target=_story_scan_worker,args=(job_id,),daemon=True).start()
+        _scan_checkpoint_save(job, force=True)
+    _scan_resume_thread(job)
     return jsonify(_scan_public(job,0))
 
 @app.get('/api/story-scan/status')
@@ -1615,7 +1723,17 @@ def story_scan_status():
     except Exception: offset=0
     with _SCAN_LOCK:
         job=_SCAN_JOBS.get(job_id)
-        if not job: return jsonify({'error':'tarama işi bulunamadı; sunucu yeniden başlamış olabilir'}),404
+    if not job:
+        job=_scan_restore_job(job_id)
+        if not job:
+            return jsonify({'error':'tarama işi bulunamadı; sunucu yeniden başlamış olabilir'}),404
+    if job.get('state') == 'interrupted':
+        with _SCAN_LOCK:
+            job['stop_requested']=False
+            job['state']='queued'
+            job['updated_at']=time.time()
+        _scan_resume_thread(job)
+    with _SCAN_LOCK:
         return jsonify(_scan_public(job,offset))
 
 @app.post('/api/story-scan/stop')
@@ -1625,6 +1743,7 @@ def story_scan_stop():
         job=_SCAN_JOBS.get(job_id)
         if not job: return jsonify({'error':'tarama işi bulunamadı'}),404
         job['stop_requested']=True; job['updated_at']=time.time()
+        _scan_checkpoint_save(job, force=True)
         return jsonify({'ok':True,'job_id':job_id,'state':job['state']})
 
 
