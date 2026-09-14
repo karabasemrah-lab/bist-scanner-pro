@@ -4024,21 +4024,114 @@ function storyScanUse(sym){const r=storyScanResults.find(x=>x.symbol===sym);if(!
 function storyScanErrKind(e){const m=String(e?.message||e||'').toLowerCase();if(m.includes('429'))return 'rate-limit';if(m.includes('502')||m.includes('503')||m.includes('504'))return 'upstream';if(m.includes('abort')||m.includes('timeout')||m.includes('network')||m.includes('failed to fetch'))return 'timeout';if(m.includes('404'))return 'veri-yok';return 'diğer'}
 async function storyFetchRetry(sym,maxAttempts=3){let lastErr=null;for(let a=1;a<=maxAttempts;a++){if(storyScanStopRequested)throw new Error('Tarama durduruldu');try{const j=await fetchJSON(`/api/story?symbol=${encodeURIComponent(sym)}`,{},45000);const payload=j?.data||j?.result||j;if(!payload||payload.error)throw new Error(payload?.error||'boş veri');return payload}catch(e){lastErr=e;const k=storyScanErrKind(e);if(k==='veri-yok'||a>=maxAttempts)break;const wait=(a===1?1500:a===2?4000:8000)+Math.floor(Math.random()*700);await sleep(wait)}}throw lastErr||new Error('veri alınamadı')}
 async function storyScanAll(){
- if(storyScanRunning)return;const b=$('storyScanBtn');storyScanRunning=true;storyScanStopRequested=false;b.disabled=true;$('storyScanStop').disabled=false;$('storyScanProg').style.width='0';setStatus('storyScanStatus','BIST evreni hazırlanıyor…','warn');
+ if(storyScanRunning)return;
+ const b=$('storyScanBtn');storyScanRunning=true;storyScanStopRequested=false;b.disabled=true;$('storyScanStop').disabled=false;$('storyScanProg').style.width='0';setStatus('storyScanStatus','BIST evreni hazırlanıyor…','warn');
  try{
-  const u=await getUniverse();const syms=[...new Set((u.symbols||[]).map(x=>String(x).replace(/^BIST:/,'').replace(/\.IS$/,'').toUpperCase()).filter(Boolean))];if(!syms.length)throw new Error('Tarama evreninde hisse bulunamadı');
-  const today=storyScanDayKey(),stored=storyScanStored();if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&stored?.meta?.complete){storyScanResults=stored.results||[];storyScanMeta=stored.meta||{};renderStoryScan();$('storyScanProg').style.width='100%';setStatus('storyScanStatus',`Bugünün tamamlanmış Hikâye Taraması cache'den açıldı · ${storyScanResults.length} sonuç.`,'good');return}
-  const r=await fetchJSON('/api/story-scan/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:syms})},30000);
-  const jobId=r.job_id;if(!jobId)throw new Error(r.error||'Sunucu tarama işi oluşturamadı');storyScanMeta={day:today,universe_count:syms.length,complete:false,server_job_id:jobId};storyScanPersist(storyScanMeta);
-  let offset=0;storyScanResults=[];
+  const u=await getUniverse();
+  const syms=[...new Set((u.symbols||[]).map(x=>String(x).replace(/^BIST:/,'').replace(/\.IS$/,'').toUpperCase()).filter(Boolean))];
+  if(!syms.length)throw new Error('Tarama evreninde hisse bulunamadı');
+  const today=storyScanDayKey(),stored=storyScanStored();
+  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&stored?.meta?.complete){
+    storyScanResults=stored.results||[];storyScanMeta=stored.meta||{};renderStoryScan();$('storyScanProg').style.width='100%';
+    setStatus('storyScanStatus',`Bugünün tamamlanmış Hikâye Taraması cache'den açıldı · ${storyScanResults.length} sonuç.`,'good');return
+  }
+
+  // Aynı güne ait yarım kalmış sonuçları koru. Sunucu yeniden başlarsa sadece eksikler devam eder.
+  if(stored?.meta?.day===today&&Number(stored?.meta?.universe_count||0)===syms.length&&!stored?.meta?.complete){
+    storyScanResults=stored.results||[];
+    storyScanMeta=stored.meta||{};
+    renderStoryScan();
+  }else{
+    storyScanResults=[];
+    storyScanMeta={day:today,universe_count:syms.length,complete:false};
+  }
+
+  const completedSet=()=>new Set(storyScanResults.map(x=>String(x.symbol||'').toUpperCase()).filter(Boolean));
+  const remainingSymbols=()=>{const d=completedSet();return syms.filter(s=>!d.has(s))};
+
+  let reqSymbols=remainingSymbols();
+  if(!reqSymbols.length){
+    storyScanPersist({complete:true,universe_count:syms.length});
+    $('storyScanProg').style.width='100%';renderStoryScan();
+    setStatus('storyScanStatus',`Tarama tamamlandı · ${storyScanResults.length} analiz.`,'good');return
+  }
+
+  let r=await fetchJSON('/api/story-scan/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:reqSymbols})},30000);
+  let jobId=r.job_id;
+  if(!jobId)throw new Error(r.error||'Sunucu tarama işi oluşturamadı');
+  let offset=0;
+  storyScanMeta={...storyScanMeta,day:today,universe_count:syms.length,complete:false,server_job_id:jobId};
+  storyScanPersist(storyScanMeta);
+
   while(true){
-   const j=await fetchJSON(`/api/story-scan/status?job_id=${encodeURIComponent(jobId)}&offset=${offset}`,{},30000);
-   for(const item of (j.results||[])){const row=storyScanFromPayload(item.symbol,item.payload||{}),ix=storyScanResults.findIndex(x=>x.symbol===item.symbol);if(ix>=0)storyScanResults[ix]=row;else storyScanResults.push(row);storyAutoCacheSave(item.symbol,item.payload||{})}
-   offset=Number(j.next_offset||offset);const pct=j.total?100*Number(j.done||0)/j.total:0;$('storyScanProg').style.width=pct+'%';$('storyScanCounts').textContent=`${j.total} hisse · ${j.done}/${j.total} · sonuç ${j.result_count} · canlı ${j.live} · sunucu cache ${j.cached} · hata ${(j.failures||[]).length}`;setStatus('storyScanStatus',j.state==='complete'?`Sunucu taraması tamamlandı · ${j.result_count} sonuç · ${(j.failures||[]).length} hata`:`Sunucuda taranıyor: ${j.current||'hazırlanıyor'} · ${j.done}/${j.total}. Ekranı kapatsan veya başka uygulamaya geçsen de Render tarafında devam eder.`,j.state==='complete'?'good':'warn');storyScanPersist({complete:j.state==='complete',server_job_id:jobId,final_failures:j.failures||[],live:j.live,cached:j.cached});renderStoryScan();
-   if(['complete','stopped'].includes(j.state)){if(j.state==='complete')$('storyScanProg').style.width='100%';break}
+   let j;
+   try{
+    j=await fetchJSON(`/api/story-scan/status?job_id=${encodeURIComponent(jobId)}&offset=${offset}`,{},30000);
+   }catch(e){
+    const msg=String(e?.message||e||'');
+    if(msg.includes('404')||msg.toLowerCase().includes('tarama işi bulunamad')){
+      // Render process restarted or RAM job disappeared. Keep browser checkpoint and continue missing symbols.
+      const rem=remainingSymbols();
+      if(!rem.length){
+        storyScanPersist({complete:true,server_job_id:null});
+        $('storyScanProg').style.width='100%';renderStoryScan();
+        setStatus('storyScanStatus',`Tarama tamamlandı · ${storyScanResults.length} analiz.`,'good');break
+      }
+      setStatus('storyScanStatus',`Render tarama işi yenilendi. ${storyScanResults.length} tamamlanan sonuç korundu; kalan ${rem.length} hisse otomatik devam ettiriliyor…`,'warn');
+      r=await fetchJSON('/api/story-scan/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({symbols:rem})},30000);
+      jobId=r.job_id;
+      if(!jobId)throw new Error(r.error||'Sunucu taraması yeniden başlatılamadı');
+      offset=0;
+      storyScanPersist({complete:false,server_job_id:jobId,resumed_at:Date.now()});
+      await sleep(1200);
+      continue
+    }
+    throw e
+   }
+
+   for(const item of (j.results||[])){
+    const row=storyScanFromPayload(item.symbol,item.payload||{}),ix=storyScanResults.findIndex(x=>x.symbol===item.symbol);
+    if(ix>=0)storyScanResults[ix]=row;else storyScanResults.push(row);
+    storyAutoCacheSave(item.symbol,item.payload||{})
+   }
+   offset=Number(j.next_offset||offset);
+
+   const overallDone=completedSet().size;
+   const pct=syms.length?100*overallDone/syms.length:0;
+   $('storyScanProg').style.width=pct+'%';
+   $('storyScanCounts').textContent=`${syms.length} hisse · tamamlanan ${overallDone}/${syms.length} · bu iş ${j.done}/${j.total} · canlı ${j.live} · sunucu cache ${j.cached} · hata ${(j.failures||[]).length}`;
+   setStatus('storyScanStatus',
+      j.state==='complete'
+       ? `Sunucu partisi tamamlandı · toplam ${overallDone}/${syms.length}`
+       : `Sunucuda taranıyor: ${j.current||'hazırlanıyor'} · toplam ${overallDone}/${syms.length}. Ekranı kapatsan veya başka uygulamaya geçsen de Render tarafında devam eder.`,
+      j.state==='complete'?'good':'warn');
+
+   storyScanPersist({complete:false,server_job_id:jobId,final_failures:j.failures||[],live:j.live,cached:j.cached});
+   renderStoryScan();
+
+   if(['complete','stopped'].includes(j.state)){
+    if(j.state==='stopped')break;
+    const rem=remainingSymbols();
+    if(!rem.length){
+      storyScanPersist({complete:true,server_job_id:null,finished_at:Date.now()});
+      $('storyScanProg').style.width='100%';
+      setStatus('storyScanStatus',`Hikâye Taraması tamamlandı · ${storyScanResults.length} analiz.`,'good');
+      break
+    }
+    // Some symbols failed in this server batch. Do not loop forever; finish with explicit count.
+    storyScanPersist({complete:true,server_job_id:null,finished_at:Date.now(),unresolved:rem});
+    $('storyScanProg').style.width='100%';
+    setStatus('storyScanStatus',`Tarama tamamlandı · ${storyScanResults.length} analiz · ${rem.length} hisse sonuçsuz/hatalı kaldı.` , rem.length?'warn':'good');
+    break
+   }
    await sleep(3000);
   }
- }catch(e){setStatus('storyScanStatus','Hata: '+(e?.message||e),'bad')}finally{storyScanRunning=false;b.disabled=false;$('storyScanStop').disabled=true}
+ }catch(e){
+  storyScanPersist({complete:false,last_error:String(e?.message||e),last_error_at:Date.now()});
+  setStatus('storyScanStatus','Hata: '+(e?.message||e),'bad')
+ }finally{
+  storyScanRunning=false;b.disabled=false;$('storyScanStop').disabled=true
+ }
 }
 async function storyScanStopNow(){storyScanStopRequested=true;const id=storyScanMeta?.server_job_id;if(id){try{await fetchJSON('/api/story-scan/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({job_id:id})},15000)}catch(e){}}setStatus('storyScanStatus','Durdurma istendi. Sunucu çalışan isteği bitirip taramayı durduracak.','warn')}
 function storyScanClear(){if(storyScanRunning)return;if(!storyScanResults.length)return;if(!confirm('BIST Hikâye Tarama sonuçları temizlensin mi?'))return;storyScanResults=[];localStorage.removeItem(STORY_SCAN_KEY);renderStoryScan();$('storyScanProg').style.width='0';setStatus('storyScanStatus','Tarama sonuçları temizlendi.','warn')}
