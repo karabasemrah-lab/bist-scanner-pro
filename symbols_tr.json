@@ -1,5 +1,5 @@
 {
-  "version": "2026-09-17 19:52:38",
+  "version": "2026-09-18 19:13:27",
   "source": "KAP fiili dolaşımdaki paylar",
   "symbols": {
     "TRALT": {
@@ -2561,6 +2561,10 @@
     "USHOL": {
       "name": "US YATIRIM HOLDİNG A.Ş.",
       "yahoo": "USHOL.IS"
+    },
+    "NETGL": {
+      "name": "NET GLOBAL ENDÜSTRİYEL YATIRIMLAR A.Ş.",
+      "yahoo": "NETGL.IS"
     }
   }
 }

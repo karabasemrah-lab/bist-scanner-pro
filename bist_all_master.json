@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "source": "https://kap.org.tr/tr/tumKalemler/kpy41_acc5_fiili_dolasimdaki_pay",
-  "updatedAt": "2026-09-17 19:52:38",
-  "count": 626,
+  "updatedAt": "2026-09-18 19:13:27",
+  "count": 627,
   "symbols": [
     "A1CAP",
     "A1YEN",
@@ -427,6 +427,7 @@
     "NATEN",
     "NETAS",
     "NETCD",
+    "NETGL",
     "NIBAS",
     "NTGAZ",
     "NTHOL",
@@ -1055,6 +1056,7 @@
     "NATEN": "NATUREL YENİLENEBİLİR ENERJİ TİCARET A.Ş.",
     "NETAS": "NETAŞ TELEKOMÜNİKASYON A.Ş.",
     "NETCD": "NETCAD YAZILIM A.Ş.",
+    "NETGL": "NET GLOBAL ENDÜSTRİYEL YATIRIMLAR A.Ş.",
     "NIBAS": "NİĞBAŞ NİĞDE BETON SANAYİ VE TİCARET A.Ş.",
     "NTGAZ": "NATURELGAZ SANAYİ VE TİCARET A.Ş.",
     "NTHOL": "NET HOLDİNG A.Ş.",
