@@ -1251,15 +1251,29 @@ async function getUniverse(){
     $("universeInfo").textContent=`Özel liste: ${syms.length} hisse`;
     return {symbols:syms,raw:syms.length,filtered:syms.length};
   }
-  const raw=await tvScan(TV_BASE);
+  // Tüm BIST için iki ardışık TradingView sorgusu yerine yalnızca
+  // filtrelenmiş evreni iste. Analiz/puanlama hesaplamaları değiştirilmedi.
   const minV=val("minVolume");
-  const fil=await tvScan(TV_BASE.concat([
-    {left:"close",operation:"greater",right:1},
-    {left:"average_volume_30d_calc",operation:"greater",right:minV}
-  ]));
-  const syms=(fil.data||[]).map(x=>String(x.s||"").replace("BIST:","").trim().toUpperCase()).filter(Boolean);
-  $("universeInfo").textContent=`BIST ham evren: ${raw.totalCount??(raw.data||[]).length} · Filtre sonrası: ${fil.totalCount??syms.length} · Taranacak: ${syms.length}`;
-  return {symbols:syms,raw:raw.totalCount??0,filtered:fil.totalCount??syms.length};
+  let fil;
+  try{
+    fil=await tvScan(TV_BASE.concat([
+      {left:"close",operation:"greater",right:1},
+      {left:"average_volume_30d_calc",operation:"greater",right:minV}
+    ]));
+  }catch(e){
+    const message=String(e?.message||e);
+    if(message.includes("HTTP 429")){
+      throw new Error("TradingView sorgu limiti (HTTP 429). Sunucu önbelleği henüz oluşmamış veya süresi dolmuş olabilir. Bir süre sonra yeniden deneyin; ardışık tarama başlatmayın.");
+    }
+    throw e;
+  }
+  const syms=[...new Set((fil.data||[])
+    .map(x=>String(x.s||"").replace(/^BIST:/,"").trim().toUpperCase())
+    .filter(Boolean))];
+  if(!syms.length) throw new Error("TradingView boş hisse evreni döndürdü; tarama başlatılmadı.");
+  const total=fil.totalCount??syms.length;
+  $("universeInfo").textContent=`BIST filtre sonucu: ${total} · Taranacak: ${syms.length}`;
+  return {symbols:syms,raw:total,filtered:total};
 }
 
 const yahooCache = new Map();
