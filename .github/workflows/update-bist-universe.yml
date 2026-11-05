@@ -1,0 +1,42 @@
+name: BIST hisse evrenini güncelle
+
+on:
+  schedule:
+    # UTC 05:40 = Türkiye 08:40; hafta içi
+    - cron: '40 5 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bist-universe-update
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: stabil-v4 dalını al
+        uses: actions/checkout@v4
+        with:
+          ref: stabil-v4
+          persist-credentials: true
+      - name: Python kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: KAP listesini kontrol et ve güncelle
+        run: python scripts/update_bist_universe.py
+      - name: Değişiklik varsa commit et
+        shell: bash
+        run: |
+          if git diff --quiet -- bist_all_master.json; then
+            echo 'Sembol listesi değişmedi.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bist_all_master.json
+          git commit -m 'BIST hisse evrenini KAP verisiyle güncelle'
+          git push origin HEAD:stabil-v4
