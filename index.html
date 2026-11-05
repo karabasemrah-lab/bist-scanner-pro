@@ -78,7 +78,8 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <label class="text-xs muted block mb-2">Evren</label>
       <select id="source" class="input">
         <option value="special">Özel Liste</option>
-        <option value="tv">TradingView Ön Eleme — Tüm BIST</option>
+        <option value="all">Tüm BIST — Yerel Hisse Listesi (429 korumalı)</option>
+        <option value="tv">TradingView Ön Eleme — Hacim Filtreli (429 riski)</option>
       </select>
     </div>
     <div>
@@ -91,6 +92,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
     </div>
   </div>
   <div id="universeInfo" class="mt-3 text-xs muted">Özel listedeki tüm hisseler taranır.</div>
+  <div class="text-xs muted mt-2">Tüm BIST yerel liste modunda TradingView ön elemesi ve Min. 30G Ortalama Hacim filtresi uygulanmaz. Liste tarihi ekranda gösterilir. Hacim ön elemesi istenirse TradingView seçeneğini kullanın.</div>
 </section>
 
 <div id="tabs" class="flex gap-2 overflow-x-auto">
@@ -1246,33 +1248,45 @@ async function tvScan(filters,maxRows=2000){
   return fetchJSON(TV_API,{method:"POST",headers:{"Content-Type":"application/json"},body});
 }
 async function getUniverse(){
-  if($("source").value==="special"){
-    const syms=parseSymbols($("special").value);
-    $("universeInfo").textContent=`Özel liste: ${syms.length} hisse`;
+  const mode=$('source').value;
+  if(mode==='special'){
+    const syms=parseSymbols($('special').value);
+    $('universeInfo').textContent=`Özel liste: ${syms.length} hisse`;
     return {symbols:syms,raw:syms.length,filtered:syms.length};
   }
-  // Tüm BIST için iki ardışık TradingView sorgusu yerine yalnızca
-  // filtrelenmiş evreni iste. Analiz/puanlama hesaplamaları değiştirilmedi.
-  const minV=val("minVolume");
+  if(mode==='all'){
+    // Sunucu üzerinden projede kayıtlı KAP kaynaklı BIST sembol dosyasını oku.
+    // Bu yol TradingView endpoint'ini HİÇ çağırmaz; 429'tan bağımsızdır.
+    const universe=await fetchJSON('/api/universe',{},20000);
+    const syms=[...new Set((universe.symbols||[])
+      .map(s=>String(s).trim().toUpperCase().replace(/^BIST:/,''))
+      .filter(s=>/^[A-Z0-9]{2,12}$/.test(s)))];
+    if(!syms.length) throw new Error('Yerel BIST listesi boş. Sunucudaki bist_all_master.json dosyasını kontrol edin.');
+    const updated=universe.updatedAt||'bilinmiyor';
+    $('universeInfo').textContent=`Tüm BIST yerel liste: ${syms.length} hisse · Liste tarihi: ${updated} · 30G hacim ön filtresi uygulanmaz`;
+    return {symbols:syms,raw:syms.length,filtered:syms.length};
+  }
+  // Eski TradingView hacim ön elemesi seçeneği isteyenler için korundu.
+  const minV=val('minVolume');
   let fil;
   try{
     fil=await tvScan(TV_BASE.concat([
-      {left:"close",operation:"greater",right:1},
-      {left:"average_volume_30d_calc",operation:"greater",right:minV}
+      {left:'close',operation:'greater',right:1},
+      {left:'average_volume_30d_calc',operation:'greater',right:minV}
     ]));
   }catch(e){
     const message=String(e?.message||e);
-    if(message.includes("HTTP 429")){
-      throw new Error("TradingView sorgu limiti (HTTP 429). Sunucu önbelleği henüz oluşmamış veya süresi dolmuş olabilir. Bir süre sonra yeniden deneyin; ardışık tarama başlatmayın.");
+    if(message.includes('HTTP 429')){
+      throw new Error('TradingView 429 limiti: Hacim filtreli ön eleme kullanılamıyor. Evren alanından "Tüm BIST — Yerel Hisse Listesi" seçerek TradingView olmadan tarayın.');
     }
     throw e;
   }
   const syms=[...new Set((fil.data||[])
-    .map(x=>String(x.s||"").replace(/^BIST:/,"").trim().toUpperCase())
+    .map(x=>String(x.s||'').replace(/^BIST:/,'').trim().toUpperCase())
     .filter(Boolean))];
-  if(!syms.length) throw new Error("TradingView boş hisse evreni döndürdü; tarama başlatılmadı.");
+  if(!syms.length) throw new Error('TradingView boş hisse evreni döndürdü; tarama başlatılmadı.');
   const total=fil.totalCount??syms.length;
-  $("universeInfo").textContent=`BIST filtre sonucu: ${total} · Taranacak: ${syms.length}`;
+  $('universeInfo').textContent=`TradingView filtre sonucu: ${total} · Taranacak: ${syms.length}`;
   return {symbols:syms,raw:total,filtered:total};
 }
 

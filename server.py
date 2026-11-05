@@ -205,55 +205,135 @@ def home():
     return send_from_directory(".", "index.html")
 
 
+# TradingView evreni, Yahoo mum verisinden bağımsız şekilde kontrol edilir.
+# Aynı anda birden çok istemciden gelen TV sorguları üst servise yığılmaz.
+_TV_CACHE_TTL = max(60, int(os.environ.get("BIST_TV_CACHE_SECONDS", "21600")))
+_TV_STALE_TTL = max(_TV_CACHE_TTL, int(os.environ.get("BIST_TV_STALE_SECONDS", "86400")))
+_tv_request_lock = threading.Lock()
+_tv_cooldown_until = 0.0
+
+
+def _tv_cached_response(cache_key, metric_key, stale=False):
+    item = _cache_get(("tv_stale:" if stale else "tv:") + cache_key)
+    if item is None:
+        return None
+    body, ctype = item
+    _metric_add("cache_hit", metric_key)
+    return _respond_bytes(
+        body, content_type=ctype, cache_control="no-store",
+        metric_key=metric_key,
+        extra_headers={"X-BIST-Cache": "STALE" if stale else "HIT"},
+    )
+
+
+@app.get("/api/universe")
+def bist_local_universe():
+    """Projedeki KAP kaynaklı sembol evreni; TradingView bağlantısı gerekmez.
+
+    Bu kaynak hacim/son fiyat ön filtresi değildir. Güncellik meta verisi
+    istemciye iletilir. Liste yoksa boş evren döndürmek yerine hata verilir.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bist_all_master.json")
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        if not isinstance(data, dict) or not isinstance(data.get("symbols"), list):
+            raise ValueError("bist_all_master.json dosyasının yapısı geçersiz")
+        symbols = list(dict.fromkeys(
+            symbol for raw in data["symbols"]
+            if re.fullmatch(r"[A-Z0-9]{2,12}", symbol := str(raw).strip().upper())
+        ))
+        if not symbols:
+            raise ValueError("Yerel BIST sembol listesi boş")
+        return _respond_bytes(
+            _minify_json_bytes({
+                "symbols": symbols,
+                "count": len(symbols),
+                "updatedAt": data.get("updatedAt"),
+                "source": data.get("source", "local"),
+                "volumePrefilterApplied": False,
+            }),
+            cache_control="public, max-age=300",
+            metric_key="universe",
+        )
+    except (OSError, ValueError, TypeError) as exc:
+        return jsonify({
+            "error": "Yerel BIST evreni okunamadı",
+            "detail": str(exc),
+            "required_file": "bist_all_master.json",
+        }), 503
+
+
 @app.post("/api/tradingview")
 def tradingview_proxy():
+    global _tv_cooldown_until
     metric_key = "tradingview"
-    body_obj = request.get_json(force=True)
-    # Aynı tarama gövdesi kısa süre içinde tekrar gelirse upstream'i tekrar çağırmayalım.
-    cache_key = "tv:" + json.dumps(body_obj, sort_keys=True, separators=(",", ":"))
-    cached = _cache_get(cache_key)
+    body_obj = request.get_json(silent=True)
+    if not isinstance(body_obj, dict):
+        return jsonify({"error": "Geçersiz TradingView istek gövdesi"}), 400
+    cache_key = json.dumps(body_obj, sort_keys=True, separators=(",", ":"))
+    hit = _tv_cached_response(cache_key, metric_key)
+    if hit is not None:
+        return hit
 
-    if cached:
-        _metric_add("cache_hit", metric_key)
-        body, ctype = cached
-        return _respond_bytes(
-            body,
-            content_type=ctype,
-            cache_control="no-store",
-            metric_key=metric_key,
-            extra_headers={"X-BIST-Cache": "HIT"},
-        )
+    with _tv_request_lock:
+        # Kilit beklerken başka istek önbelleği doldurmuş olabilir.
+        hit = _tv_cached_response(cache_key, metric_key)
+        if hit is not None:
+            return hit
+        if time.time() < _tv_cooldown_until:
+            stale = _tv_cached_response(cache_key, metric_key, stale=True)
+            if stale is not None:
+                return stale
+            remaining = max(1, int(_tv_cooldown_until - time.time()))
+            return jsonify({"error": "TradingView hız sınırı; önbellek mevcut değil", "retry_after_seconds": remaining}), 429, {"Retry-After": str(remaining), "Cache-Control": "no-store"}
 
-    _metric_add("cache_miss", metric_key)
-    try:
-        r = SESSION.post(
-            TV_URL,
-            json=body_obj,
-            timeout=30,
-            headers={"Content-Type": "application/json"},
-        )
-
+        _metric_add("cache_miss", metric_key)
         try:
-            # TV JSON'unu boşluklardan arındır.
-            body = _minify_json_bytes(r.json())
-            ctype = "application/json"
-        except Exception:
-            body = r.content
-            ctype = r.headers.get("Content-Type", "application/json")
+            r = SESSION.post(TV_URL, json=body_obj, timeout=30,
+                             headers={"Content-Type": "application/json"})
+            if r.status_code == 429:
+                try:
+                    wait = int(r.headers.get("Retry-After", "120"))
+                except (ValueError, TypeError):
+                    wait = 120
+                wait = max(30, min(wait, 900))
+                _tv_cooldown_until = time.time() + wait
+                stale = _tv_cached_response(cache_key, metric_key, stale=True)
+                if stale is not None:
+                    return stale
+                return jsonify({"error": "TradingView istek limiti (HTTP 429)", "retry_after_seconds": wait}), 429, {"Retry-After": str(wait), "Cache-Control": "no-store"}
 
-        if r.ok:
-            _cache_set(cache_key, 60, body, ctype)
+            try:
+                body = _minify_json_bytes(r.json())
+                ctype = "application/json"
+            except Exception:
+                body = r.content
+                ctype = r.headers.get("Content-Type", "application/octet-stream")
 
-        return _respond_bytes(
-            body,
-            status=r.status_code,
-            content_type=ctype,
-            cache_control="no-store",
-            metric_key=metric_key,
-            extra_headers={"X-BIST-Cache": "MISS"},
-        )
-    except Exception as exc:
-        return jsonify({"error": str(exc)}), 502
+            if r.ok:
+                # Yalnızca geçerli, dolu bir evren cache'lenir.
+                try:
+                    data = json.loads(body)
+                    valid = isinstance(data, dict) and isinstance(data.get("data"), list) and len(data["data"]) > 0
+                except (ValueError, TypeError):
+                    valid = False
+                if valid:
+                    _cache_set("tv:" + cache_key, _TV_CACHE_TTL, body, ctype)
+                    _cache_set("tv_stale:" + cache_key, _TV_STALE_TTL, body, ctype)
+            elif r.status_code >= 500:
+                stale = _tv_cached_response(cache_key, metric_key, stale=True)
+                if stale is not None:
+                    return stale
+
+            return _respond_bytes(body, status=r.status_code, content_type=ctype,
+                                  cache_control="no-store", metric_key=metric_key,
+                                  extra_headers={"X-BIST-Cache": "MISS"})
+        except requests.RequestException as exc:
+            stale = _tv_cached_response(cache_key, metric_key, stale=True)
+            if stale is not None:
+                return stale
+            return jsonify({"error": "TradingView bağlantı hatası", "detail": str(exc)}), 502
 
 
 @app.get("/api/yahoo")
