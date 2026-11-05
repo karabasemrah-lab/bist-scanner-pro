@@ -83,7 +83,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       </select>
     </div>
     <div>
-      <label class="text-xs muted block mb-2">Min. 30G Ortalama Hacim</label>
+      <label class="text-xs muted block mb-2">Min. 30G Ortalama Hacim (adet)</label>
       <input id="minVolume" class="input" type="number" value="250000" step="50000">
     </div>
     <div>
@@ -91,8 +91,10 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <textarea id="special" class="input" rows="2">ASELS,THYAO,EREGL,TUPRS,GARAN</textarea>
     </div>
   </div>
+  <div class="mt-3 flex items-center gap-3 flex-wrap"><label class="chip"><input id="localVolumeEnabled" type="checkbox" checked> Yerel Tüm BIST'te 30G hacim filtresini uygula</label><span class="text-xs muted">Yalnızca yerel Tüm BIST için · 0 eşik filtreyi kapatır</span></div>
   <div id="universeInfo" class="mt-3 text-xs muted">Özel listedeki tüm hisseler taranır.</div>
-  <div class="text-xs muted mt-2">Tüm BIST yerel liste modunda TradingView ön elemesi ve Min. 30G Ortalama Hacim filtresi uygulanmaz. Liste tarihi ekranda gösterilir. Hacim ön elemesi istenirse TradingView seçeneğini kullanın.</div>
+  <div class="text-xs muted mt-2">Yerel hacim filtresi, Yahoo günlük hacim verisinin son 30 geçerli işlem günündeki ortalamasını (adet) kullanır; TL işlem hacmi değildir. Veri bulunamayan hisseler yanlışlıkla elenmez, raporlanarak analize bırakılır. İlk tarama öncesinde hacim kontrolü veri çekme işlemi yapar; aynı 2y/1d verisi tarama içinde tekrar kullanılabilir.</div>
+  <details id="volumeAuditPanel" class="mt-3 rounded-xl border border-gray-700 p-3" style="display:none"><summary class="cursor-pointer font-bold">📊 Yerel hacim filtresi raporu · <span id="volumeAuditSummary">—</span></summary><div id="volumeAuditDetail" class="text-xs muted mt-3"></div><button id="volumeAuditCsv" type="button" class="btn mt-3" style="background:#173d2c;color:#8cf0bd">📥 Hacim kontrolü CSV</button><div class="overflow-auto max-h-[240px] mt-3"><table id="volumeAuditTable"></table></div></details>
 </section>
 
 <div id="tabs" class="flex gap-2 overflow-x-auto">
@@ -1073,6 +1075,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
 <section class="card p-4">
   <details>
     <summary class="cursor-pointer font-bold">⚠️ Veri alınamayan / işlenemeyen hisseler · <span id="failCount">0</span></summary>
+    <div class="mt-3 flex flex-wrap gap-2 items-center"><button id="failCsvBtn" type="button" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Hata raporu CSV indir</button><span class="text-xs muted">Veri hataları ve yetersiz geçmiş gibi nedenler burada gösterilir. Hacim nedeniyle elenenler üstteki hacim raporundadır.</span></div>
     <div class="overflow-auto max-h-[420px] mt-3"><table id="failTable"></table></div>
   </details>
 </section>
@@ -1263,8 +1266,18 @@ async function getUniverse(){
       .filter(s=>/^[A-Z0-9]{2,12}$/.test(s)))];
     if(!syms.length) throw new Error('Yerel BIST listesi boş. Sunucudaki bist_all_master.json dosyasını kontrol edin.');
     const updated=universe.updatedAt||'bilinmiyor';
-    $('universeInfo').textContent=`Tüm BIST yerel liste: ${syms.length} hisse · Liste tarihi: ${updated} · 30G hacim ön filtresi uygulanmaz`;
-    return {symbols:syms,raw:syms.length,filtered:syms.length};
+    const rawCount=syms.length;
+    const enabled=$('localVolumeEnabled').checked;
+    const minVolume=Math.max(0,Number($('minVolume').value)||0);
+    if(enabled&&minVolume>0){
+      $('universeInfo').textContent=`Yerel BIST ${rawCount} sembol · 30 günlük hacim kontrolü hazırlanıyor…`;
+      const filtered=await screenLocalVolume(syms,minVolume,updated);
+      $('universeInfo').textContent=`Tüm BIST yerel liste: ${rawCount} · Hacim sonrası: ${filtered.length} · Liste tarihi: ${updated}`;
+      return {symbols:filtered,raw:rawCount,filtered:filtered.length};
+    }
+    clearVolumeAudit();
+    $('universeInfo').textContent=`Tüm BIST yerel liste: ${rawCount} hisse · Liste tarihi: ${updated} · 30G filtresi kapalı`;
+    return {symbols:syms,raw:rawCount,filtered:rawCount};
   }
   // Eski TradingView hacim ön elemesi seçeneği isteyenler için korundu.
   const minV=val('minVolume');
@@ -1289,6 +1302,66 @@ async function getUniverse(){
   $('universeInfo').textContent=`TradingView filtre sonucu: ${total} · Taranacak: ${syms.length}`;
   return {symbols:syms,raw:total,filtered:total};
 }
+
+
+// Yerel BIST için kontrollü hacim taraması. Ana sinyal hesapları değiştirilmez.
+let volumeAuditRows=[];
+function clearVolumeAudit(){
+  volumeAuditRows=[];
+  const panel=$('volumeAuditPanel');if(panel)panel.style.display='none';
+}
+function safeAuditText(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function renderVolumeAudit(minVolume,updated){
+  const included=volumeAuditRows.filter(r=>r.status==='Dahil').length;
+  const excluded=volumeAuditRows.filter(r=>r.status==='Hacim altında').length;
+  const unknown=volumeAuditRows.filter(r=>r.status==='Veri değerlendirilemedi').length;
+  $('volumeAuditPanel').style.display='block';
+  $('volumeAuditSummary').textContent=`${included} dahil · ${excluded} elendi · ${unknown} kontrol edilemedi`;
+  $('volumeAuditDetail').textContent=`Eşik: ${minVolume.toLocaleString('tr-TR')} adet/gün · Liste: ${updated} · Ortalama: son 30 geçerli günlük hacim · Kontrol edilemeyenler taramaya bırakılır.`;
+  const problemRows=volumeAuditRows.filter(r=>r.status!=='Dahil');
+  $('volumeAuditTable').innerHTML='<thead><tr><th>Hisse</th><th>Durum</th><th>30G ort. (adet)</th><th>Açıklama</th></tr></thead><tbody>'+
+    problemRows.map(r=>`<tr><td>${safeAuditText(r.symbol)}</td><td>${safeAuditText(r.status)}</td><td>${r.average==null?'—':Math.round(r.average).toLocaleString('tr-TR')}</td><td>${safeAuditText(r.reason)}</td></tr>`).join('')+'</tbody>';
+}
+async function screenLocalVolume(symbols,minVolume,updated){
+  const rows=new Array(symbols.length);let next=0,done=0;
+  // Yahoo isteği zaten merkezi yahooCache üzerinden geçiyor; üst üste sorgu yığmıyoruz.
+  async function worker(){
+    while(true){
+      const i=next++;if(i>=symbols.length)return;
+      const symbol=symbols[i];let average=null,status='Veri değerlendirilemedi',reason='';
+      try{
+        const df=await yahoo(symbol+'.IS','2y','1d');
+        const vols=(df.v||[]).filter(v=>Number.isFinite(v)&&v>0);
+        if(vols.length<30){reason=`Yeterli geçerli hacim yok (${vols.length}/30 gün)`;}
+        else{
+          const recent=vols.slice(-30);
+          average=recent.reduce((a,b)=>a+b,0)/30;
+          status=average>=minVolume?'Dahil':'Hacim altında';
+          reason=status==='Hacim altında'?'30G ortalama eşikten düşük':'Eşik karşılandı';
+        }
+      }catch(e){reason=(e?.message||String(e)).slice(0,180)}
+      rows[i]={symbol,status,average,reason};
+      done++;
+      if(done%10===0||done===symbols.length){
+        $('universeInfo').textContent=`30G yerel hacim kontrolü: ${done}/${symbols.length} hisse…`;
+        await sleep(0);
+      }
+    }
+  }
+  await Promise.all(Array.from({length:Math.min(4,symbols.length||1)},worker));
+  volumeAuditRows=rows;
+  renderVolumeAudit(minVolume,updated);
+  return rows.filter(r=>r.status!=='Hacim altında').map(r=>r.symbol);
+}
+function downloadCSV(filename,headers,rows){
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const csv='\uFEFF'+[headers,...rows].map(row=>row.map(q).join(';')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  const a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportVolumeAudit(){downloadCSV('BIST_30G_hacim_raporu.csv',['Hisse','Durum','Ortalama adet','Açıklama'],volumeAuditRows.map(r=>[r.symbol,r.status,r.average==null?'':Math.round(r.average),r.reason]))}
+function exportFailures(){downloadCSV('BIST_veri_hata_raporu.csv',['Hisse','Neden'],failures.map(r=>[r.symbol,r.reason]))}
 
 const yahooCache = new Map();
 
@@ -2412,7 +2485,7 @@ async function scanRsiBreak(){const tfs=selectedRsiBreakTF();if(!tfs.length){ale
 function renderFails(){
   $("failCount").textContent=failures.length;
   $("failTable").innerHTML=`<thead><tr><th>Hisse</th><th>Neden</th></tr></thead><tbody>`+
-    failures.map(r=>`<tr><td>${link(r.symbol)}</td><td>${r.reason}</td></tr>`).join("")+"</tbody>";
+    failures.map(r=>`<tr><td>${safeAuditText(r.symbol)}</td><td>${safeAuditText(r.reason)}</td></tr>`).join("")+"</tbody>";
 }
 function setStatus(id,text,kind="good"){const e=$(id);e.className=`mt-3 rounded-xl p-3 text-sm ${kind}`;e.textContent=text}
 
@@ -4251,7 +4324,9 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");
   document.querySelectorAll(".tabpage").forEach(x=>x.classList.add("hidden"));$(b.dataset.tab).classList.remove("hidden");
 });
-$("source").onchange=()=>{$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
+$("volumeAuditCsv").onclick=exportVolumeAudit;
+$("failCsvBtn").onclick=exportFailures;
+$("source").onchange=()=>{clearVolumeAudit();$("universeInfo").textContent=$("source").value==="special"?"Özel listedeki tüm hisseler taranır.":$("source").value==="all"?"Tüm BIST yerel liste kullanılır; 30G yerel hacim kontrolü isteğe bağlıdır.":"TradingView BIST evreni hacim filtresi sonrası taranır."};
 $("onlyCore").onchange=renderFusion;
 $("hcBtn").onclick=scanHighConfidence;$("hcExcel").onclick=exportHighConfidence;
 $("perfCaptureBtn").onclick=perfCapture;$("perfUpdateBtn").onclick=perfUpdate;$("perfExcelBtn").onclick=perfExport;$("perfClearBtn").onclick=perfClear;$("perfOnlyEvaluated").onchange=renderPerformance;$("perfDetailN").onchange=renderPerformance;
