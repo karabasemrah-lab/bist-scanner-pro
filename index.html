@@ -1061,6 +1061,20 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
     <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">📋 Birleşik Aday Listesi · <span id="dhCount">0</span> hisse</h3></div>
     <div class="overflow-auto max-h-[700px]"><table id="dhTable"></table></div>
   </div>
+  <div class="card p-5 space-y-3" id="dhHistoryPanel">
+    <h3 class="font-black text-xl">📅 Aday Geçmişi ve İleri Performans · v4.2</h3>
+    <p class="text-sm muted">Birleşik aday listesinin o andaki görünümünü tarihle kaydeder. Aynı gün aynı hisse/yön için mükerrer kayıt açmaz. 5 / 10 / 20 işlem günü sonuçları daha sonraki kapanışlarla ölçülür.</p>
+    <div class="flex flex-wrap gap-3">
+      <button id="dhHistorySave" class="btn" style="background:#047857;color:white">📌 Görünen adayları tarihle kaydet</button>
+      <button id="dhHistoryUpdate" class="btn" style="background:#0369a1;color:white">📈 5/10/20G getirileri güncelle</button>
+      <button id="dhHistoryBackup" class="btn" style="background:#233954;color:white">💾 Geçmişi JSON indir</button>
+      <button id="dhHistoryRestore" class="btn" style="background:#233954;color:white">📂 Geçmişi geri yükle</button>
+      <input id="dhHistoryFile" type="file" accept=".json,application/json" style="display:none">
+    </div>
+    <div id="dhHistoryInfo" class="text-xs muted">Henüz kayıt yok.</div>
+    <div class="text-xs warn rounded-xl p-3">⚠️ Gözlemsel ileri test: Referans fiyat alım fiyatı değildir. Karşılaştırmanın başlangıcı, sinyalin kaydedildiği günden sonraki <b>ilk tamamlanmış işlem gününün kapanışıdır</b>. 5/10/20G bu kapanıştan sonraki işlem günleridir. İşlem maliyeti, temettü, bölünme ve kayma düzeltmesi içermez; yatırım stratejisi getirisi değildir. Bugünkü kapanmamış mum kullanılmaz. Kayıtlar bu tarayıcıdadır; JSON yedekle.</div>
+    <div class="overflow-auto max-h-[550px]"><table id="dhHistoryTable"></table></div>
+  </div>
 </section>
 
 <section id="performance" class="tabpage space-y-4 hidden">
@@ -4790,6 +4804,85 @@ async function restore(ev){
 byId('perfBackupBtn').addEventListener('click',backup);
 byId('perfRestoreBtn').addEventListener('click',restoreClick);
 byId('perfRestoreFile').addEventListener('change',restore);
+})();
+</script>
+<script>
+/* v4.2: additive candidate snapshots; independent of old performance store */
+(function(){
+'use strict';
+const KEY='bist_candidate_history_v42';
+const $h=id=>document.getElementById(id);
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const day=ms=>new Date(ms).toLocaleDateString('sv-SE',{timeZone:'Europe/Istanbul'});
+const today=()=>day(Date.now());
+const validSymbol=s=>/^[A-Z0-9]{2,12}$/.test(String(s||''));
+const finitePrice=p=>typeof p==='number'&&Number.isFinite(p)&&p>0;
+let records=[];
+function load(){try{const data=JSON.parse(localStorage.getItem(KEY)||'[]');records=Array.isArray(data)?data:[]}catch{records=[]}}
+function save(){localStorage.setItem(KEY,JSON.stringify(records));}
+function blobDownload(name,obj){const b=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+function readCurrent(){
+  const raw=perfSourceRows(),map=new Map();
+  for(const r of raw){const symbol=String(r.symbol||'').trim().toUpperCase(),direction=r.direction==='SHORT'?'SHORT':'LONG';if(!validSymbol(symbol))continue;
+    const k=symbol+'|'+direction;
+    if(!map.has(k))map.set(k,{symbol,direction,modules:new Set(),timeframes:new Set(),referencePrice:null});
+    const m=map.get(k);m.modules.add(String(r.scanner||'Bilinmeyen'));if(r.timeframe)m.timeframes.add(String(r.timeframe));
+    const p=Number(r.price);if(m.referencePrice===null&&Number.isFinite(p)&&p>0)m.referencePrice=p;
+  }
+  const min=Number($h('dhMin').value||2),side=$h('dhSide').value;
+  return [...map.values()].filter(r=>r.modules.size>=min&&(side==='ALL'||r.direction===side));
+}
+function render(){
+  load();const sorted=records.slice().sort((a,b)=>b.capturedAt-a.capturedAt||a.symbol.localeCompare(b.symbol));
+  const seen=new Map(),byKey=new Map();for(const r of records){const k=r.symbol+'|'+r.direction;seen.set(k,(seen.get(k)||0)+1);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(r);}for(const arr of byKey.values())arr.sort((a,b)=>a.capturedDate.localeCompare(b.capturedDate));
+  const evaluated=h=>records.filter(r=>typeof r.returns?.[h]==='number'&&Number.isFinite(r.returns[h]));
+  const stat=h=>{const r=evaluated(h);return `${r.length} tamamlandı${r.length?' · '+(100*r.filter(x=>x.returns[h]>0).length/r.length).toFixed(1)+'% pozitif':''}`};
+  $h('dhHistoryInfo').textContent=`${records.length} tarihli kayıt · ${seen.size} farklı hisse/yön · 5G ${stat(5)} · 10G ${stat(10)} · 20G ${stat(20)}`;
+  const headers=['Kayıt günü','Hisse','Yön','Modül sayısı','Önceki kayda göre','Modüller','Görülme','İlk sonraki kapanış','5G %','10G %','20G %','Durum'];
+  $h('dhHistoryTable').innerHTML='<thead><tr>'+headers.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+sorted.slice(0,1200).map(r=>{
+    const pct=h=>typeof r.returns?.[h]==='number'&&Number.isFinite(r.returns[h])?r.returns[h].toFixed(2):'—';
+    const arr=byKey.get(r.symbol+'|'+r.direction)||[],pos=arr.indexOf(r),prev=pos>0?arr[pos-1]:null,delta=prev?r.modules.length-prev.modules.length:null;return '<tr><td>'+esc(r.capturedDate)+'</td><td>'+esc(r.symbol)+'</td><td>'+esc(r.direction)+'</td><td>'+r.modules.length+'</td><td>'+(delta===null?'İlk kayıt':delta>0?'+'+delta:delta===0?'0':String(delta))+'</td><td>'+esc(r.modules.join(' · '))+'</td><td>'+seen.get(r.symbol+'|'+r.direction)+'</td><td>'+(finitePrice(r.baseClose)?r.baseClose.toFixed(2):'—')+'</td><td>'+pct(5)+'</td><td>'+pct(10)+'</td><td>'+pct(20)+'</td><td>'+esc(r.status||'Bekliyor')+'</td></tr>';
+  }).join('')+'</tbody>';
+}
+function capture(){
+  let current;try{current=readCurrent();}catch(e){alert('Önce adayları birleştir. '+e.message);return;}
+  if(!current.length){alert('Seçilen modül eşiğini sağlayan aday yok. Önce modülleri çalıştırıp mevcut adayları birleştir.');return;}
+  load();const now=Date.now(),d=today();let added=0,updated=0;
+  for(const r of current){const k=r.symbol+'|'+r.direction+'|'+d;
+    const old=records.find(x=>x.symbol+'|'+x.direction+'|'+x.capturedDate===k);
+    if(old){updated++;continue;}
+    records.push({id:k,capturedAt:now,capturedDate:d,symbol:r.symbol,direction:r.direction,modules:[...r.modules].sort(),timeframes:[...r.timeframes],referencePrice:r.referencePrice,baseDate:null,baseClose:null,returns:{},status:'İlk sonraki tam seans bekleniyor'});added++;
+  }
+  try{save();render();alert(`${added} aday kaydedildi · ${updated} aynı gün tekrarı atlandı.`)}catch(e){alert('Kayıt yapılamadı (tarayıcı depolaması dolu olabilir): '+e.message)}
+}
+async function update(){
+  load();if(!records.length){alert('Önce aday geçmişine kayıt ekle.');return;}
+  const btn=$h('dhHistoryUpdate');btn.disabled=true;const symbols=[...new Set(records.map(x=>x.symbol))];let next=0,ok=0,err=0,newReturns=0;
+  const cache=new Map();
+  async function worker(){while(true){const i=next++;if(i>=symbols.length)break;const sym=symbols[i];try{cache.set(sym,await yahoo(sym+'.IS','2y','1d'));ok++;}catch(e){cache.set(sym,null);err++;} $h('dhHistoryInfo').textContent=`Fiyat kontrolü: ${i+1}/${symbols.length} · başarılı ${ok} · hatalı ${err}`;if(i%5===0)await sleep(0);}}
+  try{
+    await Promise.all(Array.from({length:Math.min(3,symbols.length)},worker));const dNow=today();
+    for(const r of records){const df=cache.get(r.symbol);if(!df?.t?.length){r.status='Veri alınamadı';continue;}
+      const candles=[];for(let i=0;i<df.t.length;i++){const candleDay=day(Number(df.t[i])*1000),c=Number(df.c?.[i]);if(candleDay<dNow&&finitePrice(c))candles.push({day:candleDay,close:c});}
+      // Entry is first completed trading session strictly AFTER signal date; no backfilling with a pre-signal close.
+      const base=candles.findIndex(x=>x.day>r.capturedDate);if(base<0){r.status='İlk sonraki tam seans bekleniyor';continue;}
+      if(r.baseDate&&r.baseDate!==candles[base].day){r.status='Baz tarih uyuşmazlığı; kontrol et';continue;}
+      r.baseDate=candles[base].day;r.baseClose=candles[base].close;
+      for(const h of [5,10,20]){if(r.returns[h]!=null)continue;const c=candles[base+h];if(c){const value=r.direction==='SHORT'?100*(r.baseClose/c.close-1):100*(c.close/r.baseClose-1);r.returns[h]=+value.toFixed(3);newReturns++;}}
+      r.status=r.returns[20]!=null?'20G tamamlandı':r.returns[10]!=null?'20G bekliyor':r.returns[5]!=null?'10G bekliyor':'5G bekliyor';
+    }
+    save();render();alert(`${newReturns} yeni getiri ölçümü · ${ok} sembol fiyatı alındı · ${err} veri hatası. Gelecek sonuçlar için daha sonra tekrar güncelle.`);
+  }catch(e){alert('İleri test güncellemesi başarısız: '+e.message)}finally{btn.disabled=false;}
+}
+function backup(){load();blobDownload('BIST_aday_gecmisi_'+today()+'.json',{format:'bist-candidate-history',version:2,exportedAt:new Date().toISOString(),records});}
+async function restore(e){const f=e.target.files?.[0];e.target.value='';if(!f)return;try{
+  if(f.size>8*1024*1024)throw Error('8 MB üstü yedek kabul edilmiyor.');const d=JSON.parse(await f.text());
+  if(d.format!=='bist-candidate-history'||d.version!==2||!Array.isArray(d.records)||d.records.length>15000)throw Error('Yedek biçimi geçersiz.');
+  if(!d.records.every(x=>x&&validSymbol(x.symbol)&&['LONG','SHORT'].includes(x.direction)&&/^\d{4}-\d{2}-\d{2}$/.test(x.capturedDate)&&Array.isArray(x.modules)&&x.modules.length<=40&&x.modules.every(m=>typeof m==='string'&&m.length<100)&&typeof x.capturedAt==='number'&&x.returns&&typeof x.returns==='object'&&[5,10,20].every(h=>x.returns[h]==null||(typeof x.returns[h]==='number'&&Number.isFinite(x.returns[h])))))throw Error('Yedekte geçersiz kayıt var.');
+  if(!confirm(d.records.length+' aday geçmişi kaydı mevcut kayıtların üzerine yazılsın mı?'))return;records=d.records;save();render();alert('Aday geçmişi geri yüklendi.');
+}catch(err){alert('Yedek yüklenemedi: '+err.message)}}
+$h('dhHistorySave').addEventListener('click',capture);$h('dhHistoryUpdate').addEventListener('click',update);$h('dhHistoryBackup').addEventListener('click',backup);$h('dhHistoryRestore').addEventListener('click',()=>$h('dhHistoryFile').click());$h('dhHistoryFile').addEventListener('change',restore);
+render();
 })();
 </script>
 </body>
