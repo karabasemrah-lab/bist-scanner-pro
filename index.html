@@ -124,6 +124,7 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   <button class="tab" style="--ac:#22d3ee" data-tab="structurelab">🧠 Yapı Laboratuvarı</button>
   <button class="tab" style="--ac:#ec4899" data-tab="highconfidence">🎯 High-Confidence</button>
   <button class="tab" style="--ac:#22c55e" data-tab="performance">🧪 Performans</button>
+  <button class="tab" style="--ac:#38bdf8" data-tab="decisionhub">🧭 Aday Karar Paneli</button>
 </div>
 
 <section id="fusion" class="tabpage space-y-4">
@@ -1038,6 +1039,30 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
   </div>
 </section>
 
+
+<section id="decisionhub" class="tabpage space-y-4 hidden">
+  <div class="card p-5">
+    <h2 class="text-2xl font-black">🧭 Aday Karar Paneli · v4.1</h2>
+    <p class="text-sm muted mt-2">Önceden çalıştırdığın modüllerin mevcut aday sonuçlarını tek listede birleştirir. Aynı hisseye birden çok motorun işaret etmesi istatistiksel bağımsızlık veya kazanma olasılığı anlamına gelmez.</p>
+    <div class="grid grid-cols-3 gap-3 mt-4 grid-settings">
+      <div><label class="text-xs muted">En az kaç farklı modül?</label><select id="dhMin" class="input mt-1"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option></select></div>
+      <div><label class="text-xs muted">Yön</label><select id="dhSide" class="input mt-1"><option value="ALL">Tümü</option><option value="LONG">Yükseliş yönü</option><option value="SHORT">Düşüş yönü</option></select></div>
+      <div><label class="text-xs muted">Sıralama</label><select id="dhSort" class="input mt-1"><option value="count">Modül sayısı</option><option value="symbol">Hisse kodu</option></select></div>
+    </div>
+    <div class="flex flex-wrap gap-3 mt-4">
+      <button class="btn" id="dhRefresh" style="background:#0369a1;color:white">🔄 Mevcut adayları birleştir</button>
+      <button class="btn" id="dhExport" style="background:#173d2c;color:#8cf0bd">📥 CSV indir</button>
+      <button class="btn" id="dhPerf" style="background:#3b2864;color:white">🧪 Performans merkezine geç</button>
+    </div>
+    <div id="dhInfo" class="text-xs muted mt-3">Önce istediğin modülleri çalıştır, ardından sonuçları birleştir.</div>
+    <div class="text-xs warn rounded-xl p-3 mt-3">⚠️ Bu panel yalnız aynı oturumda hazırlanmış mevcut tarama sonuçlarını karşılaştırır. Geçmiş günlerdeki sonuçları otomatik olarak geri getirmez; zaman damgaları modüller arasında eşit olmayabilir. Çelişen LONG/SHORT yönleri ayrıca gösterilir.</div>
+  </div>
+  <div class="card overflow-hidden">
+    <div class="p-4 border-b border-gray-800"><h3 class="font-black text-xl">📋 Birleşik Aday Listesi · <span id="dhCount">0</span> hisse</h3></div>
+    <div class="overflow-auto max-h-[700px]"><table id="dhTable"></table></div>
+  </div>
+</section>
+
 <section id="performance" class="tabpage space-y-4 hidden">
   <div class="card p-5">
     <h2 class="text-2xl font-black">🧪 Tarama Performans Merkezi v1 · İleri Test</h2>
@@ -1054,7 +1079,11 @@ style="border-color:#f43f5e44;box-shadow:0 0 28px -10px #f43f5e80">
       <button id="perfUpdateBtn" class="btn" style="background:linear-gradient(90deg,#0369a1,#38bdf8);color:white">🔄 Performansı Güncelle</button>
       <button id="perfExcelBtn" class="btn" style="background:#173d2c;color:#8cf0bd">📥 Excel</button>
       <button id="perfClearBtn" class="btn" style="background:#3a1720;color:#ff9aa6">🗑️ Kayıtları Temizle</button>
+      <button id="perfBackupBtn" type="button" class="btn" style="background:#233954;color:#e2edff">💾 JSON Yedekle</button>
+      <button id="perfRestoreBtn" type="button" class="btn" style="background:#233954;color:#e2edff">📂 JSON Geri Yükle</button>
+      <input id="perfRestoreFile" type="file" accept=".json,application/json" style="display:none">
     </div>
+    <div class="text-xs muted mt-3">Kayıtlar bu tarayıcıda saklanır. Cihaz değiştirirken JSON yedeklemesi yap. Sinyal getirileri bugüne ait kapanmamış günlük mumla hesaplanmaz. Bu tablo işlem maliyeti ve slippage içermeyen gözlemsel ileri testtir.</div>
     <div id="perfCounts" class="text-xs muted mt-3"></div>
     <div class="progress mt-4"><div id="perfProg"></div></div>
     <div id="perfStatus" class="mt-3 rounded-xl p-3 text-sm warn">Önce taramaları çalıştır, sonra mevcut sinyalleri kaydet.</div>
@@ -2438,7 +2467,7 @@ function harmFwGroupStats(rows){const reached=rows.filter(r=>r.touch_at),miss=ro
 function renderHarmForward(){
   harmFwLoad();const groups=new Map();groups.set("TÜMÜ",harmFwRecords);for(const r of harmFwRecords){const k=`${r.pattern} · ${r.timeframe} · ${r.direction}`;if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)}const sums=[...groups.entries()].map(([name,rows])=>({name,...harmFwGroupStats(rows)})).sort((a,b)=>a.name==="TÜMÜ"?-1:b.name==="TÜMÜ"?1:b.n-a.n);
   $("harmFwSummaryTable").innerHTML=`<thead><tr>${["Grup","Kayıt","D Ulaştı","D Miss","Bekliyor","D İsabet %","D'ye Medyan Mum","5B N","5B Kazan %","5B Medyan %","10B N","10B Kazan %","10B Medyan %","20B N","20B Kazan %","20B Medyan %","MFE20 Medyan %","MAE20 Medyan %"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+sums.map(s=>`<tr><td><b>${s.name}</b></td><td>${s.n}</td><td>${s.reached}</td><td>${s.miss}</td><td>${s.pending}</td><td>${s.hit==null?"—":fmt(s.hit,1)}</td><td>${s.bars==null?"—":fmt(s.bars,1)}</td><td>${s[5].n}</td><td>${s[5].win==null?"—":fmt(s[5].win,1)}</td><td>${s[5].med==null?"—":fmt(s[5].med,2)}</td><td>${s[10].n}</td><td>${s[10].win==null?"—":fmt(s[10].win,1)}</td><td>${s[10].med==null?"—":fmt(s[10].med,2)}</td><td>${s[20].n}</td><td>${s[20].win==null?"—":fmt(s[20].win,1)}</td><td>${s[20].med==null?"—":fmt(s[20].med,2)}</td><td>${s.mfe==null?"—":fmt(s.mfe,2)}</td><td>${s.mae==null?"—":fmt(s.mae,2)}</td></tr>`).join("")+"</tbody>";
-  const detail=harmFwRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);$("harmFwDetailCount").textContent=detail.length;$("harmFwDetailTable").innerHTML=`<thead><tr>${["Kayıt Tarihi","Hisse","Periyot","Formasyon","Yön","İlk Durum","Uyum %","Sinyal Fiyat","D / PRZ","Başlangıç Uzak %","Durum","D Temas","D'ye Mum",...HARM_FW_H.map(h=>`${h}B %`),"MFE20 %","MAE20 %"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.pattern}</b></td><td>${r.direction}</td><td>${r.source_status}</td><td>${fmt(r.score,1)}</td><td>${fmt(r.signal_price)}</td><td><b>${fmt(r.prz)}</b></td><td>${fmt(r.prz_distance,2)}</td><td>${r.state==="D_MISS"?"❌ D ULAŞMADI":r.touch_at?(r.state==="EVALUATED"?"✅ TAM ÖLÇÜLDÜ":"🎯 D ULAŞTI"):"⏳ BEKLİYOR"}</td><td>${r.touch_date||"—"}</td><td>${r.bars_to_d??"—"}</td>${HARM_FW_H.map(h=>`<td>${Number.isFinite(Number(r.returns?.[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
+  const detail=harmFwRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);$("harmFwDetailCount").textContent=detail.length;$("harmFwDetailTable").innerHTML=`<thead><tr>${["Kayıt Tarihi","Hisse","Periyot","Formasyon","Yön","İlk Durum","Uyum %","Sinyal Fiyat","D / PRZ","Başlangıç Uzak %","Durum","D Temas","D'ye Mum",...HARM_FW_H.map(h=>`${h}B %`),"MFE20 %","MAE20 %"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${link(r.symbol)}</td><td>${r.timeframe}</td><td><b>${r.pattern}</b></td><td>${r.direction}</td><td>${r.source_status}</td><td>${fmt(r.score,1)}</td><td>${fmt(r.signal_price)}</td><td><b>${fmt(r.prz)}</b></td><td>${fmt(r.prz_distance,2)}</td><td>${r.state==="D_MISS"?"❌ D ULAŞMADI":r.touch_at?(r.state==="EVALUATED"?"✅ TAM ÖLÇÜLDÜ":"🎯 D ULAŞTI"):"⏳ BEKLİYOR"}</td><td>${r.touch_date||"—"}</td><td>${r.bars_to_d??"—"}</td>${HARM_FW_H.map(h=>`<td>${r.returns?.[h]!=null&&Number.isFinite(Number(r.returns[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
   const reached=harmFwRecords.filter(r=>r.touch_at).length,miss=harmFwRecords.filter(r=>r.state==="D_MISS").length;$("harmFwCounts").textContent=`Toplam ${harmFwRecords.length} projeksiyon · D ulaştı ${reached} · D miss ${miss} · bekleyen ${harmFwRecords.length-reached-miss}`;
 }
 function harmFwClear(){if(!confirm("Yalnız Harmonik Forward kayıtları silinsin mi?"))return;harmFwRecords=[];harmFwSave();renderHarmForward();setStatus("harmFwStatus","Harmonik Forward kayıtları temizlendi.","warn")}
@@ -4037,18 +4066,18 @@ function perfCapture(){
 async function perfUpdate(){
   perfLoad();if(!perfRecords.length){alert("Henüz kayıt yok.");return}const b=$("perfUpdateBtn");b.disabled=true;$("perfProg").style.width="0";setStatus("perfStatus","Günlük fiyatlar hazırlanıyor…","warn");
   try{const syms=[...new Set(perfRecords.map(x=>x.symbol))],cache=new Map();let next=0,done=0;async function run(){while(1){const i=next++;if(i>=syms.length)return;const s=syms[i];try{cache.set(s,await yahoo(s+".IS","2y","1d"))}catch(e){cache.set(s,null)}done++;$("perfProg").style.width=(100*done/syms.length)+"%";setStatus("perfStatus",`${s} · ${done}/${syms.length}` ,"warn");if(done%8===0)await sleep(0)}}await Promise.all(Array.from({length:Math.min(5,syms.length||1)},run));
-    let filled=0;for(const r of perfRecords){const df=cache.get(r.symbol);if(!df||!df.t?.length)continue;let base=-1;const target=r.captured_date;for(let i=0;i<df.t.length;i++){const d=perfDate(df.t[i]*1000);if(d>=target){base=i;break}}if(base<0)continue;for(const h of PERF_H){if(r.returns[h]!=null)continue;const j=base+h;if(j<df.c.length){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null){r.returns[h]=+v.toFixed(3);filled++}}}if(r.returns[20]!=null){const path=[];for(let j=base+1;j<=Math.min(base+20,df.c.length-1);j++){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null)path.push(v)}if(path.length){r.mfe20=+Math.max(...path).toFixed(3);r.mae20=+Math.min(...path).toFixed(3)}}}
+    let filled=0;for(const r of perfRecords){const df=cache.get(r.symbol);if(!df||!df.t?.length)continue;let base=-1;const target=r.captured_date;for(let i=0;i<df.t.length;i++){const d=perfDate(df.t[i]*1000);if(d>=target){base=i;break}}if(base<0||perfDate(df.t[base]*1000)!==target)continue;for(const h of PERF_H){if(r.returns[h]!=null)continue;const j=base+h;if(j<df.c.length&&perfDate(df.t[j]*1000)<perfDate()){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null){r.returns[h]=+v.toFixed(3);filled++}}}if(r.returns[20]!=null){const path=[];for(let j=base+1;j<=Math.min(base+20,df.c.length-1);j++){const v=perfRet(r.entry_price,df.c[j],r.direction);if(v!=null)path.push(v)}if(path.length){r.mfe20=+Math.max(...path).toFixed(3);r.mae20=+Math.min(...path).toFixed(3)}}}
     perfSave();renderPerformance();setStatus("perfStatus",`Güncelleme tamamlandı · ${filled} yeni getiri hücresi dolduruldu` ,"good");
   }catch(e){setStatus("perfStatus","Hata: "+(e?.message||e),"bad")}finally{b.disabled=false;$("perfProg").style.width="100%"}
 }
-function perfStats(rows,h){const a=rows.map(r=>Number(r.returns?.[h])).filter(Number.isFinite);if(!a.length)return{n:0,win:null,avg:null,med:null};return{n:a.length,win:100*a.filter(x=>x>0).length/a.length,avg:a.reduce((s,x)=>s+x,0)/a.length,med:perfMedian(a)}}
+function perfStats(rows,h){const a=rows.map(r=>r.returns?.[h]).filter(x=>x!==null&&x!==undefined&&x!==""&&Number.isFinite(Number(x))).map(Number);if(!a.length)return{n:0,win:null,avg:null,med:null};return{n:a.length,win:100*a.filter(x=>x>0).length/a.length,avg:a.reduce((s,x)=>s+x,0)/a.length,med:perfMedian(a)}}
 function renderPerformance(){
   perfLoad();const groups=new Map();for(const r of perfRecords){if(!groups.has(r.scanner))groups.set(r.scanner,[]);groups.get(r.scanner).push(r)}const rows=[];for(const [scanner,g] of groups){const s={scanner,total:g.length};for(const h of PERF_H)s[h]=perfStats(g,h);const e=g.map(x=>x.mae20).filter(Number.isFinite),f=g.map(x=>x.mfe20).filter(Number.isFinite);s.mae=e.length?e.reduce((a,b)=>a+b,0)/e.length:null;s.mfe=f.length?f.reduce((a,b)=>a+b,0)/f.length:null;rows.push(s)}rows.sort((a,b)=>(b[5].avg??-999)-(a[5].avg??-999)||(b[5].win??-1)-(a[5].win??-1));
   const heads=["Tarama","Kayıt",...PERF_H.flatMap(h=>[`${h}G N`,`${h}G Kazan %`,`${h}G Ort %`,`${h}G Medyan %`]),"20G Ort. MFE %","20G Ort. MAE %"];
   $("perfSummaryTable").innerHTML=`<thead><tr>${heads.map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+rows.map(r=>`<tr><td><b>${r.scanner}</b></td><td>${r.total}</td>${PERF_H.map(h=>`<td>${r[h].n}</td><td>${r[h].win==null?"—":fmt(r[h].win,1)}</td><td>${r[h].avg==null?"—":fmt(r[h].avg,2)}</td><td>${r[h].med==null?"—":fmt(r[h].med,2)}</td>`).join("")}<td>${r.mfe==null?"—":fmt(r.mfe,2)}</td><td>${r.mae==null?"—":fmt(r.mae,2)}</td></tr>`).join("")+"</tbody>";
-  let detail=perfRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);if($("perfOnlyEvaluated")?.checked)detail=detail.filter(r=>PERF_H.some(h=>Number.isFinite(Number(r.returns?.[h]))));detail=detail.slice(0,Math.max(50,Number($("perfDetailN")?.value||300)));$("perfDetailCount").textContent=detail.length;
-  $("perfDetailTable").innerHTML=`<thead><tr>${["Tarih","Tarama","Hisse","Yön","TF","Etiket","Giriş",...PERF_H.map(h=>`${h}G %`),"MFE20","MAE20"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${r.scanner}</td><td>${link(r.symbol)}</td><td>${r.direction}</td><td>${r.timeframe||"—"}</td><td>${r.tag||"—"}</td><td>${fmt(r.entry_price)}</td>${PERF_H.map(h=>`<td>${Number.isFinite(Number(r.returns?.[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
-  const eval20=perfRecords.filter(r=>Number.isFinite(Number(r.returns?.[20]))).length;$("perfCounts").textContent=`Toplam ${perfRecords.length} sinyal · ${groups.size} tarama · 20G tamamlanan ${eval20}`;
+  let detail=perfRecords.slice().sort((a,b)=>b.captured_at-a.captured_at);if($("perfOnlyEvaluated")?.checked)detail=detail.filter(r=>PERF_H.some(h=>r.returns?.[h]!=null&&Number.isFinite(Number(r.returns[h]))));detail=detail.slice(0,Math.max(50,Number($("perfDetailN")?.value||300)));$("perfDetailCount").textContent=detail.length;
+  $("perfDetailTable").innerHTML=`<thead><tr>${["Tarih","Tarama","Hisse","Yön","TF","Etiket","Giriş",...PERF_H.map(h=>`${h}G %`),"MFE20","MAE20"].map(x=>`<th>${x}</th>`).join("")}</tr></thead><tbody>`+detail.map(r=>`<tr><td>${r.captured_date}</td><td>${r.scanner}</td><td>${link(r.symbol)}</td><td>${r.direction}</td><td>${r.timeframe||"—"}</td><td>${r.tag||"—"}</td><td>${fmt(r.entry_price)}</td>${PERF_H.map(h=>`<td>${r.returns?.[h]!=null&&Number.isFinite(Number(r.returns[h]))?fmt(Number(r.returns[h]),2):"—"}</td>`).join("")}<td>${Number.isFinite(Number(r.mfe20))?fmt(r.mfe20,2):"—"}</td><td>${Number.isFinite(Number(r.mae20))?fmt(r.mae20,2):"—"}</td></tr>`).join("")+"</tbody>";
+  const eval20=perfRecords.filter(r=>r.returns?.[20]!=null&&Number.isFinite(Number(r.returns[20]))).length;$("perfCounts").textContent=`Toplam ${perfRecords.length} sinyal · ${groups.size} tarama · 20G tamamlanan ${eval20}`;
 }
 function perfClear(){if(!confirm("Tüm performans kayıtları silinsin mi?"))return;perfRecords=[];perfSave();renderPerformance();setStatus("perfStatus","Performans kayıtları temizlendi.","warn")}
 function perfExport(){perfLoad();if(!perfRecords.length){alert("Dışa aktarılacak performans kaydı yok.");return}const rows=perfRecords.map(r=>({Tarih:r.captured_date,Tarama:r.scanner,Hisse:r.symbol,Yon:r.direction,Periyot:r.timeframe,Etiket:r.tag,Giris:r.entry_price,...Object.fromEntries(PERF_H.map(h=>[`${h}G_Getiri_%`,r.returns?.[h]??null])),MFE20:r.mfe20??null,MAE20:r.mae20??null}));const ws=XLSX.utils.json_to_sheet(rows),wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Performans");XLSX.writeFile(wb,`BIST_Tarama_Performans_${new Date().toISOString().slice(0,10)}.xlsx`)}
@@ -4296,7 +4325,7 @@ function storyFwLoad(){try{const x=JSON.parse(localStorage.getItem(STORY_FW_KEY)
 function storyFwSave(){localStorage.setItem(STORY_FW_KEY,JSON.stringify(storyFwRecords))}
 function storyFwBand(n){n=Number(n);return n>=85?'85+ TETİK':n>=75?'75–84 HAZIR':n>=65?'65–74 İZLE':'<65'}
 function storyFwMedian(a){const z=a.filter(Number.isFinite).slice().sort((x,y)=>x-y);if(!z.length)return null;const m=Math.floor(z.length/2);return z.length%2?z[m]:(z[m-1]+z[m])/2}
-function storyFwStats(rows,h){const a=rows.map(r=>Number(r.returns?.[h])).filter(Number.isFinite);if(!a.length)return{n:0,win:null,avg:null,med:null};return{n:a.length,win:100*a.filter(x=>x>0).length/a.length,avg:a.reduce((x,y)=>x+y,0)/a.length,med:storyFwMedian(a)}}
+function storyFwStats(rows,h){const a=rows.map(r=>r.returns?.[h]).filter(x=>x!==null&&x!==undefined&&x!==""&&Number.isFinite(Number(x))).map(Number);if(!a.length)return{n:0,win:null,avg:null,med:null};return{n:a.length,win:100*a.filter(x=>x>0).length/a.length,avg:a.reduce((x,y)=>x+y,0)/a.length,med:storyFwMedian(a)}}
 async function storyFwCapture(silent=false){
   storyFwLoad();const candidates=storyScanResults.filter(r=>r.finalScore!=null&&Number(r.techCoverage||0)===3&&Number(r.finalScore)>=65&&!storyFwRecords.some(x=>x.symbol===r.symbol));
   if(!candidates.length){renderStoryForward();if(!silent)setStatus('storyFwStatus','Yeni ilk-geçiş 65+ Nihai Skor adayı yok. Mevcut kayıtlar korunuyor.','warn');return}
@@ -4704,5 +4733,64 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'&&!document.getElementB
 if($('csBtn'))$('csBtn').onclick=scanCS;
 </script>
 
+<script>
+/* v4.1: additive decision view and safe local performance export/import */
+(function(){
+const byId=id=>document.getElementById(id);
+const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let exported=[];
+function refresh(){
+  let raw=[];
+  try {raw=perfSourceRows();} catch(err){byId('dhInfo').textContent='Mevcut modül sonuçları okunamadı: '+err.message;return;}
+  const map=new Map();
+  for(const r of raw){
+    if(!/^[A-Z0-9]{2,12}$/.test(String(r.symbol||'')))continue;
+    const id=r.symbol+'|'+r.direction;
+    if(!map.has(id))map.set(id,{symbol:r.symbol,direction:r.direction,mods:new Set(),timeframes:new Set(),tags:[],price:null});
+    const o=map.get(id);o.mods.add(r.scanner);if(r.timeframe)o.timeframes.add(r.timeframe);
+    if(o.tags.length<8&&r.tag)o.tags.push(String(r.scanner)+': '+String(r.tag));
+    if(o.price===null&&Number(r.price)>0)o.price=Number(r.price);
+  }
+  const min=Math.max(1,Number(byId('dhMin').value||2)),side=byId('dhSide').value;
+  const opposite=new Set([...map.values()].filter(x=>map.has(x.symbol+'|'+(x.direction==='LONG'?'SHORT':'LONG'))).map(x=>x.symbol));
+  exported=[...map.values()].filter(x=>x.mods.size>=min&&(side==='ALL'||side===x.direction));
+  if(byId('dhSort').value==='symbol')exported.sort((a,b)=>a.symbol.localeCompare(b.symbol));
+  else exported.sort((a,b)=>b.mods.size-a.mods.size||a.symbol.localeCompare(b.symbol));
+  byId('dhCount').textContent=String(exported.length);
+  byId('dhInfo').textContent=`${raw.length} aday satırı · ${map.size} hisse/yön çifti · ${exported.length} filtrelenmiş sonuç · ${new Date().toLocaleString('tr-TR')}`;
+  byId('dhTable').innerHTML='<thead><tr>'+['Hisse','Yön','Farklı modül','Modüller','Zaman dilimleri','Fiyat (referans)','Çelişki','Detay'].map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+exported.map(x=>'<tr><td>'+safe(x.symbol)+'</td><td>'+safe(x.direction)+'</td><td>'+x.mods.size+'</td><td>'+safe([...x.mods].join(' · '))+'</td><td>'+safe([...x.timeframes].join(', ')||'—')+'</td><td>'+safe(x.price===null?'—':x.price.toFixed(2))+'</td><td>'+(opposite.has(x.symbol)?'⚠️ Ters yön sinyali':'—')+'</td><td title="'+safe(x.tags.join(' | '))+'">'+safe(x.tags.slice(0,3).join(' | '))+'</td></tr>').join('')+'</tbody>';
+}
+function exportCsv(){if(!exported.length){alert('Önce aday listesini oluştur.');return;}downloadCSV('BIST_birlesik_adaylar.csv',['Hisse','Yon','Modul sayisi','Moduller','Periyot','Referans fiyat','Detay'],exported.map(x=>[x.symbol,x.direction,x.mods.size,[...x.mods].join(' / '),[...x.timeframes].join(' / '),x.price??'',x.tags.join(' / ')]));}
+byId('dhRefresh').addEventListener('click',refresh);
+byId('dhExport').addEventListener('click',exportCsv);
+for(const id of ['dhMin','dhSide','dhSort'])byId(id).addEventListener('change',refresh);
+byId('dhPerf').addEventListener('click',()=>{const tab=document.querySelector('[data-tab="performance"]');if(tab)tab.click();});
+function backup(){
+  const records=JSON.parse(localStorage.getItem('bist_scanner_perf_v1')||'[]');
+  const content=JSON.stringify({format:'bist-scanner-perf-backup',version:1,exportedAt:new Date().toISOString(),records},null,2);
+  const blob=new Blob([content],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='BIST_performans_yedek_'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function restoreClick(){byId('perfRestoreFile').click();}
+async function restore(ev){
+  const file=ev.target.files?.[0];ev.target.value='';if(!file)return;
+  try{
+    if(file.size>15*1024*1024)throw Error('Dosya 15 MB sınırını aşıyor.');
+    const data=JSON.parse(await file.text());
+    if(data?.format!=='bist-scanner-perf-backup'||data.version!==1||!Array.isArray(data.records))throw Error('Desteklenmeyen yedek biçimi.');
+    if(data.records.length>100000)throw Error('Çok fazla kayıt.');
+    const valid=data.records.every(x=>x&&typeof x==='object'&&typeof x.symbol==='string'&&typeof x.scanner==='string'&&Number(x.entry_price)>0&&typeof x.captured_date==='string'&&x.returns&&typeof x.returns==='object');
+    if(!valid)throw Error('Yedekte geçersiz kayıt bulundu.');
+    if(!confirm(data.records.length+' performans kaydı yüklenecek. Mevcut tarayıcı kayıtlarının üzerine yazılsın mı?'))return;
+    localStorage.setItem('bist_scanner_perf_v1',JSON.stringify(data.records));
+    if(typeof renderPerformance==='function')renderPerformance();
+    alert('Performans kayıtları geri yüklendi.');
+  }catch(err){alert('Yedek yüklenemedi: '+err.message);}
+}
+byId('perfBackupBtn').addEventListener('click',backup);
+byId('perfRestoreBtn').addEventListener('click',restoreClick);
+byId('perfRestoreFile').addEventListener('change',restore);
+})();
+</script>
 </body>
 </html>
