@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "source": "https://kap.org.tr/tr/tumKalemler/kpy41_acc5_fiili_dolasimdaki_pay",
-  "updatedAt": "2026-11-23 19:28:35",
-  "count": 626,
+  "updatedAt": "2026-11-24 19:23:45",
+  "count": 627,
   "symbols": [
     "A1CAP",
     "A1YEN",
@@ -555,6 +555,7 @@
     "TDGYO",
     "TEHOL",
     "TEKTU",
+    "TERA",
     "TEZOL",
     "TGSAS",
     "THYAO",
