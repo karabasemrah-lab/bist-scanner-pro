@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "source": "https://kap.org.tr/tr/tumKalemler/kpy41_acc5_fiili_dolasimdaki_pay",
-  "updatedAt": "2026-11-24 03:03:41",
-  "count": 626,
+  "updatedAt": "2026-11-25 01:07:31",
+  "count": 627,
   "symbols": [
     "A1CAP",
     "A1YEN",
@@ -555,6 +555,7 @@
     "TDGYO",
     "TEHOL",
     "TEKTU",
+    "TERA",
     "TEZOL",
     "TGSAS",
     "THYAO",
@@ -1183,6 +1184,7 @@
     "TDGYO": "TREND GAYRİMENKUL YATIRIM ORTAKLIĞI A.Ş.",
     "TEHOL": "TERA YATIRIM TEKNOLOJİ HOLDİNG A.Ş.",
     "TEKTU": "TEK-ART İNŞAAT TİCARET TURİZM SANAYİ VE YATIRIMLAR A.Ş.",
+    "TERA": "TERA YATIRIM MENKUL DEĞERLER A.Ş.",
     "TEZOL": "EUROPAP TEZOL KAĞIT SANAYİ VE TİCARET A.Ş.",
     "TGSAS": "TGS DIŞ TİCARET A.Ş.",
     "THYAO": "TÜRK HAVA YOLLARI A.O.",
